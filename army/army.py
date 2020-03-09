@@ -7,6 +7,8 @@ sys.path.append(os.path.dirname(pkg_resources.resource_filename(__name__, "army.
 import extargparse
 import commands.project
 import commands.build
+import commands.packaging
+from config import Config, ProjectConfig, load_configuration, load_project_configuration
 
 # TODO add autocomplete https://kislyuk.github.io/argcomplete/
 
@@ -57,23 +59,6 @@ import commands.build
 
 parser = extargparse.ArgumentParser(prog='army')
 
-class Config():
-    def __init__(self):
-        self.repositories = []
-        self.config = {}
-        self.plugins = {}
-    
-    def load_repositories(self):
-        pass
-    
-    def load_config(self):
-        pass
-    
-    def load_plugins(self):
-        pass
-    
-    def load(self):
-        pass
 
 def main():
 #     parser = extargparse.ArgumentParser(
@@ -107,21 +92,19 @@ def main():
 #     console    Open console on jtag interface
 # """)
 
+    config = load_configuration() 
+    
     # create the top-level parser
-    parser.add_argument('--foo', action='store_true', help='foo help')
+    parser.add_argument('-v', '--verbose', action='store_true', help='activate verbose mode')
     subparser = parser.add_subparsers(metavar='COMMAND', title=None, description=None, help=None, parser_class=extargparse.ArgumentParser, required=True)
 
-    # load army components parsers
-    commands.project.init_parser(subparser)
-    commands.build.init_parser(subparser)
+    # load default plugins
+    commands.project.init_parser(subparser, config)
+    commands.packaging.init_parser(subparser, config)
+    commands.build.init_parser(subparser, config)
     
     # parse command line
     args = parser.parse_args()
-
-    # load army configuration files, each file supesedes the previous
-    # Global configuration: /etc/army/army.toml
-    # User configuration: ~/.army/army.tom
-    # Project configuration: .army/army.toml
 
     # load repository sources, local repositories are explored first
     # Project sources: .army/sources.toml, .army/sources.d/*.toml
@@ -133,9 +116,6 @@ def main():
     # User plugins:
     # Global plugins:
 
-    config = Config()
-    config.load()
-    
     # call asked command
     args.func(args, config)
 

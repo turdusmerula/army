@@ -1,3 +1,4 @@
+[firmware]
 name = "{{ project_name }}"
 description = "project description"
 version = "1.0.0" 
@@ -6,4 +7,7 @@ dependencies = [
 ]
 
 plugins = [
+	"gcc-arm-none-eabi"
 ]
+
+[gcc-arm-none-eabi]

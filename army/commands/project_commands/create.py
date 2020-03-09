@@ -7,9 +7,8 @@ import sys
 from pathlib import Path
 from template import ArmyTemplate
 from git import Repo
-from pip._internal.operations.prepare import CopytreeKwargs
 
-def init_parser(parentparser):
+def init_parser(parentparser, config):
     # create the parser for the "a" command
     parser = parentparser.add_parser('create', help='Create a new project')
     parser.add_argument('--type', default='firmware', help='Project type (firmware, library or plugin)')

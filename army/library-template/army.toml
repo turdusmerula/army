@@ -1,3 +1,4 @@
+[library]
 name = "{{ project_name }}"
 description = "library description"
 version = "0.0.1" 

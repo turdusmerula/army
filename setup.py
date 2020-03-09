@@ -38,7 +38,8 @@ setup(
     
     install_requires=[
         'tornado',      # template manager
-        'gitpython'     # git repository manager
+        'gitpython',    # git repository manager
+        'toml'          # toml files
     ],
 )
 
