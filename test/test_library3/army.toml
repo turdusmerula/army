@@ -1,6 +1,6 @@
 [project]
 	type = "library"
-	name = "{{ project_name }}"
+	name = "library3"
 	description = "library description"
 	version = "0.0.1" 
 

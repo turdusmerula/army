@@ -12,7 +12,7 @@ from config import Config
 
 def init_parser(parentparser, config):
 #     parser = group.add_parser('build', help='Build commands')
-    parser = parentparser.add_parser('compile', help='Compile project')
+    parser = parentparser.add_parser('build', help='Build project')
     parser.add_argument('--debug', action='store_true', help='Build with debug options')
     parser.add_argument('-j', '--jobs',  type=int, default=1, help='Number of parallel builds (default 1)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Perform verbose build')

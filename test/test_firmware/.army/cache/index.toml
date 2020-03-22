@@ -1,0 +1,47 @@
+[toolchain]
+uri = "../test_repository"
+type = "versioned"
+
+[gcc-arm-none-eabi]
+uri = "/home/seb/git/gcc-arm-none-eabi-plugin"
+type = "dev"
+
+[library1]
+uri = "../test_library1"
+type = "dev"
+
+[library2]
+uri = "../test_library2"
+type = "dev"
+
+[library3]
+uri = "../test_library3"
+type = "dev"
+
+[toolchain.modules.gcc-arm-none-eabi-plugin."9.2.1"]
+type = "plugin"
+description = "gcc for arm"
+
+[toolchain.modules.jlink."6.5.2-a"]
+type = "plugin"
+description = "jlink for arm"
+
+[toolchain.modules.ozone."2.6.1-g"]
+type = "plugin"
+description = "jlink for arm"
+
+[gcc-arm-none-eabi.modules.gcc-arm-none-eabi-plugin.dev]
+type = "plugin"
+description = "gcc for arm"
+
+[library1.modules.library1.dev]
+type = "library"
+description = "library description"
+
+[library2.modules.library2.dev]
+type = "library"
+description = "library description"
+
+[library3.modules.library3.dev]
+type = "library"
+description = "library description"

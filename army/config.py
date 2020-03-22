@@ -1,6 +1,8 @@
 import toml
 import os
 import sys
+from log import log
+from debugtools import print_stack
 
 # load army configuration files, each file supesedes the previous
 # Global configuration: /etc/army/army.toml
@@ -8,12 +10,12 @@ import sys
 def load_configuration():
     files = [
         '/etc/army/army.toml',
-        os.path.join(os.path.expanduser('~'), '/.army/army.toml'),
+        '~/.army/army.toml',
     ]
     config = None
     for file in files:
-        config = Config(config)
-        config.load_config(file)
+        config = Config(config, file)
+        config.load()
         
     return config
 
@@ -23,10 +25,10 @@ class ConfigException(Exception):
         self.message = message
 
 class Config():
-    def __init__(self, parent):
+    def __init__(self, parent, file):
         self.parent = parent
         self.config = {}
-
+        self.file = file
        
     def is_verbose(self):
         if 'verbose' in self.config:
@@ -35,26 +37,33 @@ class Config():
             return self.parent.is_verbose()
         return False
     
-    def load_config(self, file):
+    def load(self):
+        file = os.path.expanduser(self.file)
         if os.path.exists(file):
             try:
                 self.config = toml.load(file)
-                print(self.config)
+                log.info(f"Loaded config '{self.file}'")
             except Exception as e:
-                print(f"{format(e)}")
-                exit(1)
+                raise ConfigException(f"{format(e)}")
 
     def check_config(self):
         pass
 
 
 # Project configuration: .army/army.toml
-def load_project_configuration(config):
-    if os.path.exists("army.toml")==False:
-        return None
+def load_project(config):
+#     path = os.path.abspath(os.getcwd())
+#     user_path = os.path.expanduser('~')
+#     if path.startswith(user_path):
+#         path = path.replace(user_path, '~', 1)
+#     file = os.path.join(path, "army.toml")
     
-    config = ProjectConfig(config)
-    config.load_config(os.path.join(os.getcwd(), "army.toml"))
+    file = 'army.toml'
+    if os.path.exists(os.path.expanduser(file))==False:
+        raise ConfigException("Not a project: 'army.toml' not found")
+    
+    config = ProjectConfig(config, file)
+    config.load()
     
     return config
 
@@ -62,9 +71,9 @@ class ProjectConfig(Config):
     
     project_types = ['firmware', 'library', 'plugin']
     
-    def __init__(self, parent):
-        super(ProjectConfig, self).__init__(parent)
-    
+    def __init__(self, parent, file):
+        super(ProjectConfig, self).__init__(parent, file)
+        
         self._project_path = os.getcwd()
         self._output_path = os.path.join(self._project_path, "output")
 

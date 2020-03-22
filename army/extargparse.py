@@ -1,6 +1,7 @@
 import sys
 import argparse
 from argparse import _, Action, _SubParsersAction
+from log import log
 
 # import sys
 # import pprint
@@ -68,7 +69,7 @@ def add_parser_group(self, title):
 
 class ArgumentParser(argparse.ArgumentParser):    
 
-     def error(self, message):
+    def error(self, message):
         self.print_help(sys.stderr)
         print('', file=sys.stderr)
         
@@ -76,3 +77,17 @@ class ArgumentParser(argparse.ArgumentParser):
         args = {'prog': self.prog, 'message': message}
         self.exit(2, _('%(prog)s: error: %(message)s\n\n') % args)
 #        raise sys.exc_info()[1]
+
+    def add_default_args(self):
+        self.add_argument('-v', '--verbose', action='store_true', help='activate verbose mode', default=False)
+        self.add_argument('-vv', action='store_true', help=argparse.SUPPRESS, default=False)
+
+    def parse_default_args(self):
+        namespace, args = self.parse_known_args()
+        if hasattr(namespace, 'verbose') and namespace.verbose==True:
+            print("Logging level info")
+            log.setLevel('INFO')
+        if hasattr(namespace, 'vv') and namespace.vv==True:
+            print("Logging level debug")
+            log.setLevel('DEBUG')
+    

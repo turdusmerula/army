@@ -1,0 +1,20 @@
+[gcc-arm-none-eabi-plugin."9.2.1"]
+	type = "plugin"
+	description = "gcc for arm"
+
+[gcc-arm-none-eabi-plugin."9.2.0"]
+	type = "plugin"
+	description = "gcc for arm"
+
+[gcc-arm-none-eabi-plugin."9.1.1"]
+	type = "plugin"
+	description = "gcc for arm"
+
+[jlink."6.5.2-a"]
+	type = "plugin"
+	description = "jlink for arm"
+
+[ozone."2.6.1-g"]
+	type = "plugin"
+	description = "jlink for arm"
+

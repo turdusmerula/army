@@ -1,11 +1,11 @@
 [project]
 	type = "library"
-	name = "{{ project_name }}"
+	name = "library1"
 	description = "library description"
 	version = "0.0.1" 
-
-dependencies = [
-]
-
-arch = [
-]
+	
+	dependencies = [
+	]
+	
+	arch = [
+	]

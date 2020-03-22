@@ -5,10 +5,13 @@ import pkg_resources
 
 sys.path.append(os.path.dirname(pkg_resources.resource_filename(__name__, "army.py")))
 import extargparse
-import commands.project
+import argparse
 import commands.build
-import commands.packaging
-from config import Config, ProjectConfig, load_configuration, load_project_configuration
+# import commands.project
+# import commands.packaging
+# import commands.dependencies
+from config import load_configuration
+from log import log
 
 # TODO add autocomplete https://kislyuk.github.io/argcomplete/
 
@@ -61,11 +64,6 @@ parser = extargparse.ArgumentParser(prog='army')
 
 
 def main():
-#     parser = extargparse.ArgumentParser(
-#         prog="army",
-#         description='Arm cross compiling toolset',
-#         usage=""" army COMMAND
-# 
 # Management commands:
 #     project    Manage project
 #     board      Manage boards
@@ -92,24 +90,35 @@ def main():
 #     console    Open console on jtag interface
 # """)
 
-    config = load_configuration() 
+    # parse command line for logging arguments
+    preparser = extargparse.ArgumentParser(prog='army', add_help=False)
+    preparser.add_default_args()
+    # check if command has logging arguments, then it can activate debug mode early
+    preparser.parse_default_args()
     
     # create the top-level parser
-    parser.add_argument('-v', '--verbose', action='store_true', help='activate verbose mode')
+    parser.add_argument('--version', action='store_true', help='return version')
+    parser.add_default_args()
+
+    config = load_configuration() 
+
+    # add army default commands
     subparser = parser.add_subparsers(metavar='COMMAND', title=None, description=None, help=None, parser_class=extargparse.ArgumentParser, required=True)
 
     # load default plugins
-    commands.project.init_parser(subparser, config)
-    commands.packaging.init_parser(subparser, config)
+    # TODO
+#     commands.project.init_parser(subparser, config)
+#     commands.packaging.init_parser(subparser, config)
+#     commands.dependencies.init_parser(subparser, config)
+
+    # load commands
     commands.build.init_parser(subparser, config)
     
     # parse command line
+    parser.parse_default_args()
     args = parser.parse_args()
 
-    # load repository sources, local repositories are explored first
-    # Project sources: .army/sources.toml, .army/sources.d/*.toml
-    # User configuration: ~/.army/sources.tom, ~/.army/sources.d/*.toml
-    # Global configuration: /etc/army/sources.toml, ~/army/sources.d/*.toml
+    # TODO: version
     
     # load plugins
     # Project plugins:

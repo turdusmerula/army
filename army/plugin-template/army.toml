@@ -1,7 +1,8 @@
-[plugin]
-name = "{{ project_name }}"
-description = "plugin description"
-version = "0.0.1" 
+[project]
+	type = "plugin"
+	name = "{{ project_name }}"
+	description = "plugin description"
+	version = "0.0.1" 
 
 entrypoint = "plugin/plugin.py"
 
