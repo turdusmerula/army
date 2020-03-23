@@ -48,61 +48,96 @@ class Version():
             except Exception as e:
                 raise VersionException(f"Invalid version {version}")
     
-    # return -1 if self<version
-    # return 0 if self==version
-    # return 1 if self>version
+#     # return -1 if self<version
+#     # return 0 if self==version
+#     # return 1 if self>version
+#     def compare(self, version):
+#         l = self
+#         r = version
+#         
+#         if l.dev and r.dev:
+#             return 0
+#         elif l.dev and not r.dev:
+#             return 1
+#         elif not l.dev and r.dev:
+#             return -1
+#         
+#         if l.major>r.major:
+#             return 1
+#         elif l.major<r.major:
+#             return -1
+#         
+#         lminor = l.minor
+#         if lminor is None:
+#             lminor = 0
+#         rminor = r.minor
+#         if rminor is None:
+#             rminor = 0
+#         if lminor>rminor:
+#             return 1
+#         elif lminor<rminor:
+#             return -1
+# 
+#         lrevision = l.revision
+#         if lrevision is None:
+#             lrevision = 0
+#         rrevision = r.revision
+#         if rrevision is None:
+#             rrevision = 0
+#         if lrevision>rrevision:
+#             return 1
+#         elif lrevision<rrevision:
+#             return -1
+# 
+#         if l.build or r.build:
+#             lbuild = l.build
+#             if lbuild is None:
+#                 lbuild = ''
+#             rbuild = r.build
+#             if rbuild is None:
+#                 rbuild = ''
+#             if lbuild>rbuild:
+#                 return 1
+#             elif lbuild<rbuild:
+#                 return -1
+#         
+#         return 0
     def compare(self, version):
-        l = self
-        r = version
+        l = [self.major, self.minor, self.revision, self.build]
+        r = [version.major, version.minor, version.revision, version.build]
         
-        if l.dev and r.dev:
+        if self.dev and version.dev:
             return 0
-        elif l.dev and not r.dev:
-            return 1
-        elif not l.dev and r.dev:
+        elif self.dev and not version.dev:
             return -1
+        elif not self.dev and version.dev:
+            return 1
         
-        if l.major>r.major:
-            return 1
-        elif l.major<r.major:
+        res = 0
+        for i in range(3):
+            if res==0:
+                if l[i] is None or r[i] is None:
+                    res = 0
+                elif l[i] is not None and r[i] is not None:
+                    if l[i]<r[i]:
+                        res = -1
+                    if l[i]>r[i]:
+                        res = 1
+                
+        if l[3] is not None and r[3] is None:
             return -1
-        
-        lminor = l.minor
-        if lminor is None:
-            lminor = 0
-        rminor = r.minor
-        if rminor is None:
-            rminor = 0
-        if lminor>rminor:
+        if l[3] is None and r[3] is not None:
             return 1
-        elif lminor<rminor:
-            return -1
-
-        lrevision = l.revision
-        if lrevision is None:
-            lrevision = 0
-        rrevision = r.revision
-        if rrevision is None:
-            rrevision = 0
-        if lrevision>rrevision:
-            return 1
-        elif lrevision<rrevision:
-            return -1
-
-        if l.build or r.build:
-            lbuild = l.build
-            if lbuild is None:
-                lbuild = ''
-            rbuild = r.build
-            if rbuild is None:
-                rbuild = ''
-            if lbuild>rbuild:
-                return 1
-            elif lbuild<rbuild:
+        if l[3] is not None and r[3] is not None:
+            if l[3]<r[3]:
                 return -1
-        
-        return 0
+            elif l[3]==r[3]:
+                return 0
+            elif l[3]>r[3]:
+                return 1
 
+        return res
+    
     def __str__(self):
         if self.dev:
             return 'dev'

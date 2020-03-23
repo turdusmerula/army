@@ -9,6 +9,7 @@ import urllib
 from log import log
 from debugtools import print_stack
 from version import Version
+from config import ComponentConfig
 
 # type of repositories
 #  - http: indexed repository with versioned army packages
@@ -136,14 +137,24 @@ class Repository():
         # TODO: add check repository consistency
         self.loaded = True
 
-    def search(self, name, criterias):
-        log.info(f"search '{name}' in '{self.uri}'")
+    def search(self, module, fullname=False):
+        log.info(f"search '{module}' in repo '{self.name}' at '{self.uri}'")
+
+        if ':' in module:
+            name = module.split(':')[0]
+            version = module.split(':')[1]
+            fullname=True
+        else:
+            name = module
+            version = None
 
         found = []
         for module in self.modules:
-            if name in module:
+            if fullname==False and name in module:
                 found.append({'name': module, 'version': self.modules[module]})
-        
+            elif fullname==True and name==module:
+                found.append({'name': module, 'version': self.modules[module]})
+
         res = []
         for module in found:
             # search for greater version
@@ -152,18 +163,106 @@ class Repository():
             max_info = None
             for v in module['version']:
                 info = module['version'][v]
-                if v=='dev':
-                    res.append({'name': module['name'], 'version': v, 'info': info})
-                elif max_version is None:
-                    max_version = v
-                    max_info = info
-                elif Version(v)>Version(max_version):
-                    max_version = v
-                    max_info = info
+
+                match = True
+                if version:
+                    if Version(version)!=Version(v):
+                        match = False
+                
+                if match:
+                    if v=='dev':
+                        res.append({'repository': self, 'name': module['name'], 'version': v, 'info': info})
+                    elif max_version is None:
+                        max_version = v
+                        max_info = info
+                    elif Version(v)>Version(max_version):
+                        max_version = v
+                        max_info = info
             
             # build result
             if max_version:
-                res.append({'name': module['name'], 'version': max_version, 'info': max_info})
+                res.append({'repository': self, 'name': module['name'], 'version': max_version, 'info': max_info})
         
         log.debug(res)
         return res
+
+    def build(self, module, config):
+        if self.type!='dev':
+            # ignore this step
+            return
+        
+        try:
+            cwd = os.getcwd()
+            os.chdir(os.path.expanduser(self.uri))
+        
+            # execute prebuild step
+            if os.path.exists(os.path.join('pkg', 'prebuild')):
+                os.system(os.path.join('pkg', 'prebuild'))
+            
+            #execute postbuild command
+            if os.path.exists(os.path.join('pkg', 'prebuild')):
+                os.system(os.path.join('pkg', 'postbuild'))
+        except Exception as e:
+            os.chdir(cwd)
+            print_stack()
+            log.error(f"{e}")
+            raise RepositoryException("Build failed for '{module['name']}' from '{self.name}'")
+
+    def package(self, module, config):
+        pass
+    
+    def install(self, module, config, link=False, force=False):
+        module_source = None
+        install_name = f"{module['name']}@{module['version']}"
+        install_path = 'dist'
+        
+        # check if component exists
+        try:
+            if os.path.exists(os.path.join(install_path, install_name)):
+                if force:
+                    # remove component prior to reinstall
+                    shutil.rmtree(os.path.join(install_path, install_name))
+                else:
+                    return
+        except Exception as e:
+            print_stack()
+            log.error(f"{e}")
+            raise RepositoryException("Install failed for '{module['name']}' from '{self.name}'")
+        
+        if self.type=='dev':
+            module_path = self.uri
+            module_source = os.path.expanduser(module_path)
+            # build the package prior to install it
+            self.build(module, config)
+        else:
+            link = False
+            module_path = os.path.join(self.uri, module['info']['path'])
+            
+            # check if module exist in repo
+            if os.path.exists(module_path):
+                raise RepositoryException(f"Component '{module['name']}' missing in repository '{self.name}'")
+            # TODO
+            # uncompress module
+            
+        if module_source is None:
+            raise RepositoryException(f"Install failed for '{module['name']}' from '{self.name}'")
+        
+        # read component 
+        config = ComponentConfig(config, os.path.join(module_source, "army.toml"))
+        
+        # get files to install
+        includes = config.includes()
+        
+        try:
+            if os.path.exists(os.path.join(install_path, install_name))==False:
+                os.makedirs(os.path.join(install_path, install_name))
+                
+            for include in includes:
+                if link:
+                    os.symlink(os.path.join(module_path, include), os.path.join(install_path, install_name, include))
+                else:
+                    shutil.copytree(os.path.join(module_path, include), os.path.join(install_path, install_name, include))
+        except Exception as e:
+            print_stack()
+            log.error(f"{e}")
+            raise RepositoryException("Install failed for '{module['name']}' from '{self.name}'")

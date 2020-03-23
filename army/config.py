@@ -118,3 +118,64 @@ class ProjectConfig(Config):
         if packaging_section and 'include' in packaging_section:
             return packaging_section['include']
         return []
+    
+    def dependencies(self):
+        res = []
+        project = self.config['project']
+        if 'dependencies' in project:
+            for dependency in project['dependencies']:
+                res.append(dependency)
+        if 'target' in self.config:
+            for t in self.config['target']:
+                target = self.config['target'][t]
+                if 'dependencies' in target:
+                    for dependency in target['dependencies']:
+                        res.append(dependency)
+        return res
+    
+    
+    def dev_dependencies(self):
+        res = []
+        project = self.config['project']
+        if 'dev-dependencies' in project:
+            for dependency in project['dev-dependencies']:
+                res.append(dependency)
+        if 'target' in self.config:
+            for t in self.config['target']:
+                target = self.config['target'][t]
+                if 'dev-dependencies' in target:
+                    for dependency in target['dev-dependencies']:
+                        res.append(dependency)
+        return res
+
+    def plugins(self):
+        res = []
+        project = self.config['project']
+        if 'plugin' in self.config:
+            for plugin in self.config['plugin']:
+                if 'version' in self.config['plugin'][plugin]:
+                    plugin = f"{plugin}-plugin:{self.config['plugin'][plugin]['version']}"
+                res.append(plugin)
+        return res
+
+class ComponentConfig(ProjectConfig):
+
+    def __init__(self, parent, file):
+        super(ComponentConfig, self).__init__(parent, file)
+
+    def includes(self):
+        if 'packaging' not in self.config:
+            return []
+        packaging = self.config['packaging']
+        if 'include' in packaging:
+            return packaging['include']
+        return []
+    
+    def excludes(self):
+        if 'packaging' not in self.config:
+            return []
+        packaging = self.config['packaging']
+        if 'exclude' in packaging:
+            return packaging['exclude']
+        return []
+    

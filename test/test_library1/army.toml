@@ -2,7 +2,7 @@
 	type = "library"
 	name = "library1"
 	description = "library description"
-	version = "0.0.1" 
+	version = "1.0.1" 
 	
 	dependencies = [
 	]

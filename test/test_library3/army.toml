@@ -2,9 +2,10 @@
 	type = "library"
 	name = "library3"
 	description = "library description"
-	version = "0.0.1" 
+	version = "1.0.0" 
 
 dependencies = [
+	"library2"
 ]
 
 arch = [

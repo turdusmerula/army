@@ -34,12 +34,13 @@ def project_search(args, config, **kwargs):
     for r in repositories:
         repo_config = r['config']
         repo = r['repo']
-        modules = repo.search(name, [])
+        modules = repo.search(name)
         if len(modules)>0:
             res[repo] = modules
              
     if len(res)==0:
         print(f'No matches found for "{name}"')
+        return
 
     column_repo = ['repository']
     column_module = ['module']
