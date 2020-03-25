@@ -9,7 +9,7 @@ import urllib
 from log import log
 from debugtools import print_stack
 from version import Version
-from config import ComponentConfig
+from config import load_module
 
 # type of repositories
 #  - http: indexed repository with versioned army packages
@@ -105,19 +105,28 @@ class Repository():
         try:
             uri = os.path.expanduser(self.uri)
             if os.path.exists(uri)==False:
-                raise RepositoryException(f"repository '{self.name}' does not exist")
+                log.warning(f"repository '{self.name}' does not exist")
+                return 
             
             if os.path.exists(os.path.join(uri, 'army.toml')):
                 # found a dev repository
                 self.type = 'dev'
                 project = toml.load(os.path.join(os.path.join(uri, 'army.toml')))
                 self.modules = {}
-                self.modules[project['project']['name']] = {
+                module = {
                     'dev': {
                         'type': project['project']['type'],
                         'description': project['project']['description']
                     }
                 }
+                if 'dependencies' in project['project']:
+                    module['dev']['dependencies'] = project['project']['dependencies']
+                if 'dev-dependencies' in project['project']:
+                    module['dev']['dev-dependencies'] = project['project']['dev-dependencies']
+                if 'arch' in project['project']:
+                    module['dev']['arch'] = project['project']['arch']
+                    
+                self.modules[project['project']['name']] = module
                 log.info(f"Loaded repository: local dev '{self.uri}'")
     
             elif os.path.exists(os.path.join(uri, 'index.toml')):
@@ -127,6 +136,9 @@ class Repository():
                 log.info(f"Loaded repository: local versioned '{self.uri}'")
                 
                 # TODO check file
+                log.error("Not implemented yet")
+                print_stack()
+                exit(1)
             else:
                 raise RepositoryException(f"repository '{self.uri}' is not valid")
         except Exception as e:
@@ -191,6 +203,8 @@ class Repository():
             # ignore this step
             return
         
+        log.info(f"build module '{module['name']}'")
+        
         try:
             cwd = os.getcwd()
             os.chdir(os.path.expanduser(self.uri))
@@ -200,8 +214,10 @@ class Repository():
                 os.system(os.path.join('pkg', 'prebuild'))
             
             #execute postbuild command
-            if os.path.exists(os.path.join('pkg', 'prebuild')):
+            if os.path.exists(os.path.join('pkg', 'postbuild')):
                 os.system(os.path.join('pkg', 'postbuild'))
+            
+            os.chdir(cwd)
         except Exception as e:
             os.chdir(cwd)
             print_stack()
@@ -216,13 +232,17 @@ class Repository():
         install_name = f"{module['name']}@{module['version']}"
         install_path = 'dist'
         
+        log.info(f"install module '{install_name}'")
+        
         # check if component exists
         try:
             if os.path.exists(os.path.join(install_path, install_name)):
                 if force:
                     # remove component prior to reinstall
+                    log.info(f"remove module '{install_name}'")
                     shutil.rmtree(os.path.join(install_path, install_name))
                 else:
+                    log.info(f"module '{install_name}' already installed")
                     return
         except Exception as e:
             print_stack()
@@ -230,8 +250,8 @@ class Repository():
             raise RepositoryException("Install failed for '{module['name']}' from '{self.name}'")
         
         if self.type=='dev':
-            module_path = self.uri
-            module_source = os.path.expanduser(module_path)
+            module_path = os.path.expanduser(self.uri)
+            module_source = module_path
             # build the package prior to install it
             self.build(module, config)
         else:
@@ -243,26 +263,51 @@ class Repository():
                 raise RepositoryException(f"Component '{module['name']}' missing in repository '{self.name}'")
             # TODO
             # uncompress module
+            log.error("Not implemented yet")
+            print_stack()
+            exit(1)
             
         if module_source is None:
             raise RepositoryException(f"Install failed for '{module['name']}' from '{self.name}'")
         
         # read component 
-        config = ComponentConfig(config, os.path.join(module_source, "army.toml"))
+        config = load_module(config, module_source)
         
         # get files to install
         includes = config.includes()
+        if os.path.exists(os.path.join(module_path, 'pkg')):
+            includes.append('pkg')
+        includes.append('army.toml')
         
         try:
-            if os.path.exists(os.path.join(install_path, install_name))==False:
-                os.makedirs(os.path.join(install_path, install_name))
-                
+            dest_path = os.path.join(install_path, install_name)
+            if os.path.exists(dest_path)==False:
+                os.makedirs(dest_path)
+            
+            # execute preinstall step
+            if os.path.exists(os.path.join(module_path, 'pkg', 'preinstall')):
+                os.system(os.path.join(module_path, 'pkg', 'preinstall'))
+            
             for include in includes:
                 if link:
-                    os.symlink(os.path.join(module_path, include), os.path.join(install_path, install_name, include))
+                    os.symlink(os.path.join(module_path, include), os.path.join(dest_path, include))
                 else:
-                    shutil.copytree(os.path.join(module_path, include), os.path.join(install_path, install_name, include))
+                    if os.path.isfile(os.path.join(module_path, include)):
+                        shutil.copy(os.path.join(module_path, include), os.path.join(dest_path, include))
+                    else:
+                        shutil.copytree(os.path.join(module_path, include), os.path.join(dest_path, include))
+
+            #execute postinstall command
+            if os.path.exists(os.path.join(dest_path, 'pkg', 'postinstall')):
+                os.system(os.path.join(dest_path, 'pkg', 'postinstall'))
+
+            if os.path.exists(os.path.join(dest_path, 'pkg')):
+                if link:
+                    os.remove(os.path.join(dest_path, 'pkg'))
+                else:
+                    shutil.rmtree(os.path.join(dest_path, 'pkg'))
+            
         except Exception as e:
             print_stack()
             log.error(f"{e}")
-            raise RepositoryException("Install failed for '{module['name']}' from '{self.name}'")
+            raise RepositoryException(f"Install failed for '{module['name']}' from '{self.name}'")

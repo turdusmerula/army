@@ -8,8 +8,9 @@ import os
 def init_parser(parentparser, config):
     parser = parentparser.add_parser('install', help='Install module')
     parser.add_default_args()
-    parser.add_argument('-l', '--link', action='store_true', help='Link files for dev libraries', default=False)
-    parser.add_argument('-g', '--global', action='store_true', help='Install library in user space', default=False)
+    parser.add_argument('-l', '--link', action='store_true', help='Link files for dev module', default=False)
+    parser.add_argument('-g', '--global', action='store_true', help='Install module in user space', default=False)
+    parser.add_argument('-r', '--reinstall', action='store_true', help='Force reinstall module if alredy exists', default=False)
     parser.add_argument('NAME', nargs='*', help='Module names', default=[])
     parser.set_defaults(func=project_install)
 
@@ -29,8 +30,6 @@ def project_install(args, config, **kwargs):
     
     modules = args.NAME
     if len(modules)==0:
-        print(config.config)
-        
         # find project dependencies
         plugins = config.plugins()
         log.debug(f"plugins: {plugins}")
@@ -53,12 +52,14 @@ def project_install(args, config, **kwargs):
     if args.link:
         link = True
         
-    for module in modules:
-        install_module(module, config, repositories, path, link)
-    
-def install_module(module, config, repositories, dest_path, link=False):
-    print(f"install {module}")
+    force = False
+    if args.reinstall:
+        force = True
 
+    for module in modules:
+        install_module(module, config, repositories, path, link, force)
+    
+def install_module(module, config, repositories, dest_path, link=False, force=False):
     modules = []
     # search for module in repositories
     for r in repositories:
@@ -79,22 +80,19 @@ def install_module(module, config, repositories, dest_path, link=False):
         else:
             if Version(install['version'])>Version(module['version']):
                 install = module
-            
+    log.debug(install)
+    
     # install dependencies
     if 'dependencies' in install['info']:
         for dependency in install['info']['dependencies']:
-            install_module(dependency, config, repositories, dest_path, link)
-    
-    print(f"+++ {install}")
-    # check if module already installed
-    module_folder = f"{install['name']}@{install['version']}"
-    if os.path.exists(os.path.join(module_folder)):
-        log.info(f"module '{module_folder}' already installed")
-    else:
-        pass
+            install_module(dependency, config, repositories, dest_path, link, force)
+    if 'dev-dependencies' in install['info']:
+        for dependency in install['info']['dev-dependencies']:
+            install_module(dependency, config, repositories, dest_path, link, force)
     
     try:
-        install['repository'].install(install, config, link)
+        install['repository'].install(install, config, link, force)
+        print(f"installed '{module['name']}:{module['version']}'")
     except Exception as e:
         print(f"army: {e}")
         exit(1)

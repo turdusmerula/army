@@ -4,9 +4,11 @@ army/__init__.py
 army/army.py
 army/config.py
 army/debugtools.py
+army/dependency.py
 army/extargparse.py
 army/log.py
 army/package.py
+army/plugin.py
 army/repository.py
 army/template.py
 army/version.py
@@ -25,13 +27,10 @@ army/commands/project.py
 army/commands/__pycache__/__init__.cpython-38.pyc
 army/commands/__pycache__/project.cpython-38.pyc
 army/commands/board_commands/create.py
-army/commands/build_commands/build.py
-army/commands/build_commands/clean.py
 army/commands/build_commands/init.py
 army/commands/build_commands/install.py
 army/commands/build_commands/package.py
 army/commands/build_commands/publish.py
-army/commands/build_commands/rebuild.py
 army/commands/build_commands/search.py
 army/commands/build_commands/tag.py
 army/commands/build_commands/update.py

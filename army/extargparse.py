@@ -21,7 +21,8 @@ def add_method(cls):
 
 
 class _PseudoGroup(Action):
-    def __init__(self, container, title):
+    def __init__(self, container, title, id):
+        self.id = id
         sup = super(_PseudoGroup, self)
         sup.__init__(option_strings=[], dest=title)
         self.container = container
@@ -38,9 +39,9 @@ class _PseudoGroup(Action):
     def _get_subactions(self):
         return self._choices_actions
 
-    def add_parser_group(self, title):
+    def add_parser_group(self, title, id):
         # the formatter can handle recursive subgroups
-        grp = _PseudoGroup(self, title)
+        grp = _PseudoGroup(self, title, id)
         self._choices_actions.append(grp)
         return grp
 
@@ -61,8 +62,9 @@ class _PseudoGroup(Action):
 
 # add method to class _SubParsersAction without inheriting it, pretty nasty but it works
 @add_method(_SubParsersAction)
-def add_parser_group(self, title):
-    grp = _PseudoGroup(self, title)
+def add_parser_group(self, title, id=''):
+    self.id = id
+    grp = _PseudoGroup(self, title, id)
     self._choices_actions.append(Action(option_strings=[], dest=''))
     self._choices_actions.append(grp)
     return grp
@@ -91,3 +93,4 @@ class ArgumentParser(argparse.ArgumentParser):
             print("Logging level debug")
             log.setLevel('DEBUG')
     
+#     def get_subparser(self):

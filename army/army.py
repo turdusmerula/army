@@ -10,8 +10,10 @@ import commands.build
 # import commands.project
 # import commands.packaging
 # import commands.dependencies
-from config import load_configuration
+from config import load_configuration, load_project
+from plugin import load_plugin
 from log import log
+from debugtools import print_stack
 
 # TODO add autocomplete https://kislyuk.github.io/argcomplete/
 
@@ -114,6 +116,19 @@ def main():
     # load commands
     commands.build.init_parser(subparser, config)
     
+    # load plugins
+    try:
+        project_config = load_project(config)
+        plugins = project_config.plugins()
+        for plugin in plugins:
+            try:
+                load_plugin(plugin, config, subparser)
+            except Exception as e:
+                print_stack()
+                log.warn(f"{e}")
+    except Exception as e:
+        pass
+
     # parse command line
     parser.parse_default_args()
     args = parser.parse_args()

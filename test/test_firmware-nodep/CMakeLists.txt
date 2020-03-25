@@ -1,29 +1,12 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.16)
 
 set(PROJECT_PATH "$ENV{PROJECT_PATH}") 
-
-set(board "$ENV{board}") 
-set(BOARD_PATH "${PROJECT_PATH}/board/${board}") 
-set(TOOLCHAIN_PATH "${BOARD_PATH}/toolchain") 
-
-# unset to disable freertos dynamic memory
-set(HEAP_MODEL 1)
 
 # import helpers
 include(${TOOLCHAIN_PATH}/cmake/helpers.cmake)
 
-# Toolchain
-include(${TOOLCHAIN_PATH}/cmake/core-${DEVICE}.cmake)
-include(${BOARD_PATH}/cmake/board.cmake)
-include(${TOOLCHAIN_PATH}/cmake/freertos-samd21.cmake)
-include(${TOOLCHAIN_PATH}/cmake/print.cmake)
-include(${TOOLCHAIN_PATH}/cmake/stream.cmake)
-include(${TOOLCHAIN_PATH}/cmake/debug-samd21.cmake)
-include(${TOOLCHAIN_PATH}/cmake/display-ssd1306.cmake)
-include(${TOOLCHAIN_PATH}/cmake/lis3dh.cmake)
-include(${TOOLCHAIN_PATH}/cmake/ledpin-samd21.cmake)
-include(${TOOLCHAIN_PATH}/cmake/gps-neo.cmake)
-include(${TOOLCHAIN_PATH}/cmake/sigfox-sfm.cmake)
+# libraries
+
 
 # show informations about includes
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -H")

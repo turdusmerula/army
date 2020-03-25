@@ -8,7 +8,7 @@ import commands.build_commands.install
 import commands.build_commands.search
 
 def init_parser(parentparser, config):
-    group = parentparser.add_parser_group(title='Build commands:')
+    group = parentparser.add_parser_group(title='Build commands:', id='build')
 
     # init sub parsers
 #     commands.build_commands.build.init_parser(group, config)

@@ -50,7 +50,6 @@ class Config():
         pass
 
 
-# Project configuration: .army/army.toml
 def load_project(config):
 #     path = os.path.abspath(os.getcwd())
 #     user_path = os.path.expanduser('~')
@@ -84,6 +83,9 @@ class ProjectConfig(Config):
         super(ProjectConfig, self).check_config()
         #TODO
 
+    def output_path(self):
+        return 'output'
+    
     def project_section(self):
         if 'project' in self.config:
             return self.config['project']
@@ -158,6 +160,23 @@ class ProjectConfig(Config):
                 res.append(plugin)
         return res
 
+    def targets(self):
+        res = []
+        if 'target' in self.config:
+            return self.config['target']
+        return res
+    
+
+def load_module(config, module_path):
+    file = 'army.toml'
+    if os.path.exists(os.path.join(module_path, file))==False:
+        raise ConfigException("Not a module: 'army.toml' not found")
+    
+    config = ComponentConfig(config, os.path.join(module_path, file))
+    config.load()
+    
+    return config
+
 class ComponentConfig(ProjectConfig):
 
     def __init__(self, parent, file):
@@ -178,4 +197,21 @@ class ComponentConfig(ProjectConfig):
         if 'exclude' in packaging:
             return packaging['exclude']
         return []
+
+    def arch(self):
+        res = []
+        project = self.config['project']
+        if 'arch' in project:
+            return self.config['project']['arch']
+        return res
+    
+class PluginConfig(Config):
+
+    def __init__(self, parent, file):
+        super(PluginConfig, self).__init__(parent, file)
+
+    def entrypoint(self):
+        if 'entrypoint' in self.config['project']:
+            return self.config['project']['entrypoint']
+        return 'plugin/plugin.py'
     

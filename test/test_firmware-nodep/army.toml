@@ -2,14 +2,14 @@
 	name = "test-firmware-nodep"
 	description = "project without dependencies"
 	version = "1.0.0" 
-	
-# versioned repository
-[repo.toolchain]
-	uri = "../test_repository"
 
-# dev repositories
-[repo.gcc-arm-none-eabi]
-	uri = "~/git/gcc-arm-none-eabi-plugin"
+	dependencies = [
+	]
+
+	dev-dependencies = [
+		"core-samd21g18a:dev",
+	]
+	
 
 [plugin.gcc-arm-none-eabi]
 	version = "dev"
@@ -17,6 +17,6 @@
 
 [target.board-v1]
 	arch = "samd21g18a"
-	
+
 [target.board-v2]
 	arch = "samd21g18a"
