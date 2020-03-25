@@ -51,6 +51,7 @@ def load_dependencies(config, target):
             
             loaded.append(dependency)
 
+    res.reverse()
     return res
 
 def load_dev_dependencies(config, target):
@@ -80,7 +81,8 @@ def load_dev_dependencies(config, target):
             dependencies += module_dependencies
             
             loaded.append(dependency)
-
+    
+    res.reverse()
     return res
 
 class DependencyException(Exception):

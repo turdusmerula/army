@@ -205,6 +205,13 @@ class ComponentConfig(ProjectConfig):
             return self.config['project']['arch']
         return res
     
+    def cmake(self):
+        res = None
+        project = self.config['project']
+        if 'cmake' in project:
+            return self.config['project']['cmake']
+        return res
+        
 class PluginConfig(Config):
 
     def __init__(self, parent, file):

@@ -10,6 +10,7 @@ from log import log
 from debugtools import print_stack
 from version import Version
 from config import load_module
+import subprocess
 
 # type of repositories
 #  - http: indexed repository with versioned army packages
@@ -211,18 +212,18 @@ class Repository():
         
             # execute prebuild step
             if os.path.exists(os.path.join('pkg', 'prebuild')):
-                os.system(os.path.join('pkg', 'prebuild'))
+                subprocess.check_call([os.path.join('pkg', 'prebuild')])
             
             #execute postbuild command
             if os.path.exists(os.path.join('pkg', 'postbuild')):
-                os.system(os.path.join('pkg', 'postbuild'))
+                subprocess.check_call([os.path.join('pkg', 'postbuild')])
             
             os.chdir(cwd)
         except Exception as e:
             os.chdir(cwd)
             print_stack()
             log.error(f"{e}")
-            raise RepositoryException("Build failed for '{module['name']}' from '{self.name}'")
+            raise RepositoryException(f"Build failed for '{module['name']}' from repository '{self.name}'")
 
     def package(self, module, config):
         pass
@@ -286,7 +287,7 @@ class Repository():
             
             # execute preinstall step
             if os.path.exists(os.path.join(module_path, 'pkg', 'preinstall')):
-                os.system(os.path.join(module_path, 'pkg', 'preinstall'))
+                subprocess.check_call([os.path.join(module_path, 'pkg', 'preinstall')])
             
             for include in includes:
                 if link:
@@ -299,7 +300,7 @@ class Repository():
 
             #execute postinstall command
             if os.path.exists(os.path.join(dest_path, 'pkg', 'postinstall')):
-                os.system(os.path.join(dest_path, 'pkg', 'postinstall'))
+                subprocess.check_call([os.path.join(dest_path, 'pkg', 'postinstall')])
 
             if os.path.exists(os.path.join(dest_path, 'pkg')):
                 if link:
