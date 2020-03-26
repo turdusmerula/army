@@ -69,6 +69,38 @@ def add_parser_group(self, title, id=''):
     self._choices_actions.append(grp)
     return grp
 
+@add_method(_SubParsersAction)
+def __call__(self, parser, namespace, values, option_string=None):
+    parser_name = values[0]
+    arg_strings = values[1:]
+
+    # set the parser name if requested
+    if self.dest is not argparse.SUPPRESS:
+        setattr(namespace, self.dest, parser_name)
+
+    # select the parser
+    try:
+        parser = self._name_parser_map[parser_name]
+    except KeyError:
+        args = {'parser_name': parser_name,
+                'choices': ', '.join(self._name_parser_map)}
+        msg = _('unknown parser %(parser_name)r (choices: %(choices)s)') % args
+        raise argparse.ArgumentError(self, msg)
+
+    # CHANGES
+    # parse all the remaining options into a new namespace
+    # store any unrecognized options on the main namespace, so that the top
+    # level parser can decide what to do with them
+    newspace = argparse.Namespace()
+    newspace, arg_strings = parser.parse_known_args(arg_strings, newspace)
+    setattr(namespace, 'subspace', newspace) # is there a better 'dest'?
+
+    if arg_strings:
+        vars(namespace).setdefault(argparse._UNRECOGNIZED_ARGS_ATTR, [])
+        getattr(namespace, argparse._UNRECOGNIZED_ARGS_ATTR).extend(arg_strings)
+
+#argparse._SubParsersAction.__call__ = mycall
+
 class ArgumentParser(argparse.ArgumentParser):    
 
     def error(self, message):

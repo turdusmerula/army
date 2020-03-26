@@ -29,12 +29,19 @@ class Config():
         self.parent = parent
         self.config = {}
         self.file = file
-       
-    def is_verbose(self):
+    
+    def command_target(self):
+        if 'command_target' in self.config:
+            return self.config['command_target']
+        if self.parent:
+            return self.parent.command_target()
+        return None
+
+    def verbose(self):
         if 'verbose' in self.config:
             return self.config['verbose']
         if self.parent:
-            return self.parent.is_verbose()
+            return self.parent.verbose()
         return False
     
     def load(self):

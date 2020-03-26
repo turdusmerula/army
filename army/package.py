@@ -21,8 +21,6 @@ class Package():
         self.packaging_path  =  tempfile.TemporaryDirectory()
         self.package_name = name
         
-        print(f"{self.packaging_path.name}")
-        
     def add_files(self, path):
         files = glob.glob(path)
         if len(files)==0:

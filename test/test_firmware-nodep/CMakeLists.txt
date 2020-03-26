@@ -6,6 +6,12 @@ set(PROJECT_PATH "$ENV{PROJECT_PATH}")
 include(${TOOLCHAIN_PATH}/cmake/helpers.cmake)
 
 # libraries
+set(LIBRARY_PATH "/home/seb/git/army/test/test_firmware-nodep/dist/cmsis@dev")
+include(/home/seb/git/army/test/test_firmware-nodep/dist/cmsis@dev/cmake/cmsis.cmake)
+set(LIBRARY_PATH "/home/seb/git/army/test/test_firmware-nodep/dist/core-samd21@dev")
+include(/home/seb/git/army/test/test_firmware-nodep/dist/core-samd21@dev/cmake/core-samd21.cmake)
+set(LIBRARY_PATH "/home/seb/git/army/test/test_firmware-nodep/dist/core-samd21g18a@dev")
+include(/home/seb/git/army/test/test_firmware-nodep/dist/core-samd21g18a@dev/cmake/core-samd21g18a.cmake)
 
 
 # show informations about includes

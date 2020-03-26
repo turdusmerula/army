@@ -14,6 +14,7 @@ from config import load_configuration, load_project
 from plugin import load_plugin
 from log import log
 from debugtools import print_stack
+from command import Command
 
 # TODO add autocomplete https://kislyuk.github.io/argcomplete/
 
@@ -92,26 +93,22 @@ def main():
 #     console    Open console on jtag interface
 # """)
 
-    # parse command line for logging arguments
+    # parse command line for logging arguments, other arguments are ignored during this phase
+    # id logging arguments are present then it can activated prior to any action
     preparser = extargparse.ArgumentParser(prog='army', add_help=False)
     preparser.add_default_args()
-    # check if command has logging arguments, then it can activate debug mode early
     preparser.parse_default_args()
     
     # create the top-level parser
     parser.add_argument('--version', action='store_true', help='return version')
+    parser.add_argument('-t', '--target', help='select target', default=None)
     parser.add_default_args()
 
     config = load_configuration() 
 
     # add army default commands
+    Command.instances.clear()
     subparser = parser.add_subparsers(metavar='COMMAND', title=None, description=None, help=None, parser_class=extargparse.ArgumentParser, required=True)
-
-    # load default plugins
-    # TODO
-#     commands.project.init_parser(subparser, config)
-#     commands.packaging.init_parser(subparser, config)
-#     commands.dependencies.init_parser(subparser, config)
 
     # load commands
     commands.build.init_parser(subparser, config)
@@ -135,14 +132,19 @@ def main():
 
     # TODO: version
     
-    # load plugins
-    # Project plugins:
-    # User plugins:
-    # Global plugins:
+    if args.target is not None:
+        config.config['command_target'] = args.target
 
-    # call asked command
-    args.func(args, config)
-
+    # call asked commands
+    while args is not None:
+        if hasattr(args, "func"):
+            args.func(args, config)
+        if hasattr(args, "subspace"):
+            args = args.subspace
+        else:
+            args = None
+        
+    
 if __name__ == "__main__":
 
     main()

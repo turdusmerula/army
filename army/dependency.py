@@ -5,6 +5,7 @@ from log import log
 from debugtools import print_stack
 from version import Version
 from config import load_module
+from debugtools import print_stack
 
 def search_module(module):
     if ':' in module:
@@ -31,6 +32,10 @@ def search_module(module):
 def load_dependencies(config, target):
     res = []
 
+    print_stack()
+    raise DependencyException("Not implemented yet")
+    exit(1)
+    
     loaded = []
     
     dependencies = config.dependencies()
