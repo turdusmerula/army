@@ -56,7 +56,10 @@ class Config():
     def check_config(self):
         pass
 
-
+    def write(self, path):
+        with open(path, "w") as file:
+            toml.dump(self.config, file)
+        
 def load_project(config):
 #     path = os.path.abspath(os.getcwd())
 #     user_path = os.path.expanduser('~')
