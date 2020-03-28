@@ -176,6 +176,12 @@ class ProjectConfig(Config):
             return self.config['target']
         return res
     
+    def default_target(self):
+        project = self.config['project']
+        if 'default-target' in project:
+            return project['default-target']
+        return None
+        
 
 def load_module(config, module_path):
     file = 'army.toml'

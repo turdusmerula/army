@@ -290,8 +290,11 @@ class Repository():
                 subprocess.check_call([os.path.join(module_path, 'pkg', 'preinstall')])
             
             for include in includes:
+                if os.path.exists(os.path.abspath(os.path.join(module_path, include)))==False:
+                    raise Exception(f"file not found {os.path.join(module_path, include)}")
+                
                 if link:
-                    os.symlink(os.path.join(module_path, include), os.path.join(dest_path, include))
+                    os.symlink(os.path.abspath(os.path.join(module_path, include)), os.path.join(dest_path, include))
                 else:
                     if os.path.isfile(os.path.join(module_path, include)):
                         shutil.copy(os.path.join(module_path, include), os.path.join(dest_path, include))
