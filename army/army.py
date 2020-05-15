@@ -6,15 +6,10 @@ import pkg_resources
 sys.path.append(os.path.dirname(pkg_resources.resource_filename(__name__, "army.py")))
 import extargparse
 import argparse
-import commands.build
-# import commands.project
-# import commands.packaging
-# import commands.dependencies
 from config import load_configuration, load_project
-from plugin import load_plugin
 from log import log
 from debugtools import print_stack
-from command import Command
+from army.api.command import Command, CommandGroup
 
 # TODO add autocomplete https://kislyuk.github.io/argcomplete/
 
@@ -63,78 +58,60 @@ from command import Command
 
 # library project structure:
 
-parser = extargparse.ArgumentParser(prog='army')
-
+# create the top-level parser
+# this parser handles top level 
+root_parser = extargparse.ArgumentParser(prog='army')
 
 def main():
-# Management commands:
-#     project    Manage project
-#     board      Manage boards
-#     
-# Remote package commands:
-#     search     Search a package on repositories
-#     update     Update available package list
-#     install    Install package
-#     provides   Search for a file inside packages
-#     
-# Installed package commands:
-#     list       List installed packages
-#     remove     Uninstall package
-#     
-# Packaging commands:
-#     package    Create package for the current board
-#     publish    Publish package on repo
-#     tag        Tag version
-#     
-# Build commands:
-#     build      Build project
-#     clean      Clean project
-#     flash      Flash project on board
-#     console    Open console on jtag interface
-# """)
 
-    # parse command line for logging arguments, other arguments are ignored during this phase
-    # id logging arguments are present then it can activated prior to any action
+    # temporary parser used parse command line for logging arguments, other arguments are ignored during this phase
+    # if logging arguments are present they can be activated prior to any action
     preparser = extargparse.ArgumentParser(prog='army', add_help=False)
     preparser.add_default_args()
     preparser.parse_default_args()
     
-    # create the top-level parser
-    parser.add_argument('--version', action='store_true', help='return version')
-    parser.add_argument('-t', '--target', help='select target', default=None)
-    parser.add_default_args()
-
+    # load army configuration files
     config = load_configuration() 
 
-    # add army default commands
-    Command.instances.clear()
-    subparser = parser.add_subparsers(metavar='COMMAND', title=None, description=None, help=None, parser_class=extargparse.ArgumentParser, required=True)
+    # add root_parser options
+    root_parser.add_argument('--version', action='store_true', help='return version')
+    root_parser.add_argument('-t', '--target', help='select target', default=None)
+    root_parser.add_default_args()
 
-    # load commands
-    commands.build.init_parser(subparser, config)
+    # init command parser group
+    command_parser = root_parser.add_subparsers(metavar='COMMAND', title=None, description=None, help=None, parser_class=extargparse.ArgumentParser, required=True)
+    CommandGroup.init_root("aaa", "aaa", command_parser)
+    root = CommandGroup.root()
+
+#     # create default subgroups
+#     root.add_subgroup(CommandGroup("package", "Package commands"))
+#     root.add_subgroup(CommandGroup("build", "Build commands"))
     
-    # load plugins
-    try:
-        project_config = load_project(config)
-        plugins = project_config.plugins()
-        for plugin in plugins:
-            try:
-                load_plugin(plugin, config, subparser)
-            except Exception as e:
-                print_stack()
-                log.warn(f"{e}")
-    except Exception as e:
-        pass
-
+    # load internal plugins
+    import army.plugin.package
+    
+#     # load plugins
+#     try:
+#         project_config = load_project(config)
+#         plugins = project_config.plugins()
+#         for plugin in plugins:
+#             try:
+#                 load_plugin(plugin, config, subparser)
+#             except Exception as e:
+#                 print_stack()
+#                 log.warn(f"{e}")
+#     except Exception as e:
+#         pass
+# 
     # parse command line
-    parser.parse_default_args()
-    args = parser.parse_args()
+    root_parser.parse_default_args()
+    args = root_parser.parse_args()
 
-    # TODO: version
-    
+#     # TODO: version
+     
     if args.target is not None:
         config.config['command_target'] = args.target
-
+ 
     # call asked commands
     while args is not None:
         if hasattr(args, "func"):

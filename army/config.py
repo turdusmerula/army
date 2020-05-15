@@ -4,7 +4,7 @@ import sys
 from log import log
 from debugtools import print_stack
 
-# load army configuration files, each file supesedes the previous
+# load army configuration files, each file supersedes the previous
 # Global configuration: /etc/army/army.toml
 # User configuration: ~/.army/army.tom
 def load_configuration():
@@ -54,12 +54,14 @@ class Config():
                 raise ConfigException(f"{format(e)}")
 
     def check_config(self):
+        # TODO
         pass
 
     def write(self, path):
         with open(path, "w") as file:
             toml.dump(self.config, file)
-        
+
+
 def load_project(config):
 #     path = os.path.abspath(os.getcwd())
 #     user_path = os.path.expanduser('~')
@@ -182,6 +184,7 @@ class ProjectConfig(Config):
             return project['default-target']
         return None
         
+
 
 def load_module(config, module_path):
     file = 'army.toml'

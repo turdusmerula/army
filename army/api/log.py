@@ -5,3 +5,6 @@ logging.basicConfig(format=FORMAT)
 
 log = logging.getLogger('console')
 log.setLevel('WARNING') # default log mode warning
+
+# class ConfigLogLevel(object):
+#     def

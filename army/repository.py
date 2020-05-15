@@ -12,12 +12,6 @@ from version import Version
 from config import load_module
 import subprocess
 
-# type of repositories
-#  - http: indexed repository with versioned army packages
-#  - local repository: indexed repository with versioned army packages
-#  - remote git: allow to install pushed master/tagged version directly from git
-#  - local git: allow to install dev versions with symbolic links 
-
 
 # repository cache is stored in ~/.toml/cache
 def load_repository_cache(config):

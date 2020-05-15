@@ -1,4 +1,2 @@
-recursive-include army/commands *
-recursive-include army/library-template *
-recursive-include army/plugin-template *
-recursive-include army/firmware-template *
+recursive-include army/api *
+recursive-include army/plugin *

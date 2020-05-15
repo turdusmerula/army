@@ -1,0 +1,8 @@
+# verbosty level (default info):
+# debug
+# info
+# warning
+# error
+# critical
+vebose = "debug"
+

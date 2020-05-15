@@ -15,9 +15,9 @@ class Version():
         
         version = value
         
-        if value=='dev':
-            self.dev = True
-            return 
+#         if value=='dev':
+#             self.dev = True
+#             return 
         
         # extract build number
         if '-' in value:
@@ -47,61 +47,12 @@ class Version():
                 self.major = int(value)
             except Exception as e:
                 raise VersionException(f"Invalid version {version}")
-    
-#     # return -1 if self<version
-#     # return 0 if self==version
-#     # return 1 if self>version
-#     def compare(self, version):
-#         l = self
-#         r = version
-#         
-#         if l.dev and r.dev:
-#             return 0
-#         elif l.dev and not r.dev:
-#             return 1
-#         elif not l.dev and r.dev:
-#             return -1
-#         
-#         if l.major>r.major:
-#             return 1
-#         elif l.major<r.major:
-#             return -1
-#         
-#         lminor = l.minor
-#         if lminor is None:
-#             lminor = 0
-#         rminor = r.minor
-#         if rminor is None:
-#             rminor = 0
-#         if lminor>rminor:
-#             return 1
-#         elif lminor<rminor:
-#             return -1
-# 
-#         lrevision = l.revision
-#         if lrevision is None:
-#             lrevision = 0
-#         rrevision = r.revision
-#         if rrevision is None:
-#             rrevision = 0
-#         if lrevision>rrevision:
-#             return 1
-#         elif lrevision<rrevision:
-#             return -1
-# 
-#         if l.build or r.build:
-#             lbuild = l.build
-#             if lbuild is None:
-#                 lbuild = ''
-#             rbuild = r.build
-#             if rbuild is None:
-#                 rbuild = ''
-#             if lbuild>rbuild:
-#                 return 1
-#             elif lbuild<rbuild:
-#                 return -1
-#         
-#         return 0
+        
+        if self.build and ( self.major is None or self.minor is None or self.revision is None):
+            raise VersionException(f"Invalid version {version}")
+        elif self.build and self.build=="dev":
+            self.dev = True
+        
     def compare(self, version):
         l = [self.major, self.minor, self.revision, self.build]
         r = [version.major, version.minor, version.revision, version.build]
@@ -139,8 +90,6 @@ class Version():
         return res
     
     def __str__(self):
-        if self.dev:
-            return 'dev'
         version = f"{self.major}"
         if self.minor:
             version += f".{self.minor}"
