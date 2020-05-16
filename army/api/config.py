@@ -10,7 +10,7 @@ from army.api.debugtools import print_stack
 # @param parent parent configuration
 # @param prefix mainly used for unit tests purpose
 def load_configuration(parent=None, prefix="/"):
-    
+    i=0
     # load main config file
     config = ArmyConfigFile(parent=parent, file=os.path.join(prefix, 'etc/army/army.toml'))
     config.load()
@@ -20,14 +20,20 @@ def load_configuration(parent=None, prefix="/"):
     for f in os.listdir(path):
         if os.path.isfile(os.path.join(path, f)) and f.endswith(".toml"):
 #            config = ConfigRepository(parent=config, value=)
-            config = ArmyConfigFile(parent=config, file=os.path.join(path, f))
+            config = ConfigRepositoryFile(parent=config, file=os.path.join(path, f))
             config.load()
-    
+
     # load user config file
     config = ArmyConfigFile(parent=config, file=os.path.join(prefix, '~/.army/army.toml'))
     config.load()
     
     # load user repositories
+    path = os.path.join(prefix, '~/.army/repo.d')
+    for f in os.listdir(path):
+        if os.path.isfile(os.path.join(path, f)) and f.endswith(".toml"):
+#            config = ConfigRepository(parent=config, value=)
+            config = ConfigRepositoryFile(parent=config, file=os.path.join(path, f))
+            config.load()
 
 
     return config
@@ -38,21 +44,15 @@ class ConfigException(Exception):
     def __init__(self, message):
         self.message = message
 
-# Configuration base class
-class Config():
-    ITEM_TYPE=0
-    ITEM_DEFAULT_VALUE=1
 
-    def __init__(self, value=None, parent=None, fields=None):
+# Configuration base class
+class BaseConfig(object):
+
+    def __init__(self, value=None, parent=None):
+        super(BaseConfig, self).__init__()
+        
         self._parent = parent
         self._value = value
-        
-        # configuration fields
-        # key: field name
-        # value: [ <item class>, default value ]
-        self._fields = fields
-        
-        self.check() ;
         
     def parent(self):
         return self._parent 
@@ -61,6 +61,21 @@ class Config():
     def value(self):
         return self._value
 
+
+class Config(BaseConfig):
+    ITEM_TYPE=0
+    ITEM_DEFAULT_VALUE=1
+
+    def __init__(self, value=None, parent=None, fields=None):
+        super(Config, self).__init__(value=value, parent=parent)
+        
+        # configuration fields
+        # key: field name
+        # value: [ <item class>, default value ]
+        self._fields = fields
+        
+        self.check() ;
+        
     # check value content
     def check(self):
         if isinstance(self._value, dict):
@@ -75,10 +90,10 @@ class Config():
             if err:
                 raise ConfigException(err)
 
-    # load the configuration
-    # should be overriden if special thing needs to be done such as loading a file
-    def load(self):
-        pass
+    def get_fields(self):
+        if self._fields:
+            return self._fields
+        return {}
 
     def get_field(self, item):
         if self._fields and item in self._fields:
@@ -87,8 +102,11 @@ class Config():
             return self._parent.get_field(item)
         return None
     
-    # get subitem value
-    def get(self, item):
+    # @description get subitem value
+    # @param item name of the item to look for
+    # @param default when the item is not found, if True  return its default value, when False return None
+    def get(self, item, default=True):
+        # check that field exists somewhere in the configuration tree
         field = self.get_field(item)
         
         if field is None:
@@ -96,16 +114,28 @@ class Config():
     
         value = None
         if isinstance(self.value(), dict) and item in self.value():
+            # item exists in the current configuration
             # instantiate configuration item from loaded value
             value = self.value()[item]
+        elif self.parent() and self.parent().get_field(item) is None:
+            # item does not exists either in the parent
+            if default==True:
+                # set default value
+                value = field[self.ITEM_DEFAULT_VALUE]
+            else:
+                # no value
+                value = None
         elif self.parent():
-            # parent exists, ask item value to it
-            return self.parent().get(item)
-        else:
+            # parent exists and has the item
+            value = self.parent().get(item).value()
+
+        if value:
+            # we have a value
+            return field[self.ITEM_TYPE](value=value)
+        elif default==True:
             # item not found in herarchy, return default value
-            value = field[self.ITEM_DEFAULT_VALUE]
-    
-        return field[self.ITEM_TYPE](value=value)
+            return field[self.ITEM_TYPE](value=field[self.ITEM_DEFAULT_VALUE])
+        return None
 
     def set(self, item, value):
         field = self.get_field(item)
@@ -123,31 +153,31 @@ class Config():
         v = field[self.ITEM_TYPE](value=value)
         self._value[item] = v.value()
         
-    def expand(self):
+    def expand(self, default=True):
         res = None
         if self._fields:
             res = {}
         else:
             return self._value
         
-        if isinstance(self._value, dict):
-            for value in self._value:
-                res[value] = self._value[value]
+        if self.parent():
+            res = self.parent().expand(default)
         
-        for field in self._fields:
-            if field not in res:
-                res[field] = self.get(field).expand()
+        for item in self.get_fields():
+#            field = self.get_field(item)
+            value = self.get(item, default)
+            if value:
+                res[item] = value.expand()
 
         return res
-                
-        
+
     def __str__(self):
         return f"{self.value()}"
 
 
 class ConfigString(Config):
     def __init__(self, value=None, parent=None):
-        super(ConfigString, self).__init__(value, parent)
+        super(ConfigString, self).__init__(value=value, parent=parent)
     
     def check(self):
         if not isinstance(self.value(), str):
@@ -156,7 +186,7 @@ class ConfigString(Config):
 
 class ConfigInt(Config):
     def __init__(self, value=None, parent=None):
-        super(ConfigInt, self).__init__(value, parent)
+        super(ConfigInt, self).__init__(value=value, parent=parent)
 
     def check(self):
         if not isinstance(self.value(), int):
@@ -169,63 +199,195 @@ class ConfigInt(Config):
 class _ConfigDictIterator(object):
     def __init__(self, values):
         self._list = values
-        self._iter = iter(values)
-    
+        
+        if values.parent():
+            self._items = { **values.parent().value(), **values.value()}
+        self._iter = iter(self._items)
+     
     def __next__(self):
-        res = next(self._iter)
-        return res
+        return next(self._iter)
+#         return self._list.get_field()[ConfigDict.ITEM_TYPE](value=val)
+ 
 
+class ConfigDict(BaseConfig):
+    ITEM_TYPE=0
+    ITEM_DEFAULT_VALUE=1
 
-class ConfigDict(Config):
-    def __init__(self, value=None, parent=None, item=None):
-        super(ConfigDict, self).__init__(value, parent)
+    def __init__(self, value=None, parent=None, field=None):
+        super(ConfigDict, self).__init__(value=value, parent=parent)
 
-        self._item = item
+        # fields will contain only the type of dict items
+        self._field = field
 
+        self.check() ;
+ 
     def check(self):
+        if self._parent and not isinstance(self.parent(), ConfigDict):
+            raise ConfigException(f"'{self.parent()}': invalid parent type")
+        
         if not isinstance(self.value(), dict):
-            raise ConfigException(f"'{self.value()}': invalid value list")
+            raise ConfigException(f"'{self.value()}': invalid value dict")
+         
+    def get_field(self):
+        return self._field
     
-    def get(self, item):
-        field = self._item
+    def append(self, name, item):
+        # check that field exists somewhere in the configuration tree
+        field = self.get_field()
+        
+        if isinstance(item, type(field))==False:
+            raise ConfigException(f"{item}: invilad type")
+        
+        self.value()[name] = item.value()
+        
+    def expand(self):
+        res = None
+        if self._field:
+            res = {}
+        else:
+            return self._value
+        
+        for item in self:
+            res[item] = self[item].expand()
+        return res
+    
+    def __len__(self):
+        if self.parent():
+            return len({ **self.parent().value(), **self.value() })
+        return len(self.value())
+    
+    def __getitem__(self, name):
+        # check that field exists somewhere in the configuration tree
+        field = self.get_field()
         
         if field is None:
-            raise ConfigException(f"'{item}': dict type not defined")
-    
+            raise ConfigException(f"None type found")
+
         value = None
-        if isinstance(self.value(), dict) and item in self.value():
+        if self.value() and name in self.value():
+            # item exists in the current configuration
             # instantiate configuration item from loaded value
-            value = self.value()[item]
+            return field[self.ITEM_TYPE](value=self.value()[name])
         elif self.parent():
-            # parent exists, ask item value to it
-            return self.parent().get(item)
+            return self.parent()[name]
         else:
-            # item not found in herarchy, return default value
-            value = field[self.ITEM_DEFAULT_VALUE]
-    
-        return field[self.ITEM_TYPE](value=value)
-    
-    def count(self):
-        return len(self._value)
+            raise ConfigException(f"{name}: does not exists")
+            
+        return None
+
+    def __str__(self):
+        return f"{self.value()}"
 
     def __iter__(self):
-        return _ConfigDictIterator(self._value)
+        return _ConfigDictIterator(self)
 
 
+class _ConfigListIterator(object):
+    def __init__(self, list):
+        self._list = list
+#         self._field = field
+#         self._list = values
+        self._index = 0
+#         self._iter = iter(values)
+    
+    def __next__(self):
+        if self._index<len(self._list):
+            res = self._list[self._index]
+            self._index += 1
+            return res
+        raise StopIteration()
+    
+class ConfigList(BaseConfig):
+    ITEM_TYPE=0
+    ITEM_DEFAULT_VALUE=1
+
+    def __init__(self, value=None, parent=None, field=None):
+        super(ConfigList, self).__init__(value=value, parent=parent)
+
+        # fields will contain only the type of dict items
+        self._field = field
+
+        self.check() ;
+
+    def check(self):
+        if self._parent and not isinstance(self.parent(), ConfigList):
+            raise ConfigException(f"'{self.parent()}': invalid parent type")
+        
+        if not isinstance(self.value(), list):
+            raise ConfigException(f"'{self.value()}': invalid value list")
+
+    def get_field(self):
+        return self._field
+    
+    def append(self, item):
+        # check that field exists somewhere in the configuration tree
+        field = self.get_field()
+        
+        if isinstance(item, type(field))==False:
+            raise ConfigException(f"{item}: invilad type")
+        
+        self.value().append(item.value())
+        
+    def expand(self, default=True):
+        res = None
+        if self._field:
+            res = []
+        else:
+            return self._value
+        
+        for item in self:
+            res.append(item.expand())
+        return res
+    
+    def __len__(self):
+        res = len(self.value())
+        if self.parent():
+            res += len(self.parent())
+        return res 
+    
+    def __getitem__(self, index):
+        # check that field exists somewhere in the configuration tree
+        field = self.get_field()
+        
+        if field is None:
+            raise ConfigException(f"None type found")
+
+        if index<0 or index>=len(self):
+            raise ConfigException(f"{index}: out of bounds")
+            
+        value = None
+        if index<len(self.value()):
+            # item exists in the current configuration
+            # instantiate configuration item from loaded value
+            return field[self.ITEM_TYPE](value=self.value()[index])
+        elif self.parent():
+            pindex = index-len(self.value())
+            return self.parent()[pindex]
+
+        return None
+
+    def __str__(self):
+        return f"{self.value()}"
+
+    def __iter__(self):
+        return _ConfigListIterator(self)
+
+
+# TODO: create type ConfigEnum as base class
 class ConfigLogLevel(ConfigString):
     def __init__(self, value=None, parent=None):
-        super(ConfigLogLevel, self).__init__(value, parent)
+        super(ConfigLogLevel, self).__init__(value=value, parent=parent)
 
     def check(self):
         super(ConfigLogLevel, self).check() 
-        if self.value() not in {"debug", "info", "warning", "error", "critical"}:
+        if self._value not in {"debug", "info", "warning", "error", "critical"}:
             raise ConfigException(f"'{self.value()}': invalid value")
 
 
 class ArmyConfig(Config):
     def __init__(self, parent=None, fields=None):
         super(ArmyConfig, self).__init__(
-            parent,
+            parent=parent,
             fields={
                 'verbose': [ ConfigLogLevel, "error" ]
             }
@@ -235,7 +397,7 @@ class ArmyConfig(Config):
 class ArmyConfigFile(ArmyConfig):
     def __init__(self, file, parent=None):
         super(ArmyConfigFile, self).__init__(
-            parent,
+            parent=parent,
             fields={
             }
         )
@@ -273,11 +435,12 @@ class ConfigRepository(Config):
         )
     
 class ConfigRepositoryDict(ConfigDict):
+    
     def __init__(self, parent=None, value=None):
         super(ConfigRepositoryDict, self).__init__(
             parent=parent,
             value=value,
-            item=[ ConfigRepository, {} ]
+            field=[ ConfigRepository, {} ]
         )
 
 class ConfigRepositoryFile(Config):
@@ -286,7 +449,7 @@ class ConfigRepositoryFile(Config):
             parent=parent,
             value=value,
             fields={
-                "repo": [ ConfigRepositoryDict, {} ]
+                "repo": [ ConfigRepositoryList, [] ]
             }
         )
         self._file = file
@@ -298,12 +461,20 @@ class ConfigRepositoryFile(Config):
             config = {}
             try:
                 log.info(f"Load repository config '{self._file}'")
-                config = toml.load(file)
+                config_toml = toml.load(file)
                 log.debug(config)
             except Exception as e:
                 print_stack()
                 raise ConfigException(f"{format(e)}")
             
-            for item in config:
-                self.set(item, config[item])
+#             for item in config_toml:
+#                 if item=="repo":
+#                     # merge instead of replacing
+#                     for r in config_toml[item]:
+#                         repo = ConfigRepository(value={
+#                             'name:': 
+#                             })
+#                         self.get(item).append(config_toml[item])
+#                 else:
+#                     self.set(item, config_toml[item])
 

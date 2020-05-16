@@ -1,6 +1,7 @@
 from army.api.config import Config, ConfigException,  ConfigString, ConfigInt
 from army.api.log import log
 import os
+import sys
 import pkg_resources
 
 # get current file path to find ressource files
@@ -58,6 +59,7 @@ assert int(c2.get('value3'))== 10
 c3 = TestConfig(value={
     "value2": 2
     }, parent=c2)
+print(type(c3.get('value1')))
 assert str(c3.get('value1'))=='v2'
 assert int(c3.get('value2'))==2
 assert int(c3.get('value3'))==10
@@ -143,36 +145,82 @@ assert str(c8.get("value1"))=="a"
 ##############################
 # test army config files loading
 from army.api.config import ArmyConfigFile, load_configuration, ConfigRepository, ConfigRepositoryDict, ConfigRepositoryFile
+from army.api.config import ConfigList
 
 # check simple file load
 c9 = ArmyConfigFile(file=os.path.join(path, "test_config/etc/army/army.toml"))
 c9.load()
+print("c9:", c9.expand())
 assert str(c9.get("verbose"))=="debug"
 
-# c10 = ConfigRepository(
-#     value={
-#         'repo': {
-#             'repo_test1': {'type': 'git-local', 'uri': '~/git/repo_test1'}, 
-#             'repo_test2': {'type': 'git-local', 'uri': '~/git/repo_test2'}
-#             }
-#         }
-#     )
-c10 = ConfigRepositoryDict(
+class ConfigListItem(Config):
+    def __init__(self, parent=None, value=None):
+        super(ConfigListItem, self).__init__(
+            parent=parent,
+            value=value,
+            fields={
+                'name': [ ConfigString, "" ],
+                'type': [ ConfigString, "" ],
+                'uri': [ ConfigString, "" ],
+            }
+        )
+
+c10a = ConfigList(
+    value=[
+            {'name': 'repo_test1', 'type': 'git-local', 'uri': '~/git/repo_test1'}, 
+            {'name': 'repo_test2', 'type': 'git-local', 'uri': '~/git/repo_test2'}
+        ],
+    field=[ConfigListItem, {}]
+    )
+c10b = ConfigList(
+    value=[
+            {'name': 'repo_test3', 'type': 'git-local', 'uri': '~/git/repo_test3'}, 
+            {'name': 'repo_test4', 'type': 'git-local', 'uri': '~/git/repo_test4'}
+        ],
+    field=[ConfigListItem, {}],
+    parent=c10a
+    )
+assert len(c10a)==2
+assert len(c10b)==4
+assert str(c10a[0].get('name'))=='repo_test1'
+assert str(c10b[0].get('name'))=='repo_test3'
+assert str(c10b[2].get('name'))=='repo_test1'
+i=0
+for item in c10b:
+    print(f"c10b[{i}]:", item) #.get('name'))
+    i += 1 
+print("c10b:", c10b.expand())
+
+
+c11a = ConfigRepositoryDict(
     value={
             'repo_test1': {'type': 'git-local', 'uri': '~/git/repo_test1'}, 
-            'repo_test2': {'type': 'git-local', 'uri': '~/git/repo_test2'}
-        }
+            'repo_test2': {'type': 'git-local', 'uri': '~/git/repo_test2'},
+            'repo_test3': {'type': 'git-local', 'uri': '~/git/repo_test3'}
+        },
     )
-for item in c10:
-    print(type(item), item)
+c11b = ConfigRepositoryDict(
+    value={
+            'repo_test3': {'type': 'git', 'uri': 'http://github.com/repo_test3'}, 
+            'repo_test4': {'type': 'git-local', 'uri': '~/git/repo_test4'}
+        },
+    parent=c11a
+    )
+assert len(c11a)==3
+assert len(c11b)==4
+assert str(c11a['repo_test1'].get('uri'))=='~/git/repo_test1'
+assert str(c11a['repo_test3'].get('type'))=='git-local'
+assert str(c11b['repo_test3'].get('type'))=='git'
 
-assert isinstance(c10.get("repo_test1"), ConfigRepository)
-assert str(c10.get("repo_test1").get('type'))=='git-local'
-
-c11 = ConfigRepositoryFile(file=os.path.join(path, "test_config/etc/army/repo.d/repo_tests.toml"))
-c11.load()
-assert c11.get("repo").count()==2
-assert str(c11.get("repo").get("repo_test1").get('type'))=='git-local'
-
+for item in c11b:
+    print(f"c11b['{item}']:", c11b[item]) #.get('name'))
+print("c11b:", c11b.expand())
+# 
+# c11 = ConfigRepositoryFile(file=os.path.join(path, "test_config/etc/army/repo.d/repo_tests.toml"))
+# c11.load()
+# assert c11.get("repo").count()==2
+# assert str(c11.get("repo").get("repo_test1").get('type'))=='git-local'
+# 
 # print(f"load test files from {path}")
-# load_configuration(prefix=os.path.join(path, "test_config"))
+# config=load_configuration(prefix=os.path.join(path, "test_config"))
+# print(config.expand())
