@@ -1,8 +1,8 @@
-# verbosty level (default info):
+# verbosty level (default critical):
 # debug
 # info
 # warning
 # error
 # critical
-vebose = "debug"
+verbose = "debug"
 

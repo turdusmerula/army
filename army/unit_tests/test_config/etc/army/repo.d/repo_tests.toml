@@ -1,0 +1,7 @@
+[repo.repo_test1]
+	type = "git-local"
+	uri = "~/git/repo_test1"
+
+[repo.repo_test2]
+	type = "git-local"
+	uri = "~/git/repo_test2"

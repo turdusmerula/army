@@ -18,7 +18,7 @@ class SearchCommand(Command):
         pass
     
     def execute(self, args, config, **kwargs):
-        
+        pass
 #         try:
 #             # load project configuration
 #             config = load_project(config)

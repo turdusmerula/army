@@ -7,17 +7,29 @@ from army.api.debugtools import print_stack
 # load army configuration files, each file supersedes the previous
 # Global configuration: /etc/army/army.toml
 # User configuration: ~/.army/army.tom
+# @param parent parent configuration
 # @param prefix mainly used for unit tests purpose
-def load_configuration(prefix=""):
-    files = [
-        '/etc/army/army.toml',
-        '~/.army/army.toml',
-    ]
-    config = None
-    for file in files:
-        config = Config(config, os.path.join(prefix, file))
-        config.load()
-        
+def load_configuration(parent=None, prefix="/"):
+    
+    # load main config file
+    config = ArmyConfigFile(parent=parent, file=os.path.join(prefix, 'etc/army/army.toml'))
+    config.load()
+    
+    # load main repositories
+    path = os.path.join(prefix, 'etc/army/repo.d')
+    for f in os.listdir(path):
+        if os.path.isfile(os.path.join(path, f)) and f.endswith(".toml"):
+#            config = ConfigRepository(parent=config, value=)
+            config = ArmyConfigFile(parent=config, file=os.path.join(path, f))
+            config.load()
+    
+    # load user config file
+    config = ArmyConfigFile(parent=config, file=os.path.join(prefix, '~/.army/army.toml'))
+    config.load()
+    
+    # load user repositories
+
+
     return config
 
 
@@ -68,9 +80,18 @@ class Config():
     def load(self):
         pass
 
+    def get_field(self, item):
+        if self._fields and item in self._fields:
+            return self._fields[item]
+        if self._parent:
+            return self._parent.get_field(item)
+        return None
+    
     # get subitem value
     def get(self, item):
-        if self._fields is None or item not in self._fields:
+        field = self.get_field(item)
+        
+        if field is None:
             raise ConfigException(f"'{item}': value not found")
     
         value = None
@@ -82,10 +103,26 @@ class Config():
             return self.parent().get(item)
         else:
             # item not found in herarchy, return default value
-            value = self._fields[item][self.ITEM_DEFAULT_VALUE]
+            value = field[self.ITEM_DEFAULT_VALUE]
     
-        return self._fields[item][self.ITEM_TYPE](value=value)
+        return field[self.ITEM_TYPE](value=value)
 
+    def set(self, item, value):
+        field = self.get_field(item)
+        
+        if field is None:
+            raise ConfigException(f"'{item}': value not found")
+        
+        if self._value is None:
+            self._value = {}
+            
+        if self._value and not isinstance(self._value, dict):
+            # this should not happen, means there is a problem to investigate upstream
+            raise ConfigException(f"'{item}': parent type mismatch")
+        
+        v = field[self.ITEM_TYPE](value=value)
+        self._value[item] = v.value()
+        
     def expand(self):
         res = None
         if self._fields:
@@ -107,6 +144,7 @@ class Config():
     def __str__(self):
         return f"{self.value()}"
 
+
 class ConfigString(Config):
     def __init__(self, value=None, parent=None):
         super(ConfigString, self).__init__(value, parent)
@@ -114,6 +152,7 @@ class ConfigString(Config):
     def check(self):
         if not isinstance(self.value(), str):
             raise ConfigException(f"'{self.value()}': invalid string")
+
 
 class ConfigInt(Config):
     def __init__(self, value=None, parent=None):
@@ -125,46 +164,146 @@ class ConfigInt(Config):
     
     def __int__(self):
         return self._value
+
+
+class _ConfigDictIterator(object):
+    def __init__(self, values):
+        self._list = values
+        self._iter = iter(values)
     
-# class ArmyConfig(Config):
-#     def __init__(self, parent, file):
-#         super(ArmyConfig, self).__init__(parent)
-#         
-#         self._fields = {
-#             { 'verbose', [ str, False ]}
-#         }
-# 
-# class ArmyConfigFile(Config):
-#     def __init__(self, parent, file):
-#         super(ArmyConfigFile, self).__init__(parent, file)
-#     
-#     def command_target(self):
-#         if 'command_target' in self.config:
-#             return self.config['command_target']
-#         if self.parent:
-#             return self.parent.command_target()
-#         return None
-# 
-#     def verbose(self):
-#         if 'verbose' in self.config:
-#             return self.config['verbose']
-#         if self.parent:
-#             return self.parent.verbose()
-#         return False
-#     
-#     def load(self):
-#         file = os.path.expanduser(self.file)
-#         if os.path.exists(file):
-#             try:
-#                 self.config = toml.load(file)
-#                 log.info(f"Loaded config '{self.file}'")
-#             except Exception as e:
-#                 raise ConfigException(f"{format(e)}")
-# 
-#     def check_config(self):
-#         # TODO
-#         pass
-# 
-#     def write(self, path):
-#         with open(path, "w") as file:
-#             toml.dump(self.config, file)
+    def __next__(self):
+        res = next(self._iter)
+        return res
+
+
+class ConfigDict(Config):
+    def __init__(self, value=None, parent=None, item=None):
+        super(ConfigDict, self).__init__(value, parent)
+
+        self._item = item
+
+    def check(self):
+        if not isinstance(self.value(), dict):
+            raise ConfigException(f"'{self.value()}': invalid value list")
+    
+    def get(self, item):
+        field = self._item
+        
+        if field is None:
+            raise ConfigException(f"'{item}': dict type not defined")
+    
+        value = None
+        if isinstance(self.value(), dict) and item in self.value():
+            # instantiate configuration item from loaded value
+            value = self.value()[item]
+        elif self.parent():
+            # parent exists, ask item value to it
+            return self.parent().get(item)
+        else:
+            # item not found in herarchy, return default value
+            value = field[self.ITEM_DEFAULT_VALUE]
+    
+        return field[self.ITEM_TYPE](value=value)
+    
+    def count(self):
+        return len(self._value)
+
+    def __iter__(self):
+        return _ConfigDictIterator(self._value)
+
+
+class ConfigLogLevel(ConfigString):
+    def __init__(self, value=None, parent=None):
+        super(ConfigLogLevel, self).__init__(value, parent)
+
+    def check(self):
+        super(ConfigLogLevel, self).check() 
+        if self.value() not in {"debug", "info", "warning", "error", "critical"}:
+            raise ConfigException(f"'{self.value()}': invalid value")
+
+
+class ArmyConfig(Config):
+    def __init__(self, parent=None, fields=None):
+        super(ArmyConfig, self).__init__(
+            parent,
+            fields={
+                'verbose': [ ConfigLogLevel, "error" ]
+            }
+        )
+
+
+class ArmyConfigFile(ArmyConfig):
+    def __init__(self, file, parent=None):
+        super(ArmyConfigFile, self).__init__(
+            parent,
+            fields={
+            }
+        )
+        self._file = file
+    
+    def file(self):
+        return self._file 
+    
+    def load(self):
+        # TODO find a way to add line to error message
+        file = os.path.expanduser(self._file)
+        if os.path.exists(file):
+            config = {}
+            try:
+                log.info(f"Load config '{self._file}'")
+                config = toml.load(file)
+                log.debug(config)
+            except Exception as e:
+                print_stack()
+                raise ConfigException(f"{format(e)}")
+            
+            for item in config:
+                self.set(item, config[item])
+
+
+class ConfigRepository(Config):
+    def __init__(self, parent=None, value=None):
+        super(ConfigRepository, self).__init__(
+            parent=parent,
+            value=value,
+            fields={
+                'type': [ ConfigString, "" ],
+                'uri': [ ConfigString, "" ],
+            }
+        )
+    
+class ConfigRepositoryDict(ConfigDict):
+    def __init__(self, parent=None, value=None):
+        super(ConfigRepositoryDict, self).__init__(
+            parent=parent,
+            value=value,
+            item=[ ConfigRepository, {} ]
+        )
+
+class ConfigRepositoryFile(Config):
+    def __init__(self, file, parent=None, value=None):
+        super(ConfigRepositoryFile, self).__init__(
+            parent=parent,
+            value=value,
+            fields={
+                "repo": [ ConfigRepositoryDict, {} ]
+            }
+        )
+        self._file = file
+    
+    def load(self):
+        # TODO find a way to add line to error message
+        file = os.path.expanduser(self._file)
+        if os.path.exists(file):
+            config = {}
+            try:
+                log.info(f"Load repository config '{self._file}'")
+                config = toml.load(file)
+                log.debug(config)
+            except Exception as e:
+                print_stack()
+                raise ConfigException(f"{format(e)}")
+            
+            for item in config:
+                self.set(item, config[item])
+

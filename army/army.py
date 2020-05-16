@@ -6,9 +6,10 @@ import pkg_resources
 sys.path.append(os.path.dirname(pkg_resources.resource_filename(__name__, "army.py")))
 import extargparse
 import argparse
-from config import load_configuration, load_project
-from log import log
-from debugtools import print_stack
+
+from army.api.config import ArmyConfig, load_configuration
+from army.api.log import log, get_log_level
+from army.api.debugtools import print_stack
 from army.api.command import Command, CommandGroup
 
 # TODO add autocomplete https://kislyuk.github.io/argcomplete/
@@ -61,6 +62,7 @@ from army.api.command import Command, CommandGroup
 # create the top-level parser
 # this parser handles top level 
 root_parser = extargparse.ArgumentParser(prog='army')
+root_config = ArmyConfig()
 
 def main():
 
@@ -69,6 +71,9 @@ def main():
     preparser = extargparse.ArgumentParser(prog='army', add_help=False)
     preparser.add_default_args()
     preparser.parse_default_args()
+    
+    # configure logger
+    root_config.set("verbose", get_log_level())
     
     # load army configuration files
     config = load_configuration() 
