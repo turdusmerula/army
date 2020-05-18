@@ -10,7 +10,6 @@ from army.api.debugtools import print_stack
 # @param parent parent configuration
 # @param prefix mainly used for unit tests purpose
 def load_configuration(parent=None, prefix="/"):
-    i=0
     # load main config file
     config = ArmyConfigFile(parent=parent, file=os.path.join(prefix, 'etc/army/army.toml'))
     config.load()
@@ -26,7 +25,7 @@ def load_configuration(parent=None, prefix="/"):
     # load user config file
     config = ArmyConfigFile(parent=config, file=os.path.join(prefix, '~/.army/army.toml'))
     config.load()
-    
+     
     # load user repositories
     path = os.path.join(prefix, '~/.army/repo.d')
     for f in os.listdir(path):
@@ -34,7 +33,6 @@ def load_configuration(parent=None, prefix="/"):
 #            config = ConfigRepository(parent=config, value=)
             config = ConfigRepositoryFile(parent=config, file=os.path.join(path, f))
             config.load()
-
 
     return config
 
@@ -57,14 +55,19 @@ class BaseConfig(object):
     def parent(self):
         return self._parent 
 
+    def set_parent(self, parent):
+        self._parent = parent
+        self.check()
+
     # get item value stored inside the item
     def value(self):
         return self._value
 
 
 class Config(BaseConfig):
-    ITEM_TYPE=0
-    ITEM_DEFAULT_VALUE=1
+    ITEM_TYPE=0          # mandatory: field type
+    ITEM_DEFAULT_VALUE=1 # mandatory: define default field value
+    ITEM_ALLOCATOR=2     # facultative: custom allocator for field
 
     def __init__(self, value=None, parent=None, fields=None):
         super(Config, self).__init__(value=value, parent=parent)
@@ -112,6 +115,11 @@ class Config(BaseConfig):
         if field is None:
             raise ConfigException(f"'{item}': value not found")
     
+        if len(field)==3:
+            allocator = field[self.ITEM_ALLOCATOR]
+        else:
+            allocator = field[self.ITEM_TYPE]
+        
         value = None
         if isinstance(self.value(), dict) and item in self.value():
             # item exists in the current configuration
@@ -131,15 +139,24 @@ class Config(BaseConfig):
 
         if value:
             # we have a value
-            return field[self.ITEM_TYPE](value=value)
+            return allocator(value=value)
         elif default==True:
             # item not found in herarchy, return default value
-            return field[self.ITEM_TYPE](value=field[self.ITEM_DEFAULT_VALUE])
+            return allocator(value=field[self.ITEM_DEFAULT_VALUE])
         return None
 
+    def __getattribute__(self, name):
+        try:
+            return object.__getattribute__(self, name)
+        except AttributeError:
+            if self.get_field(name):
+                return object.__getattribute__(self, "get")(name)
+            else:
+                raise AttributeError(name)
+    
     def set(self, item, value):
         field = self.get_field(item)
-        
+
         if field is None:
             raise ConfigException(f"'{item}': value not found")
         
@@ -202,6 +219,8 @@ class _ConfigDictIterator(object):
         
         if values.parent():
             self._items = { **values.parent().value(), **values.value()}
+        else:
+            self._items = values.value()
         self._iter = iter(self._items)
      
     def __next__(self):
@@ -247,14 +266,21 @@ class ConfigDict(BaseConfig):
         else:
             return self._value
         
+        if self.parent():
+            res = self.parent().expand()
+
         for item in self:
             res[item] = self[item].expand()
+
         return res
     
     def __len__(self):
-        if self.parent():
-            return len({ **self.parent().value(), **self.value() })
-        return len(self.value())
+        list = self.value()
+        parent = self.parent()
+        while parent:
+            list = { **parent.value(), **list }
+            parent = parent.parent()
+        return len(list)
     
     def __getitem__(self, name):
         # check that field exists somewhere in the configuration tree
@@ -389,6 +415,7 @@ class ArmyConfig(Config):
         super(ArmyConfig, self).__init__(
             parent=parent,
             fields={
+                **fields,
                 'verbose': [ ConfigLogLevel, "error" ]
             }
         )
@@ -399,10 +426,11 @@ class ArmyConfigFile(ArmyConfig):
         super(ArmyConfigFile, self).__init__(
             parent=parent,
             fields={
+                "repo": [ ConfigRepositoryDict, {} ]
             }
         )
         self._file = file
-    
+
     def file(self):
         return self._file 
     
@@ -414,13 +442,17 @@ class ArmyConfigFile(ArmyConfig):
             try:
                 log.info(f"Load config '{self._file}'")
                 config = toml.load(file)
-                log.debug(config)
+                log.debug(f"content: {config}")
             except Exception as e:
                 print_stack()
                 raise ConfigException(f"{format(e)}")
             
             for item in config:
-                self.set(item, config[item])
+                try:
+#                     log.debug(f"load '{item}': {config[item]}")
+                    self.set(item, config[item])
+                except Exception as e:
+                    log.error(f"{self._file}: {e}")
 
 
 class ConfigRepository(Config):
@@ -449,7 +481,7 @@ class ConfigRepositoryFile(Config):
             parent=parent,
             value=value,
             fields={
-                "repo": [ ConfigRepositoryList, [] ]
+                "repo": [ ConfigRepositoryDict, {}, self._allocate_repo ]
             }
         )
         self._file = file
@@ -458,23 +490,36 @@ class ConfigRepositoryFile(Config):
         # TODO find a way to add line to error message
         file = os.path.expanduser(self._file)
         if os.path.exists(file):
-            config = {}
+            config_toml = {}
             try:
                 log.info(f"Load repository config '{self._file}'")
                 config_toml = toml.load(file)
-                log.debug(config)
+                log.debug(config_toml)
             except Exception as e:
                 print_stack()
                 raise ConfigException(f"{format(e)}")
             
-#             for item in config_toml:
-#                 if item=="repo":
-#                     # merge instead of replacing
-#                     for r in config_toml[item]:
-#                         repo = ConfigRepository(value={
-#                             'name:': 
-#                             })
-#                         self.get(item).append(config_toml[item])
-#                 else:
-#                     self.set(item, config_toml[item])
+            self._value = config_toml
+            self.check()
+    
+    # define a custom allocator for the repo field, this field is not replaced by childs but needs to be merged
+    # as each child just adds or superseed repository list
+    def _allocate_repo(self, value):
+        res = ConfigRepositoryDict(value=value)
+        current = res
+        
+        # merge repository list with parent repo
+        parent = self.parent()
+        while(parent):
+            try:
+                if(parent.get_field('repo')):
+                    new = ConfigRepositoryDict(value=parent.repo.value())
+                    current.set_parent(new)
+                    current = new
+            except:
+                pass
+            parent = parent.parent()
 
+        if parent:  
+            return ConfigRepositoryDict(value=value, parent=parent.repo)
+        return res

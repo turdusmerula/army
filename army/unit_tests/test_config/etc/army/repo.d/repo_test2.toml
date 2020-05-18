@@ -1,0 +1,4 @@
+
+[repo.repo_test2]
+	type = "git"
+	uri = "~/git/repo_test2"

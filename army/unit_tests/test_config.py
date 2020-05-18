@@ -43,26 +43,30 @@ class TestConfig(Config):
 # no config set, check we are finding the default values
 c1 = TestConfig() ;
 assert str(c1.get('value1'))=='v1'
-assert int(c1.get('value2'))==5
-assert int(c1.get('value3'))==10
+assert str(c1.value1)=='v1'
+assert int(c1.value2)==5
+assert int(c1.value3)==10
+print("c1:", c1.expand())
 
 # values are set, check that we find them 
 c2 = TestConfig(value={
     "value1": "v2",
     "value2": 1
     })
-assert str(c2.get('value1'))=='v2'
-assert int(c2.get('value2'))== 1
-assert int(c2.get('value3'))== 10
+assert str(c2.value1)=='v2'
+assert int(c2.value2)== 1
+assert int(c2.value3)== 10
+print("c2:", c2.expand())
 
 # child configuration overrides 
 c3 = TestConfig(value={
     "value2": 2
     }, parent=c2)
-print(type(c3.get('value1')))
-assert str(c3.get('value1'))=='v2'
+print(type(c3.value1))
+assert str(c3.value1)=='v2'
 assert int(c3.get('value2'))==2
 assert int(c3.get('value3'))==10
+print("c3:", c3.expand())
 
 class ConfigStringEnum(ConfigString):
     def __init__(self, value=None, parent=None):
@@ -77,6 +81,7 @@ assert raised(ConfigStringEnum)==ConfigException
 assert raised(ConfigStringEnum, "d")==ConfigException
 c4 = ConfigStringEnum("a")
 assert str(c4)=='a'
+print("c4:", c4.expand())
 
 
 class TestConfig2(Config):
@@ -216,11 +221,14 @@ for item in c11b:
     print(f"c11b['{item}']:", c11b[item]) #.get('name'))
 print("c11b:", c11b.expand())
 # 
-# c11 = ConfigRepositoryFile(file=os.path.join(path, "test_config/etc/army/repo.d/repo_tests.toml"))
-# c11.load()
-# assert c11.get("repo").count()==2
-# assert str(c11.get("repo").get("repo_test1").get('type'))=='git-local'
+c12 = ConfigRepositoryFile(file=os.path.join(path, "test_config/etc/army/repo.d/repo_test1-2.toml"))
+c12.load()
+assert len(c12.repo)==2
+assert str(c12.get("repo")["repo_test1"].get('type'))=='git-local'
 # 
-# print(f"load test files from {path}")
-# config=load_configuration(prefix=os.path.join(path, "test_config"))
-# print(config.expand())
+print(f"load test files from {path}")
+config=load_configuration(prefix=os.path.join(path, "test_config"))
+print(config.expand())
+assert len(config.repo)==6
+assert str(config.repo['main'].type)=='git-local'
+assert str(config.repo['repo_test2'].type)=='git'
