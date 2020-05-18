@@ -94,6 +94,7 @@ def main():
     
     # load internal plugins
     import army.plugin.package
+    import army.plugin.repository
     
 #     # load plugins
 #     try:
@@ -120,7 +121,7 @@ def main():
     # call asked commands
     while args is not None:
         if hasattr(args, "func"):
-            args.func(args, config)
+            args.func(config, args)
         if hasattr(args, "subspace"):
             args = args.subspace
         else:

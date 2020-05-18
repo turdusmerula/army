@@ -1,8 +1,6 @@
 from army.api.config import Config, ConfigException,  ConfigString, ConfigInt
 from army.api.log import log
 import os
-import sys
-import pkg_resources
 
 # get current file path to find ressource files
 path = os.path.dirname(__file__)
@@ -153,8 +151,7 @@ from army.api.config import ArmyConfigFile, load_configuration, ConfigRepository
 from army.api.config import ConfigList
 
 # check simple file load
-c9 = ArmyConfigFile(file=os.path.join(path, "test_config/etc/army/army.toml"))
-c9.load()
+c9 = ArmyConfigFile(file=os.path.join(path, "test_data/etc/army/army.toml"))
 print("c9:", c9.expand())
 assert str(c9.get("verbose"))=="debug"
 
@@ -221,14 +218,19 @@ for item in c11b:
     print(f"c11b['{item}']:", c11b[item]) #.get('name'))
 print("c11b:", c11b.expand())
 # 
-c12 = ConfigRepositoryFile(file=os.path.join(path, "test_config/etc/army/repo.d/repo_test1-2.toml"))
-c12.load()
+c12 = ConfigRepositoryFile(file=os.path.join(path, "test_data/etc/army/repo.d/repo_test1-2.toml"))
 assert len(c12.repo)==2
 assert str(c12.get("repo")["repo_test1"].get('type'))=='git-local'
 # 
 print(f"load test files from {path}")
-config=load_configuration(prefix=os.path.join(path, "test_config"))
-print(config.expand())
+config=load_configuration(prefix=os.path.join(path, "test_data"))
+print("c12:", config.expand())
 assert len(config.repo)==6
 assert str(config.repo['main'].type)=='git-local'
 assert str(config.repo['repo_test2'].type)=='git'
+# check iterator
+repos={}
+for repo in config.repo:
+    repos[repo] = repo
+print(repos)
+assert len(repos)==6

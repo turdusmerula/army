@@ -7,11 +7,11 @@ class VersionException(Exception):
 class Version():
     
     def __init__(self, value):
-        self.major = None
-        self.minor = None
-        self.revision = None
-        self.build = None
-        self.dev = False
+        self._major = None
+        self._minor = None
+        self._revision = None
+        self._build = None
+        self._dev = False
         
         version = value
         
@@ -22,7 +22,7 @@ class Version():
         # extract build number
         if '-' in value:
             s = value.split('-', 1)
-            self.build = s[1]
+            self._build = s[1]
             value = s[0]
         
         if '.' in value:
@@ -33,35 +33,35 @@ class Version():
                 
             try:
                 if len(s)==3:
-                    self.major = int(s[0])
-                    self.minor = int(s[1])
-                    self.revision = int(s[2])
+                    self._major = int(s[0])
+                    self._minor = int(s[1])
+                    self._revision = int(s[2])
                 elif len(s)==2:
-                    self.major = int(s[0])
-                    self.minor = int(s[1])
+                    self._major = int(s[0])
+                    self._minor = int(s[1])
             except Exception as e:
                 raise VersionException(f"Invalid version {version}")
                 
         else:
             try:
-                self.major = int(value)
+                self._major = int(value)
             except Exception as e:
                 raise VersionException(f"Invalid version {version}")
         
-        if self.build and ( self.major is None or self.minor is None or self.revision is None):
+        if self._build and ( self._major is None or self._minor is None or self._revision is None):
             raise VersionException(f"Invalid version {version}")
-        elif self.build and self.build=="dev":
-            self.dev = True
+        elif self._build and self._build=="dev":
+            self._dev = True
         
     def compare(self, version):
-        l = [self.major, self.minor, self.revision, self.build]
-        r = [version.major, version.minor, version.revision, version.build]
+        l = [self._major, self._minor, self._revision, self._build]
+        r = [version._major, version._minor, version._revision, version._build]
         
-        if self.dev and version.dev:
+        if self._dev and version._dev:
             return 0
-        elif self.dev and not version.dev:
+        elif self._dev and not version._dev:
             return -1
-        elif not self.dev and version.dev:
+        elif not self._dev and version._dev:
             return 1
         
         res = 0
@@ -90,15 +90,18 @@ class Version():
         return res
     
     def __str__(self):
-        version = f"{self.major}"
-        if self.minor:
-            version += f".{self.minor}"
-        if self.revision:
-            version += f".{self.revision}"
-        if self.build:
-            version += f"-{self.build}"
+        version = f"{self._major}"
+        if self._minor is not None:
+            version += f".{self._minor}"
+        if self._revision is not None:
+            version += f".{self._revision}"
+        if self._build is not None:
+            version += f"-{self._build}"
         return version
-
+    
+    def __repr__(self):
+        return self.__str__()
+    
     def __eq__(self, other):
         return self.compare(other)==0
     

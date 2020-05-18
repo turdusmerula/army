@@ -1,8 +1,9 @@
 from army.api.log import log
 from army.api.command import Command
-from config import load_project
-from debugtools import print_stack
-from repository import load_repositories
+from army.api.debugtools import print_stack
+# from army.api.repository import load_repositories
+from army.api.project import load_project
+from army.api.repository import load_repositories
 
 class SearchCommand(Command):
     
@@ -17,22 +18,26 @@ class SearchCommand(Command):
     def init_parser(self):
         pass
     
-    def execute(self, args, config, **kwargs):
-        pass
-#         try:
-#             # load project configuration
-#             config = load_project(config)
-#             if not config:
-#                 print("army: not a project")
-#         except Exception as e:
-#             log.error(f"army: {e}")
-#             print_stack()
-#             return
-#             
+    def execute(self, config, *args, **kwargs):
+        main_config = config
+        project_config = None
+        
+        try:
+            # load project configuration
+            project_config = load_project(config)
+        except Exception as e:
+            print_stack()
+            log.error(f"army: {e}")
+            return
+        if not project_config:
+            log.debug("no project loaded")
+            project_config = config
+
 #         name = args.NAME
-#             
-#         # build repositories list
-#         repositories = load_repositories(config)
+#         log.debug(f"search {name}")
+
+        # build repositories list
+        repositories = load_repositories(config)
 #         
 #         res = {}
 #         

@@ -1,5 +1,6 @@
 from army.api.command import CommandGroup
 from army.plugin.package.search import SearchCommand
+
 # init plugin
 
 # get package command group

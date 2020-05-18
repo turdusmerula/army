@@ -3,6 +3,7 @@ import os
 import sys
 from army.api.log import log
 from army.api.debugtools import print_stack
+from army.api.version import Version
 
 # load army configuration files, each file supersedes the previous
 # Global configuration: /etc/army/army.toml
@@ -12,27 +13,23 @@ from army.api.debugtools import print_stack
 def load_configuration(parent=None, prefix="/"):
     # load main config file
     config = ArmyConfigFile(parent=parent, file=os.path.join(prefix, 'etc/army/army.toml'))
-    config.load()
     
     # load main repositories
     path = os.path.join(prefix, 'etc/army/repo.d')
-    for f in os.listdir(path):
-        if os.path.isfile(os.path.join(path, f)) and f.endswith(".toml"):
-#            config = ConfigRepository(parent=config, value=)
-            config = ConfigRepositoryFile(parent=config, file=os.path.join(path, f))
-            config.load()
+    if os.path.exists(path) and os.path.isdir(path):
+        for f in os.listdir(path):
+            if os.path.isfile(os.path.join(path, f)) and f.endswith(".toml"):
+                config = ConfigRepositoryFile(parent=config, file=os.path.join(path, f))
 
     # load user config file
     config = ArmyConfigFile(parent=config, file=os.path.join(prefix, '~/.army/army.toml'))
-    config.load()
      
     # load user repositories
     path = os.path.join(prefix, '~/.army/repo.d')
-    for f in os.listdir(path):
-        if os.path.isfile(os.path.join(path, f)) and f.endswith(".toml"):
-#            config = ConfigRepository(parent=config, value=)
-            config = ConfigRepositoryFile(parent=config, file=os.path.join(path, f))
-            config.load()
+    if os.path.exists(path) and os.path.isdir(path):
+        for f in os.listdir(path):
+            if os.path.isfile(os.path.join(path, f)) and f.endswith(".toml"):
+                config = ConfigRepositoryFile(parent=config, file=os.path.join(path, f))
 
     return config
 
@@ -77,10 +74,23 @@ class Config(BaseConfig):
         # value: [ <item class>, default value ]
         self._fields = fields
         
-        self.check() ;
+        self.load() ;
         
     # check value content
     def check(self):
+        # check for mandatory fields
+        for field_name in self.get_fields():
+            field = self.get_field(field_name)
+
+            if isinstance(field, list)==False:
+                raise ConfigException(f"{field_name}: invalid field format")                
+            if len(field)==0:
+                raise ConfigException(f"{field_name}: missing field type")
+            if len(field)==1 and ( self._value is None or field_name not in self._value):
+                raise ConfigException(f"{field_name}: missing value")
+                
+        
+        # check for extraneous elements
         if isinstance(self._value, dict):
             err = None
             # check all fields
@@ -89,9 +99,12 @@ class Config(BaseConfig):
                     self.get(value)
                 except ConfigException as e:
                     err = f"{err}\n{e}: unknown value"
-            
+                    
             if err:
                 raise ConfigException(err)
+
+    def load(self):
+        self.check() 
 
     def get_fields(self):
         if self._fields:
@@ -201,6 +214,14 @@ class ConfigString(Config):
             raise ConfigException(f"'{self.value()}': invalid string")
 
 
+class ConfigVersion(Config):
+    def __init__(self, value=None, parent=None):
+        super(ConfigVersion, self).__init__(value=Version(value), parent=parent)
+
+    def check(self):
+        if not isinstance(self.value(), Version):
+            raise ConfigException(f"'{self.value()}': invalid version")
+
 class ConfigInt(Config):
     def __init__(self, value=None, parent=None):
         super(ConfigInt, self).__init__(value=value, parent=parent)
@@ -217,10 +238,12 @@ class _ConfigDictIterator(object):
     def __init__(self, values):
         self._list = values
         
-        if values.parent():
-            self._items = { **values.parent().value(), **values.value()}
-        else:
-            self._items = values.value()
+        self._items = values.value()
+        parent = values.parent()
+        while parent:
+            self._items = { **parent.value(), **self._items }
+            parent = parent.parent()
+
         self._iter = iter(self._items)
      
     def __next__(self):
@@ -238,7 +261,7 @@ class ConfigDict(BaseConfig):
         # fields will contain only the type of dict items
         self._field = field
 
-        self.check() ;
+        self.load() ;
  
     def check(self):
         if self._parent and not isinstance(self.parent(), ConfigDict):
@@ -247,6 +270,9 @@ class ConfigDict(BaseConfig):
         if not isinstance(self.value(), dict):
             raise ConfigException(f"'{self.value()}': invalid value dict")
          
+    def load(self):
+        self.check()
+        
     def get_field(self):
         return self._field
     
@@ -333,7 +359,7 @@ class ConfigList(BaseConfig):
         # fields will contain only the type of dict items
         self._field = field
 
-        self.check() ;
+        self.load() ;
 
     def check(self):
         if self._parent and not isinstance(self.parent(), ConfigList):
@@ -342,6 +368,9 @@ class ConfigList(BaseConfig):
         if not isinstance(self.value(), list):
             raise ConfigException(f"'{self.value()}': invalid value list")
 
+    def load(self):
+        self.check()
+        
     def get_field(self):
         return self._field
     
@@ -411,7 +440,7 @@ class ConfigLogLevel(ConfigString):
 
 
 class ArmyConfig(Config):
-    def __init__(self, parent=None, fields=None):
+    def __init__(self, parent=None, fields={}):
         super(ArmyConfig, self).__init__(
             parent=parent,
             fields={
@@ -422,15 +451,17 @@ class ArmyConfig(Config):
 
 
 class ArmyConfigFile(ArmyConfig):
-    def __init__(self, file, parent=None):
+    def __init__(self, file, parent=None, fields={}):
+        self._file = file
+
         super(ArmyConfigFile, self).__init__(
             parent=parent,
             fields={
-                "repo": [ ConfigRepositoryDict, {} ]
+                **fields,
+                "repo": [ ConfigRepositoryDict, {}, self._allocate_repo ]
             }
         )
-        self._file = file
-
+    
     def file(self):
         return self._file 
     
@@ -452,8 +483,31 @@ class ArmyConfigFile(ArmyConfig):
 #                     log.debug(f"load '{item}': {config[item]}")
                     self.set(item, config[item])
                 except Exception as e:
+                    print_stack()
                     log.error(f"{self._file}: {e}")
+            self.check()
+        
+    # define a custom allocator for the repo field, this field is not replaced by childs but needs to be merged
+    # as each child just adds or superseed repository list
+    def _allocate_repo(self, value):
+        res = ConfigRepositoryDict(value=value)
+        current = res
+        
+        # merge repository list with parent repo
+        parent = self.parent()
+        while(parent):
+            try:
+                if(parent.get_field('repo')):
+                    new = ConfigRepositoryDict(value=parent.repo.value())
+                    current.set_parent(new)
+                    current = new
+            except:
+                pass
+            parent = parent.parent()
 
+        if parent:  
+            return ConfigRepositoryDict(value=value, parent=parent.repo)
+        return res
 
 class ConfigRepository(Config):
     def __init__(self, parent=None, value=None):
@@ -477,6 +531,8 @@ class ConfigRepositoryDict(ConfigDict):
 
 class ConfigRepositoryFile(Config):
     def __init__(self, file, parent=None, value=None):
+        self._file = file
+
         super(ConfigRepositoryFile, self).__init__(
             parent=parent,
             value=value,
@@ -484,8 +540,7 @@ class ConfigRepositoryFile(Config):
                 "repo": [ ConfigRepositoryDict, {}, self._allocate_repo ]
             }
         )
-        self._file = file
-    
+        
     def load(self):
         # TODO find a way to add line to error message
         file = os.path.expanduser(self._file)
@@ -494,7 +549,7 @@ class ConfigRepositoryFile(Config):
             try:
                 log.info(f"Load repository config '{self._file}'")
                 config_toml = toml.load(file)
-                log.debug(config_toml)
+                log.debug(f"content: {config_toml}")
             except Exception as e:
                 print_stack()
                 raise ConfigException(f"{format(e)}")

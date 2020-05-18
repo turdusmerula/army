@@ -76,6 +76,9 @@ class Command(object):
     
     def parser(self):
         return self._parser 
+
+    def execute(self, config, *args, **kwargs):
+        pass
     
 #     # map storing all command instances
 #     # key: command name
