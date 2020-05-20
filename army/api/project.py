@@ -9,11 +9,12 @@ from army.api.config import ArmyConfigFile, ConfigRepositoryDict, Config, Config
 # @param parent parent configuration
 # @param prefix mainly used for unit tests purpose
 # @return the loaded project configuration or None if project was not loaded
-def load_project(parent=None, prefix="/"):
-        # load main config file
-    config = ArmyConfigFile(parent=parent, file=os.path.join(prefix, 'etc/army/army.toml'))
+def load_project(parent=None, prefix=""):
+    
+    # load main config file
+    config = ArmyProjectFile(parent=parent, file=os.path.join(prefix, 'army.toml'))
 
-    return None
+    return config
 
 class ConfigProject(Config):
     def __init__(self, value=None, parent=None):

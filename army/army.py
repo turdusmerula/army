@@ -64,19 +64,26 @@ from army.api.command import Command, CommandGroup
 root_parser = extargparse.ArgumentParser(prog='army')
 root_config = ArmyConfig()
 
-def main():
+# path prefix, used to provide unit tests data path
+prefix = ""
+prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_data")
 
+def main():
+    global prefix
+    
     # temporary parser used parse command line for logging arguments, other arguments are ignored during this phase
     # if logging arguments are present they can be activated prior to any action
     preparser = extargparse.ArgumentParser(prog='army', add_help=False)
     preparser.add_default_args()
-    preparser.parse_default_args()
+    args = preparser.parse_default_args()
     
     # configure logger
     root_config.set("verbose", get_log_level())
     
     # load army configuration files
-    config = load_configuration() 
+    if prefix!="":
+        log.debug(f"using {prefix} as path prefix")
+    config = load_configuration(prefix=prefix) 
 
     # add root_parser options
     root_parser.add_argument('--version', action='store_true', help='return version')
@@ -85,12 +92,8 @@ def main():
 
     # init command parser group
     command_parser = root_parser.add_subparsers(metavar='COMMAND', title=None, description=None, help=None, parser_class=extargparse.ArgumentParser, required=True)
-    CommandGroup.init_root("aaa", "aaa", command_parser)
+    CommandGroup.init_root("", "", command_parser)
     root = CommandGroup.root()
-
-#     # create default subgroups
-#     root.add_subgroup(CommandGroup("package", "Package commands"))
-#     root.add_subgroup(CommandGroup("build", "Build commands"))
     
     # load internal plugins
     import army.plugin.package

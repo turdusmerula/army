@@ -127,10 +127,12 @@ class Config(BaseConfig):
         
         if field is None:
             raise ConfigException(f"'{item}': value not found")
-    
+
         if len(field)==3:
+            # custom allocator given for this field
             allocator = field[self.ITEM_ALLOCATOR]
         else:
+            # use default allocator
             allocator = field[self.ITEM_TYPE]
         
         value = None
@@ -468,24 +470,26 @@ class ArmyConfigFile(ArmyConfig):
     def load(self):
         # TODO find a way to add line to error message
         file = os.path.expanduser(self._file)
-        if os.path.exists(file):
-            config = {}
+        if os.path.exists(file)==False:
+            raise ConfigException(f"{file}: file not found")
+
+        config = {}
+        try:
+            log.info(f"Load config '{self._file}'")
+            config = toml.load(file)
+            log.debug(f"content: {config}")
+        except Exception as e:
+            print_stack()
+            raise ConfigException(f"{format(e)}")
+        
+        for item in config:
             try:
-                log.info(f"Load config '{self._file}'")
-                config = toml.load(file)
-                log.debug(f"content: {config}")
+#                     log.debug(f"load '{item}': {config[item]}")
+                self.set(item, config[item])
             except Exception as e:
                 print_stack()
-                raise ConfigException(f"{format(e)}")
-            
-            for item in config:
-                try:
-#                     log.debug(f"load '{item}': {config[item]}")
-                    self.set(item, config[item])
-                except Exception as e:
-                    print_stack()
-                    log.error(f"{self._file}: {e}")
-            self.check()
+                log.error(f"{self._file}: {e}")
+        self.check()
         
     # define a custom allocator for the repo field, this field is not replaced by childs but needs to be merged
     # as each child just adds or superseed repository list

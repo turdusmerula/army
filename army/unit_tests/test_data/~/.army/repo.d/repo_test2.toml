@@ -1,4 +1,4 @@
-
+# redefine repo_test2
 [repo.repo_test2]
 	type = "git"
 	uri = "~/git/repo_test2"

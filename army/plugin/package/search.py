@@ -5,6 +5,8 @@ from army.api.debugtools import print_stack
 from army.api.project import load_project
 from army.api.repository import load_repositories
 
+from army.army import prefix
+
 class SearchCommand(Command):
     
     def __init__(self, group):
@@ -18,57 +20,55 @@ class SearchCommand(Command):
     def init_parser(self):
         pass
     
-    def execute(self, config, *args, **kwargs):
+    def execute(self, config, args):
         main_config = config
-        project_config = None
         
+        project_config = None
         try:
             # load project configuration
             project_config = load_project(config)
         except Exception as e:
-            print_stack()
-            log.error(f"army: {e}")
-            return
-        if not project_config:
-            log.debug("no project loaded")
+            pass
+        
+        if project_config is None:
+            log.debug(f"no project loaded")
             project_config = config
 
-#         name = args.NAME
-#         log.debug(f"search {name}")
-
+        name = args.NAME
+        log.debug(f"search {name}")
+        
         # build repositories list
-        repositories = load_repositories(config)
+        repositories = load_repositories(config, prefix)
+        res = {}
+         
+        for r in repositories:
+            packages = r.search(name)
+            if len(packages)>0:
+                res[r.name()] = packages
+
+        if len(res)==0:
+            print(f'No matches found for "{name}"')
+            return
+     
+        column_repo = ['repository']
+        column_package = ['package']
+        column_version = ['version']
+        column_description = ['description']
 #         
-#         res = {}
-#         
-#         for r in repositories:
-#             repo_config = r['config']
-#             repo = r['repo']
-#             modules = repo.search(name)
-#             if len(modules)>0:
-#                 res[repo] = modules
-#                  
-#         if len(res)==0:
-#             print(f'No matches found for "{name}"')
-#             return
-#     
-#         column_repo = ['repository']
-#         column_module = ['module']
-#         column_version = ['version']
-#         column_description = ['description']
-#         
-#         for r in res:
-#             repo = res[r]
-#             for module in repo:
-#     
-#                 column_repo.append(r.name)
-#                 column_module.append(module['name'])
-#                 column_version.append(module['version'])
-#                 column_description.append(module['info']['description'])
-#     
-#         max_repo = len(max(column_repo, key=len))
-#         max_module = len(max(column_module, key=len))
-#         max_version = len(max(column_version, key=len))
-#     
-#         for i in range(len(column_repo)):
-#             print(f"{column_repo[i].ljust(max_repo, ' ')}|{column_module[i].ljust(max_module)}|{column_version[i].ljust(max_version)}|{column_description[i]}")
+        for r in res:
+            repo = res[r]
+            for p in repo:
+                package = repo[p]
+                for v in package:
+                    version = package[v]
+                    column_repo.append(r)
+                    column_package.append(p)
+                    column_version.append(v)
+                    column_description.append(version.description())
+      
+        max_repo = len(max(column_repo, key=len))
+        max_package = len(max(column_package, key=len))
+        max_version = len(max(column_version, key=len))
+      
+        for i in range(len(column_repo)):
+            print(f"{column_repo[i].ljust(max_repo, ' ')}|{column_package[i].ljust(max_package)}|{column_version[i].ljust(max_version)}|{column_description[i]}")

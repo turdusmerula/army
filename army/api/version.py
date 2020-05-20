@@ -7,51 +7,54 @@ class VersionException(Exception):
 class Version():
     
     def __init__(self, value):
-        self._major = None
-        self._minor = None
-        self._revision = None
-        self._build = None
-        self._dev = False
-        
-        version = value
-        
-#         if value=='dev':
-#             self.dev = True
-#             return 
-        
-        # extract build number
-        if '-' in value:
-            s = value.split('-', 1)
-            self._build = s[1]
-            value = s[0]
-        
-        if '.' in value:
-            s = value.split('.')
-            
-            if(len(s)>3):
-                raise VersionException(f"Invalid version {version}")
-                
-            try:
-                if len(s)==3:
-                    self._major = int(s[0])
-                    self._minor = int(s[1])
-                    self._revision = int(s[2])
-                elif len(s)==2:
-                    self._major = int(s[0])
-                    self._minor = int(s[1])
-            except Exception as e:
-                raise VersionException(f"Invalid version {version}")
-                
+        if isinstance(value, Version):
+            self._major = value._major
+            self._minor = value._minor
+            self._revision = value._revision
+            self._build = value._build
+            self._dev = value._dev
         else:
-            try:
-                self._major = int(value)
-            except Exception as e:
+            self._major = None
+            self._minor = None
+            self._revision = None
+            self._build = None
+            self._dev = False
+            
+            version = value
+
+            # extract build number
+            if '-' in value:
+                s = value.split('-', 1)
+                self._build = s[1]
+                value = s[0]
+            
+            if '.' in value:
+                s = value.split('.')
+                
+                if(len(s)>3):
+                    raise VersionException(f"Invalid version {version}")
+                    
+                try:
+                    if len(s)==3:
+                        self._major = int(s[0])
+                        self._minor = int(s[1])
+                        self._revision = int(s[2])
+                    elif len(s)==2:
+                        self._major = int(s[0])
+                        self._minor = int(s[1])
+                except Exception as e:
+                    raise VersionException(f"Invalid version {version}")
+                    
+            else:
+                try:
+                    self._major = int(value)
+                except Exception as e:
+                    raise VersionException(f"Invalid version {version}")
+            
+            if self._build and ( self._major is None or self._minor is None or self._revision is None):
                 raise VersionException(f"Invalid version {version}")
-        
-        if self._build and ( self._major is None or self._minor is None or self._revision is None):
-            raise VersionException(f"Invalid version {version}")
-        elif self._build and self._build=="dev":
-            self._dev = True
+            elif self._build and self._build=="dev":
+                self._dev = True
         
     def compare(self, version):
         l = [self._major, self._minor, self._revision, self._build]

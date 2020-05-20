@@ -1,4 +1,4 @@
-import extargparse
+import army.api.extargparse
 
 class CommandGroupException(Exception):
     def __init__(self, message):
@@ -77,7 +77,7 @@ class Command(object):
     def parser(self):
         return self._parser 
 
-    def execute(self, config, *args, **kwargs):
+    def execute(self, config, args):
         pass
     
 #     # map storing all command instances

@@ -1,7 +1,7 @@
 import sys
 import argparse
 from argparse import _, Action, _SubParsersAction
-from log import log
+from army.api.log import log
 
 # import sys
 # import pprint
@@ -116,7 +116,7 @@ class ArgumentParser(argparse.ArgumentParser):
         self.add_argument('-v', '--verbose', action='store_true', help='activate verbose mode', default=False)
         self.add_argument('-vv', action='store_true', help=argparse.SUPPRESS, default=False)
         self.add_argument('-vvv', action='store_true', help=argparse.SUPPRESS, default=False)
-
+        
     def parse_default_args(self):
         namespace, args = self.parse_known_args()
         if hasattr(namespace, 'verbose') and namespace.verbose==True:
@@ -128,5 +128,5 @@ class ArgumentParser(argparse.ArgumentParser):
         if hasattr(namespace, 'vvv') and namespace.vvv==True:
             print("Logging level debug")
             log.setLevel('DEBUG')
-    
+        return args
 #     def get_subparser(self):

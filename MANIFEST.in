@@ -1,2 +1,3 @@
 recursive-include army/api *
 recursive-include army/plugin *
+recursive-include army/unit_tests *

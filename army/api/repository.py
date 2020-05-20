@@ -1,6 +1,8 @@
 from army.api.log import log
 from army.api.package import Package
 from army.api.debugtools import print_stack
+from army.api.version import Version
+import os
 
 repository_types = {}
 
@@ -11,12 +13,12 @@ def register_repository(repository_class):
         repository_types[repository_class.TYPE] = repository_class
         log.debug(f"registered '{repository_class.TYPE}' repository type")
 
+
 # build repository list from configuration
-def load_repositories(config):
+def load_repositories(config, prefix=""):
     global repository_types
     res = []
     
-    print(repository_types)
     repos = {}
     try:
         repos = config.repo
@@ -27,11 +29,18 @@ def load_repositories(config):
     
     for repo_name in repos:
         try:
-            repo_type = repos[repo_name].type.value()
-            
-            # instanciate repository and load it
-            repo = repository_types[repo_type](repos[repo_name].uri)
-            res.append(repo)
+            repo_type_name = repos[repo_name].type.value()
+            repo_uri = os.path.join(prefix, repos[repo_name].uri.value())
+
+            if repo_type_name in repository_types:
+                    
+                repo_type = repository_types[repo_type_name]
+                
+                # instanciate repository and load it
+                repo = repo_type(name=repo_name, path=repo_uri)
+                res.append(repo)
+            else:
+                log.warning(f"{repo_type_name}: unhandheld repository type")
         except Exception as e:
             print_stack()
             log.debug(f"{e}")
@@ -46,24 +55,21 @@ class RepositoryException(Exception):
 
 class Repository(object):
     TYPE=None
+    DEV=False
     
-    def __init__(self, uri):
+    def __init__(self, name, uri):
+        self._name = name
         self._uri = uri
     
-    # override to return repository type
-    def type(self):
-        return None 
-
-    # override if repository has dev capability
-    def dev(self):
-        return False
+    def uri(self):
+        return self._uri
+    
+    def name(self):
+        return self._name
     
     # override to return package list
     def packages(self):
-        return {} 
-
-    def uri(self):
-        return self._uri 
+        return [] 
 
 
     # load package list from repository
@@ -75,10 +81,40 @@ class Repository(object):
         self.load()
     
     # search for a package inside the package list
-    # @param fullname if True then package name must match exactly 
-    def search(self, package, fullname=False):
-        pass
+    # @param fullname if True then package name must match exactly, if version is given then fullname is True
+    def search(self, search_criteria, fullname=False):
+        res = {}
+        search_name = search_criteria
+        search_version = None
+        
+        if ':' in search_criteria:
+            search_name, search_version = search_criteria.split(':')
+            fullname = True
+        
+        def _add_package(p):
+            if p.name() not in res:
+                res[p.name()] = {}
+            res[p.name()][str(p.version())] = p
+        
+        packages = self.packages()
+        for package in packages:
+            match_name = False
+            match_version = False
+            
+            if fullname==True and search_name==package.name():
+                match_name = True
+            elif fullname==False and search_name in package.name():
+                match_name = True
+            
+            if search_version is None:
+                match_version = True
+            elif match_name==True and Version(search_version)==package.version():
+                match_version = True
+                
+            if match_name==True and match_version==True:
+                _add_package(package)
 
+        return res
 
 class RepositoryPool(object):
     def __init__(self):
