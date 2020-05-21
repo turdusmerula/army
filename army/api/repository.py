@@ -19,6 +19,10 @@ def load_repositories(config, prefix=""):
     global repository_types
     res = []
     
+    if prefix=="":
+        log.debug(f"load repositories")
+    else:
+        log.debug(f"load repositories from {prefix}")
     repos = {}
     try:
         repos = config.repo
@@ -84,6 +88,7 @@ class Repository(object):
     # @param fullname if True then package name must match exactly, if version is given then fullname is True
     def search(self, search_criteria, fullname=False):
         res = {}
+        
         search_name = search_criteria
         search_version = None
         
@@ -91,10 +96,10 @@ class Repository(object):
             search_name, search_version = search_criteria.split(':')
             fullname = True
         
-        def _add_package(p):
-            if p.name() not in res:
-                res[p.name()] = {}
-            res[p.name()][str(p.version())] = p
+#         def _add_package(p):
+#             if p.name() not in res:
+#                 res[p.name()] = {}
+#             res[p.name()][str(p.version())] = p
         
         packages = self.packages()
         for package in packages:
@@ -110,12 +115,19 @@ class Repository(object):
                 match_version = True
             elif match_name==True and Version(search_version)==package.version():
                 match_version = True
-                
+            
             if match_name==True and match_version==True:
-                _add_package(package)
+                # package match
+                max_version = None
+                if package.name() in res:
+                    max_version = res[package.name()].version()
+                
+                if max_version is None or package.version()>max_version:
+                    res[package.name()] = package
 
         return res
 
+    
 class RepositoryPool(object):
     def __init__(self):
         self._repositories = []

@@ -1,7 +1,6 @@
 from army.api.log import log
 from army.api.command import Command
 from army.api.debugtools import print_stack
-# from army.api.repository import load_repositories
 from army.api.project import load_project
 from army.api.repository import load_repositories
 
@@ -14,7 +13,7 @@ class SearchCommand(Command):
 
         # add command arguments
         self.parser().add_default_args()
-        self.parser().add_argument('NAME', help='Module name')
+        self.parser().add_argument('NAME', help='Package name')
         self.parser().set_defaults(func=self.execute)
 
     def init_parser(self):
@@ -39,14 +38,15 @@ class SearchCommand(Command):
         
         # build repositories list
         repositories = load_repositories(config, prefix)
-        res = {}
+        packages = []
          
         for r in repositories:
-            packages = r.search(name)
-            if len(packages)>0:
-                res[r.name()] = packages
+            res = r.search(name)
+            if len(res)>0:
+                for pkg in res:
+                    packages.append(res[pkg])
 
-        if len(res)==0:
+        if len(packages)==0:
             print(f'No matches found for "{name}"')
             return
      
@@ -54,17 +54,12 @@ class SearchCommand(Command):
         column_package = ['package']
         column_version = ['version']
         column_description = ['description']
-#         
-        for r in res:
-            repo = res[r]
-            for p in repo:
-                package = repo[p]
-                for v in package:
-                    version = package[v]
-                    column_repo.append(r)
-                    column_package.append(p)
-                    column_version.append(v)
-                    column_description.append(version.description())
+#
+        for package in packages:
+            column_repo.append(package.repository().name())
+            column_package.append(package.name())
+            column_version.append(str(package.version()))
+            column_description.append(package.description())
       
         max_repo = len(max(column_repo, key=len))
         max_package = len(max(column_package, key=len))

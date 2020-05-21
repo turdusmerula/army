@@ -1,3 +1,0 @@
-[console_scripts]
-army = army.army:main
-

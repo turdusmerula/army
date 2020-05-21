@@ -22,7 +22,9 @@ def load_configuration(parent=None, prefix="/"):
                 config = ConfigRepositoryFile(parent=config, file=os.path.join(path, f))
 
     # load user config file
-    config = ArmyConfigFile(parent=config, file=os.path.join(prefix, '~/.army/army.toml'))
+    path = os.path.join(prefix, '~/.army/army.toml')
+    if os.path.exists(path):
+        config = ArmyConfigFile(parent=config, file=path)
      
     # load user repositories
     path = os.path.join(prefix, '~/.army/repo.d')
@@ -38,7 +40,6 @@ def load_configuration(parent=None, prefix="/"):
 class ConfigException(Exception):
     def __init__(self, message):
         self.message = message
-
 
 # Configuration base class
 class BaseConfig(object):
@@ -92,16 +93,19 @@ class Config(BaseConfig):
         
         # check for extraneous elements
         if isinstance(self._value, dict):
-            err = None
+            err = []
             # check all fields
             for value in self._value:
-                try:
-                    self.get(value)
-                except ConfigException as e:
-                    err = f"{err}\n{e}: unknown value"
-                    
-            if err:
-                raise ConfigException(err)
+                if self.get_field(value) is None:
+                    raise ConfigException(f"{value}: unexpected value")
+#             for value in self._value:
+#                 try:
+#                     self.get(value)
+#                 except ConfigException as e:
+#                     err.append(f"{e}")
+#                     
+#             if len(err)>0:
+#                 raise ConfigException(err)
 
     def load(self):
         self.check() 
@@ -114,6 +118,7 @@ class Config(BaseConfig):
     def get_field(self, item):
         if self._fields and item in self._fields:
             return self._fields[item]
+            
         if self._parent:
             return self._parent.get_field(item)
         return None
@@ -126,7 +131,7 @@ class Config(BaseConfig):
         field = self.get_field(item)
         
         if field is None:
-            raise ConfigException(f"'{item}': value not found")
+            raise ConfigException(f"'{item}': unexpected value")
 
         if len(field)==3:
             # custom allocator given for this field
@@ -173,7 +178,7 @@ class Config(BaseConfig):
         field = self.get_field(item)
 
         if field is None:
-            raise ConfigException(f"'{item}': value not found")
+            raise ConfigException(f"'{item}': unexpected value")
         
         if self._value is None:
             self._value = {}
@@ -182,6 +187,7 @@ class Config(BaseConfig):
             # this should not happen, means there is a problem to investigate upstream
             raise ConfigException(f"'{item}': parent type mismatch")
         
+        # create an item, should trigger an error if content is invalid
         v = field[self.ITEM_TYPE](value=value)
         self._value[item] = v.value()
         
@@ -484,7 +490,7 @@ class ArmyConfigFile(ArmyConfig):
         
         for item in config:
             try:
-#                     log.debug(f"load '{item}': {config[item]}")
+#                 log.debug(f"load '{item}': {config[item]}")
                 self.set(item, config[item])
             except Exception as e:
                 print_stack()

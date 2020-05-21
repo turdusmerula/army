@@ -4,7 +4,7 @@ import sys
 import pkg_resources
 
 sys.path.append(os.path.dirname(pkg_resources.resource_filename(__name__, "army.py")))
-import extargparse
+import army.api.extargparse as extargparse
 import argparse
 
 from army.api.config import ArmyConfig, load_configuration
@@ -66,7 +66,8 @@ root_config = ArmyConfig()
 
 # path prefix, used to provide unit tests data path
 prefix = ""
-prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_data")
+prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_project_data")
+#prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_data")
 
 def main():
     global prefix

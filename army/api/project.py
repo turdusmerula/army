@@ -4,6 +4,7 @@ import sys
 from army.api.log import log
 from army.api.debugtools import print_stack
 from army.api.config import ArmyConfigFile, ConfigRepositoryDict, Config, ConfigString, ConfigVersion
+from army.api.config import ConfigList
 
 # load project army file
 # @param parent parent configuration
@@ -16,6 +17,7 @@ def load_project(parent=None, prefix=""):
 
     return config
 
+
 class ConfigProject(Config):
     def __init__(self, value=None, parent=None):
         super(ConfigProject, self).__init__(
@@ -24,7 +26,9 @@ class ConfigProject(Config):
             fields={
                 'name': [ ConfigString ],
                 'description': [ ConfigString ],
-                'version': [ ConfigVersion ]
+                'version': [ ConfigVersion ],
+                'dependencies': [ ConfigRepositoryList, [] ],
+                'dev-dependencies': [ ConfigRepositoryList, [] ]
             }
         )
 
@@ -38,3 +42,12 @@ class ArmyProjectFile(ArmyConfigFile):
             }
         )
     
+
+class ConfigRepositoryList(ConfigList):
+    
+    def __init__(self, parent=None, value=None):
+        super(ConfigRepositoryList, self).__init__(
+            parent=parent,
+            value=value,
+            field=[ ConfigString, "" ]
+        )

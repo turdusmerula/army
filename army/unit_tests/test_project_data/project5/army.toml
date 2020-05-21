@@ -1,0 +1,4 @@
+[project]
+	name = "project5"
+	description = "test project 5"
+	version = "1.0.0" 

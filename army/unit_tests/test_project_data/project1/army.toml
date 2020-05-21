@@ -1,0 +1,8 @@
+[project]
+	name = "project1"
+	description = "test project 1"
+	version = "1.0.0" 
+
+	dependencies = [
+		"project2:1.0.0"
+	]

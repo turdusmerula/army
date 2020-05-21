@@ -1,5 +1,6 @@
 from army.api.command import CommandGroup
 from army.plugin.package.search import SearchCommand
+from army.plugin.package.install import InstallCommand
 
 # init plugin
 
@@ -10,3 +11,4 @@ if package_group is None:
 
 # load commands
 search_command = SearchCommand(package_group)
+install_command = InstallCommand(package_group)
