@@ -435,6 +435,14 @@ class ConfigList(BaseConfig):
     def __iter__(self):
         return _ConfigListIterator(self)
 
+class ConfigStringList(ConfigList):
+    
+    def __init__(self, parent=None, value=None):
+        super(ConfigStringList, self).__init__(
+            parent=parent,
+            value=value,
+            field=[ ConfigString ]
+        )
 
 # TODO: create type ConfigEnum as base class
 class ConfigLogLevel(ConfigString):

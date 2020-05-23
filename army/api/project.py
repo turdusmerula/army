@@ -3,10 +3,10 @@ import os
 import sys
 from army.api.log import log
 from army.api.debugtools import print_stack
-from army.api.config import ArmyConfigFile, ConfigRepositoryDict, Config, ConfigString, ConfigVersion
-from army.api.config import ConfigList
+from army.api.config import ArmyConfigFile, Config, ConfigString, ConfigVersion
+from army.api.config import ConfigList, ConfigStringList
 
-# load project army file
+# load project army file 
 # @param parent parent configuration
 # @param prefix mainly used for unit tests purpose
 # @return the loaded project configuration or None if project was not loaded
@@ -16,6 +16,17 @@ def load_project(parent=None, prefix=""):
     config = ArmyProjectFile(parent=parent, file=os.path.join(prefix, 'army.toml'))
 
     return config
+
+class ConfigPackaging(Config):
+    def __init__(self, value=None, parent=None):
+        super(ConfigPackaging, self).__init__(
+            value=value,
+            parent=parent,
+            fields={
+                'include': [ ConfigStringList, [] ],
+                'exclude': [ ConfigStringList, [] ]
+            }
+        )
 
 
 class ConfigProject(Config):
@@ -38,7 +49,8 @@ class ArmyProjectFile(ArmyConfigFile):
             file=file,
             parent=parent,
             fields={
-                'project': [ ConfigProject ]
+                'project': [ ConfigProject ],
+                'packaging': [ ConfigPackaging, {} ]
             }
         )
     

@@ -96,11 +96,6 @@ class Repository(object):
             search_name, search_version = search_criteria.split(':')
             fullname = True
         
-#         def _add_package(p):
-#             if p.name() not in res:
-#                 res[p.name()] = {}
-#             res[p.name()][str(p.version())] = p
-        
         packages = self.packages()
         for package in packages:
             match_name = False

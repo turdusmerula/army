@@ -3,10 +3,11 @@ from army.api.command import Command
 from army.api.debugtools import print_stack
 from army.api.project import load_project
 from army.api.repository import load_repositories
-
 from army.army import prefix
 
 import os
+import fnmatch
+import shutil
 
 class PackageDependency(object):
     def __init__(self, package, from_package=None):
@@ -79,7 +80,7 @@ class InstallCommand(Command):
 
         # locate install folder
         if getattr(args, 'global'):
-            path = "~/.army/dist/"
+            path = os.path.join(prefix, "~/.army/dist/")
         else:
             path = "dist"
         
@@ -124,7 +125,29 @@ class InstallCommand(Command):
         
         dependencies.reverse()
         for dependency in dependencies:
-            print("--- install", dependency.package())
+            install = False
+            installed_package = self.find_installed_package(dependency.package(), path)
+            if installed_package:
+                if force==True:
+                    log.info(f"reinstall package {dependency.package()}")
+                    install = True
+
+                    def rmtree_error(func, path, exc_info):
+                        print(exc_info)
+                        exit(1)
+                    shutil.rmtree(os.path.join(path, installed_package), onerror=rmtree_error)
+                else:
+                    log.info(f"package {dependency.package()} already installed, skip")
+                    install = False
+            else:
+                install = True
+                
+            if install==True:
+                if dependency.package().repository().DEV==True:
+                    dependency.package().install(path=os.path.join(path, str(dependency.package())), link=link)
+                else:
+                    # link mode is only possible with repository DEV
+                    dependency.package().install(path=os.path.join(path, str(dependency.package())), link=False)
         
     def check_dependency_version_conflict(self, dependencies, dependency):
         for dep in dependencies:
@@ -152,69 +175,11 @@ class InstallCommand(Command):
                     return res[package]
         log.error(f"{package}: package not found")
         exit(1)
-                # TODO
-#         
-#         
-#     def collect_pakages(self, package, config, repositories, dest_path, link=False, force=False):
-#         packages = []
-#         
-#         # search for module in repositories
-#         for repo in repositories:
-#             found_packages = repo.search(package, fullname=True)
-#             if len(found_packages)>0:
-#                 packages.append(found_packages) 
-# 
-#         if len(packages)==0:
-#             print(f"package not found '{package}'")
-#             exit(1)
-# 
-#         # search for dependices
-#         for package in packages:
-#             for repo_name in package:
-#                 repo = package[repo_name]
-#                 for version in repo:
-#                     package = repo[version]
-#                     
-#                     
-#                     
-#         return packages
-# 
-#     def install_pakage(self, package, config, repositories, dest_path, link=False, force=False):
-#         packages = []
-#         
-#         # search for module in repositories
-#         for repo in repositories:
-#             found_packages = repo.search(package, fullname=True)
-#             if len(found_packages)>0:
-#                 packages.append(found_packages) 
-# 
-#         if len(packages)==0:
-#             print(f"package not found '{package}'")
-#             exit(1)
-# #         
-#         install = None
-#         for module in modules:
-#             if module['version']=='dev':
-#                 install = module
-#             elif install is None:
-#                 install = module
-#             else:
-#                 if Version(install['version'])>Version(module['version']):
-#                     install = module
-#         log.debug(install)
-#         
-#         # install dependencies
-#         if 'dependencies' in install['info']:
-#             for dependency in install['info']['dependencies']:
-#                 install_module(dependency, config, repositories, dest_path, link, force)
-#         if 'dev-dependencies' in install['info']:
-#             for dependency in install['info']['dev-dependencies']:
-#                 install_module(dependency, config, repositories, dest_path, link, force)
-#         
-#         try:
-#             install['repository'].install(install, config, link, force)
-#             print(f"installed '{module['name']}:{module['version']}'")
-#         except Exception as e:
-#             print(f"army: {e}")
-#             exit(1)
-        
+    
+    def find_installed_package(self, package, path):
+        if os.path.exists(path):
+            for entry in os.listdir(path):
+                if fnmatch.fnmatch(entry, f"{package.name()}:*"):
+                    return entry
+        return None
+    

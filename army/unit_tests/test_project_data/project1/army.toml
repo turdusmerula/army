@@ -6,3 +6,9 @@
 	dependencies = [
 		"project2:1.0.0"
 	]
+
+[packaging]
+	include = [
+		"folder1",
+		"folder2"
+	]
