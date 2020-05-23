@@ -44,7 +44,6 @@ class LocalGitPackage(Package):
         return res
 
     def include(self):
-        print("..", self._config.expand())
         return self._config.packaging.include.value()
     
     def exclude(self):

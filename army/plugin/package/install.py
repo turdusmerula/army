@@ -40,7 +40,6 @@ class InstallCommand(Command):
         pass
     
     def execute(self, config, args):
-        
         project_config = None
         if os.path.exists("army.toml"):
             try:
@@ -149,19 +148,20 @@ class InstallCommand(Command):
                     # link mode is only possible with repository DEV
                     dependency.package().install(path=os.path.join(path, str(dependency.package())), link=False)
         
+        
     def check_dependency_version_conflict(self, dependencies, dependency):
         for dep in dependencies:
-            if dep.package().version()!=dependency.package().version():
-                msg = "version conflicts: "
+            if dep.package().name()==dependency.package().name() and dep.package().version()!=dependency.package().version():
+                msg = f"'{dependency.package().name()}': version conflicts: "
                 if dependency.from_package() is None:
-                    msg += f"{dependency.package.version()} from project"
+                    msg += f"'{dependency.package().version()}' from project"
                 else:
-                    msg += f"{dependency.package.version()} from {dependency.from_package().name()}"
+                    msg += f"'{dependency.package().version()}' from '{dependency.from_package().name()}'"
                 msg += " conflicts with "
                 if dep.from_package() is None:
-                    msg += f"{dep.package.version()} from project"
+                    msg += f"'{dep.package().version()}' from project"
                 else:
-                    msg += f"{dep.package.version()} from {dep.from_package().name()}"
+                    msg += f"'{dep.package().version()}' from '{dep.from_package().name()}'"
                 log.error(msg)
                 exit(1)
 

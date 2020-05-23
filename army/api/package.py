@@ -76,7 +76,6 @@ class Package(object):
                 self._link(source, dest)
             else:
                 self._copy(source, dest)
-            print("---", include)
         
         #execute postinstall command
         if os.path.exists(os.path.join(self._package_path, 'pkg', 'postinstall')):
