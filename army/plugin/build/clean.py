@@ -14,11 +14,9 @@ class CleanCommand(Command):
 
         # add command arguments
         self.parser().add_default_args()
-        self.parser().set_defaults(func=self.execute)
-
-    def init_parser(self):
-        pass
     
+        self.add_subparser()
+        
     def execute(self, config, args):
         log.info(f"clean {args}")
         

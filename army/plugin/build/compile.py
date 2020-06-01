@@ -13,11 +13,11 @@ class CompileCommand(Command):
 
         # add command arguments
         self.parser().add_default_args()
-        self.parser().set_defaults(func=self.execute)
-
-    def init_parser(self):
-        pass
+        self.parser().add_argument('-d', '--debug', action='store_true', help='Build with debug options')
+        self.parser().add_argument('-j', '--jobs',  type=int, default=1, help='Number of parallel builds (default 1)')
     
+        self.add_subparser()
+        
     def execute(self, config, args):
         print(f"compile {args}")
         #TODO
