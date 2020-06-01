@@ -68,7 +68,7 @@ root_config = ArmyConfig()
 
 # path prefix, used to provide unit tests data path
 prefix = ""
-prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_project_data")
+prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_compile_data")
 #prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_data")
 
 def main():
@@ -101,6 +101,7 @@ def main():
     # load internal plugins
     import army.plugin.package
     import army.plugin.repository
+    import army.plugin.build
     
     # load plugins
     try:
@@ -121,7 +122,7 @@ def main():
 #     # TODO: version
      
     if args.target is not None:
-        config.config['command_target'] = args.target
+        config.set("default-target", args.target)
  
     # call asked commands
     while args is not None:

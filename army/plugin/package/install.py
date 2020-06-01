@@ -35,11 +35,10 @@ class InstallCommand(Command):
 
         self.parser().add_argument('NAME', nargs='*', help='Packages', default=[])
         self.parser().set_defaults(func=self.execute)
-
-    def init_parser(self):
-        pass
     
     def execute(self, config, args):
+        log.info(f"install {args}")
+        
         project_config = None
         if os.path.exists("army.toml"):
             try:
@@ -49,7 +48,7 @@ class InstallCommand(Command):
             except Exception as e:
                 print_stack()
                 log.error(e)
-                exit(1  )
+                exit(1)
          
         if project_config is None:
             log.debug(f"no project loaded")
@@ -161,6 +160,8 @@ class InstallCommand(Command):
         
         # TODO save and save-dev
         
+        # TODO global
+
     def check_dependency_version_conflict(self, dependencies, dependency):
         for dep in dependencies:
             if dep.package().name()==dependency.package().name() and dep.package().version()!=dependency.package().version():

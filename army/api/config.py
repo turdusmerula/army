@@ -297,7 +297,7 @@ class ConfigDict(BaseConfig):
         field = self.get_field()
         
         if isinstance(item, type(field))==False:
-            raise ConfigException(f"{item}: invilad type")
+            raise ConfigException(f"{item}: invalid type")
         
         self.value()[name] = item.value()
         
@@ -469,7 +469,8 @@ class ArmyConfig(Config):
             parent=parent,
             fields={
                 **fields,
-                'verbose': [ ConfigLogLevel, "error" ]
+                'verbose': [ ConfigLogLevel, "error" ],
+                'default-target': [ ConfigString, "" ]
             }
         )
 
@@ -506,7 +507,7 @@ class ArmyConfigFile(ArmyConfig):
         
         for item in config:
             try:
-#                 log.debug(f"load '{item}': {config[item]}")
+                log.debug(f"load '{item}': {config[item]}")
                 self.set(item, config[item])
             except Exception as e:
                 print_stack()

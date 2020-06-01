@@ -16,10 +16,9 @@ class SearchCommand(Command):
         self.parser().add_argument('NAME', help='Package name')
         self.parser().set_defaults(func=self.execute)
 
-    def init_parser(self):
-        pass
-    
     def execute(self, config, args):
+        log.info(f"search {args}")
+        
         main_config = config
         
         project_config = None
@@ -66,4 +65,4 @@ class SearchCommand(Command):
         max_version = len(max(column_version, key=len))
       
         for i in range(len(column_repo)):
-            print(f"{column_repo[i].ljust(max_repo, ' ')}|{column_package[i].ljust(max_package)}|{column_version[i].ljust(max_version)}|{column_description[i]}")
+            print(f"{column_repo[i].ljust(max_repo, ' ')} | {column_package[i].ljust(max_package)} | {column_version[i].ljust(max_version)} | {column_description[i]}")

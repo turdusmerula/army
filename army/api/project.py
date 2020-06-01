@@ -38,7 +38,8 @@ class ConfigProject(Config):
                 'description': [ ConfigString ],
                 'version': [ ConfigVersion ],
                 'dependencies': [ ConfigRepositoryList, [] ],
-                'dev-dependencies': [ ConfigRepositoryList, [] ]
+                'dev-dependencies': [ ConfigRepositoryList, [] ],
+                'target': [ ConfigString, "" ],
             }
         )
 
@@ -59,6 +60,27 @@ class ConfigPluginDict(ConfigDict):
         )
 
 
+class ConfigTarget(Config):
+    def __init__(self, value=None, parent=None):
+        super(ConfigTarget, self).__init__(
+            value=value,
+            parent=parent,
+            fields={
+                'arch': [ ConfigString, "" ],
+                'include': [ ConfigString, "" ],
+                'dependencies': [ ConfigRepositoryList, [] ],
+                'dev-dependencies': [ ConfigRepositoryList, [] ],
+            }
+        )
+
+class ConfigTargetDict(ConfigDict):
+    def __init__(self, parent=None, value=None):
+        super(ConfigTargetDict, self).__init__(
+            parent=parent,
+            value=value,
+            field=[ ConfigTarget, {} ]
+        )
+
 class ArmyProjectFile(ArmyConfigFile):
     def __init__(self, file, parent=None):
         super(ArmyProjectFile, self).__init__(
@@ -67,7 +89,8 @@ class ArmyProjectFile(ArmyConfigFile):
             fields={
                 'project': [ ConfigProject ],
                 'packaging': [ ConfigPackaging, {} ],
-                'plugin': [ ConfigPluginDict, {} ]
+                'plugin': [ ConfigPluginDict, {} ],
+                'target': [ ConfigTargetDict, {} ]
             }
         )
     
