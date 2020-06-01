@@ -25,7 +25,7 @@ class LocalGitPackage(Package):
     def load(self):
         try:
             self._config = ArmyProjectFile(file=os.path.join(self._repository.uri(), 'army.toml'))
-            self._package_path = self.repository().uri()
+            self._path = self.repository().uri()
         except Exception as e:
             print_stack()
             log.error(e)
@@ -41,6 +41,12 @@ class LocalGitPackage(Package):
         res = []
         for dependency in self._config.project.get("dev-dependencies"):
             res.append(dependency.value())
+        return res
+
+    def plugins(self):
+        res = []
+        for dependency in self._config.plugin:
+            res.append(dependency)
         return res
 
     def include(self):

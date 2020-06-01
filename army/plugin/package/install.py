@@ -72,6 +72,10 @@ class InstallCommand(Command):
             for package in project_config.project.get("dev-dependencies"):
                 pkg = self.find_package(package.value(), repositories)
                 packages.append(PackageDependency(pkg))
+                
+            for plugin in project_config.plugin:
+                pkg = self.find_package(plugin, repositories)
+                packages.append(PackageDependency(pkg))
         else:
             for package in args.NAME:
                 pkg = self.find_package(package, repositories)
@@ -122,6 +126,13 @@ class InstallCommand(Command):
                 self.check_dependency_version_conflict(dependencies, dep_pkg)
                 packages.append(dep_pkg)
         
+            # append plugins to list
+            for dependency in package.plugins():
+                pkg = self.find_package(dependency, repositories)
+                dep_pkg = PackageDependency(package=pkg, from_package=package)
+                self.check_dependency_version_conflict(dependencies, dep_pkg)
+                packages.append(dep_pkg)
+        
         dependencies.reverse()
         for dependency in dependencies:
             install = False
@@ -136,7 +147,7 @@ class InstallCommand(Command):
                         exit(1)
                     shutil.rmtree(os.path.join(path, installed_package), onerror=rmtree_error)
                 else:
-                    log.info(f"package {dependency.package()} already installed, skip")
+                    print(f"package {dependency.package()} already installed, skip")
                     install = False
             else:
                 install = True
@@ -148,6 +159,7 @@ class InstallCommand(Command):
                     # link mode is only possible with repository DEV
                     dependency.package().install(path=os.path.join(path, str(dependency.package())), link=False)
         
+        # TODO save and save-dev
         
     def check_dependency_version_conflict(self, dependencies, dependency):
         for dep in dependencies:

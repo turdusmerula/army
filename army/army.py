@@ -11,6 +11,8 @@ from army.api.config import ArmyConfig, load_configuration
 from army.api.log import log, get_log_level
 from army.api.debugtools import print_stack
 from army.api.command import Command, CommandGroup
+from army.api.project import load_project
+from army.api.plugin import load_plugin
 
 # TODO add autocomplete https://kislyuk.github.io/argcomplete/
 
@@ -100,19 +102,18 @@ def main():
     import army.plugin.package
     import army.plugin.repository
     
-#     # load plugins
-#     try:
-#         project_config = load_project(config)
-#         plugins = project_config.plugins()
-#         for plugin in plugins:
-#             try:
-#                 load_plugin(plugin, config, subparser)
-#             except Exception as e:
-#                 print_stack()
-#                 log.warn(f"{e}")
-#     except Exception as e:
-#         pass
-# 
+    # load plugins
+    try:
+        project_config = load_project(config)
+        for plugin in project_config.plugin:
+            try:
+                load_plugin(plugin, config)
+            except Exception as e:
+                print_stack()
+                log.warn(f"{e}")
+    except Exception as e:
+        pass
+ 
     # parse command line
     root_parser.parse_default_args()
     args = root_parser.parse_args()

@@ -4,7 +4,7 @@ import sys
 from army.api.log import log
 from army.api.debugtools import print_stack
 from army.api.config import ArmyConfigFile, Config, ConfigString, ConfigVersion
-from army.api.config import ConfigList, ConfigStringList
+from army.api.config import ConfigList, ConfigStringList, ConfigDict
 
 # load project army file 
 # @param parent parent configuration
@@ -28,7 +28,6 @@ class ConfigPackaging(Config):
             }
         )
 
-
 class ConfigProject(Config):
     def __init__(self, value=None, parent=None):
         super(ConfigProject, self).__init__(
@@ -43,6 +42,23 @@ class ConfigProject(Config):
             }
         )
 
+class ConfigPlugin(Config):
+    def __init__(self, value=None, parent=None):
+        super(ConfigPlugin, self).__init__(
+            value=value,
+            parent=parent,
+            fields={}
+        )
+
+class ConfigPluginDict(ConfigDict):
+    def __init__(self, parent=None, value=None):
+        super(ConfigPluginDict, self).__init__(
+            parent=parent,
+            value=value,
+            field=[ ConfigPlugin, {} ]
+        )
+
+
 class ArmyProjectFile(ArmyConfigFile):
     def __init__(self, file, parent=None):
         super(ArmyProjectFile, self).__init__(
@@ -50,7 +66,8 @@ class ArmyProjectFile(ArmyConfigFile):
             parent=parent,
             fields={
                 'project': [ ConfigProject ],
-                'packaging': [ ConfigPackaging, {} ]
+                'packaging': [ ConfigPackaging, {} ],
+                'plugin': [ ConfigPluginDict, {} ]
             }
         )
     

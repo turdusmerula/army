@@ -12,3 +12,7 @@
 		"folder1",
 		"folder2"
 	]
+
+[plugin."plugin1:1.0.0"]
+	data = "value"
+	

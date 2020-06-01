@@ -6,6 +6,9 @@
 # critical
 verbose = "debug"
 
+[repo.plugin1]
+	type = "git-local"
+	uri = "plugin1"
 
 [repo.project1]
 	type = "git-local"

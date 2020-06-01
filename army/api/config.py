@@ -212,7 +212,15 @@ class Config(BaseConfig):
     def __str__(self):
         return f"{self.value()}"
 
+class ConfigNullableString(Config):
+    def __init__(self, value=None, parent=None):
+        super(ConfigNullableString, self).__init__(value=value, parent=parent)
+    
+    def check(self):
+        if self.value() and not isinstance(self.value(), str):
+            raise ConfigException(f"'{self.value()}': invalid string")
 
+    
 class ConfigString(Config):
     def __init__(self, value=None, parent=None):
         super(ConfigString, self).__init__(value=value, parent=parent)
@@ -502,7 +510,7 @@ class ArmyConfigFile(ArmyConfig):
                 self.set(item, config[item])
             except Exception as e:
                 print_stack()
-                log.error(f"{self._file}: {e}")
+                raise ConfigException(f"{self._file}: {e}")
         self.check()
         
     # define a custom allocator for the repo field, this field is not replaced by childs but needs to be merged
