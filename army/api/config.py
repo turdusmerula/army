@@ -459,7 +459,7 @@ class ConfigLogLevel(ConfigString):
 
     def check(self):
         super(ConfigLogLevel, self).check() 
-        if self._value not in {"debug", "info", "warning", "error", "critical"}:
+        if self._value not in {"debug", "info", "warning", "error", "fatal"}:
             raise ConfigException(f"'{self.value()}': invalid value")
 
 

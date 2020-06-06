@@ -48,7 +48,7 @@ def load_repositories(config, prefix=""):
         except Exception as e:
             print_stack()
             log.debug(f"{e}")
-            log.warning(f"{repo_name}: load repository failed")
+            log.error(f"{repo_name}: load repository failed")
             
     return res
 
@@ -56,7 +56,7 @@ class RepositoryException(Exception):
     def __init__(self, message):
         self.message = message
 
-
+# TODO: implement source
 class Repository(object):
     TYPE=None
     DEV=False
@@ -75,7 +75,9 @@ class Repository(object):
     def packages(self):
         return [] 
 
-
+    def type(self):
+        return self.TYPE
+    
     # load package list from repository
     def load(self):
         pass
@@ -101,6 +103,9 @@ class Repository(object):
             match_name = False
             match_version = False
             
+            if fullname==False and search_name in package.description().lower():
+                match_name = True
+                
             if fullname==True and search_name==package.name():
                 match_name = True
             elif fullname==False and search_name in package.name():

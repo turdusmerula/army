@@ -70,12 +70,7 @@ class LocalGitRepository(Repository):
     def load(self):
         # load project file
         project = None
-        try:
-            project = load_project(prefix=self.uri())
-        except Exception as e:
-            print_stack()
-            log.warning(f"{e}")
-            log.warning(f"{self.name()}: loading repository failed")
+        project = load_project(prefix=self.uri())
 
         self._packages = []
         if project is not None:

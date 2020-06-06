@@ -16,4 +16,17 @@ def get_log_level():
     elif log.level==40:
         return "error"
     else:
-        return "critical"
+        return "fatal"
+
+def set_log_level(level):
+    if level is None or level=='fatal':
+        log.setLevel('CRITICAL')        
+    elif level=='error':
+        log.setLevel('ERROR')
+    elif level=='warning':
+        log.setLevel('WARNING')
+    elif level=='info':
+        log.setLevel('INFO')
+    elif level=='debug':
+        log.setLevel('DEBUG')
+            

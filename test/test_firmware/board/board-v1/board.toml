@@ -1,5 +1,0 @@
-dependencies = [
-]
-
-[flash]
-tool = jlink

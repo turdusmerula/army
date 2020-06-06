@@ -25,3 +25,7 @@ def load_plugin(name, config):
 class PluginException(Exception):
     def __init__(self, message):
         self.message = message
+
+
+def plugin(func):
+    pass

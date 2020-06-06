@@ -4,15 +4,14 @@ import sys
 import pkg_resources
 
 sys.path.append(os.path.dirname(pkg_resources.resource_filename(__name__, "army.py")))
-import army.api.extargparse as extargparse
-import argparse
 
 from army.api.config import ArmyConfig, load_configuration
-from army.api.log import log, get_log_level
+from army.api.log import log, get_log_level, set_log_level
 from army.api.debugtools import print_stack
-from army.api.command import Command, CommandGroup
 from army.api.project import load_project
 from army.api.plugin import load_plugin
+from army.api.click import verbose_option 
+import click
 
 # TODO add autocomplete https://kislyuk.github.io/argcomplete/
 
@@ -59,50 +58,71 @@ from army.api.plugin import load_plugin
 # output/    # build result
 # project.toml # project description and global dependencies
 
-# library project structure:
+# default configuration
+root_config = ArmyConfig()
+config = None
+
+# create the config parser, this parser is mainly used to catch logger verbosity
+@click.group(invoke_without_command=True, 
+             no_args_is_help=False, 
+             add_help_option=False, 
+             context_settings=dict(
+                 resilient_parsing=True))
+#                  allow_extra_args=True, 
+#                  allow_interspersed_args=True))
+@verbose_option()
+@click.pass_context
+def cli_init(ctx, v, **kwargs):
+    pass
+#    set_log_level(v)
+
 
 # create the top-level parser
-# this parser handles top level 
-root_parser = extargparse.ArgumentParser(prog='army')
-root_config = ArmyConfig()
+@click.group()
+@verbose_option()
+@click.option('-t', '--target', help='select target')
+@click.option('--version', help='show army version', is_flag=True)
+@click.pass_context
+# TODO add version with version_option
+def cli(ctx, **kwargs):
+    global config
+    ctx.config = config
+
+    # TODO: version
+    
+    # TODO target
+#     if target is not None:
+#         config.set("default-target", args.target)
 
 # path prefix, used to provide unit tests data path
 prefix = ""
-prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_compile_data")
-#prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_data")
+#prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_compile_data")
+prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_data")
 
 def main():
     global prefix
+    global config
     
-    # temporary parser used parse command line for logging arguments, other arguments are ignored during this phase
-    # if logging arguments are present they can be activated prior to any action
-    preparser = extargparse.ArgumentParser(prog='army', add_help=False)
-    preparser.add_default_args()
-    args = preparser.parse_default_args()
-    
+    try:
+        # cliinit will initialize the logger only
+        # we need to load the plugins before showing any help or it will not be complete
+        cli_init()
+    except:
+        pass
+
     # configure logger
     root_config.set("verbose", get_log_level())
-    
+
     # load army configuration files
     if prefix!="":
         log.debug(f"using {prefix} as path prefix")
-    config = load_configuration(prefix=prefix) 
+    config = load_configuration(parent=root_config, prefix=prefix) 
 
-    # add root_parser options
-    root_parser.add_argument('--version', action='store_true', help='return version')
-    root_parser.add_argument('-t', '--target', help='select target', default=None)
-    root_parser.add_default_args()
-
-    # init command parser group
-    command_parser = root_parser.add_subparsers(metavar='COMMAND', title=None, description=None, help=None, parser_class=extargparse.ArgumentParser, required=True)
-    CommandGroup.init_root("", "", command_parser)
-    root = CommandGroup.root()
-    
     # load internal plugins
-    import army.plugin.package
     import army.plugin.repository
-    import army.plugin.build
-    
+    import army.plugin.package
+#     import army.plugin.build
+
     # load plugins
     try:
         project_config = load_project(config)
@@ -114,25 +134,10 @@ def main():
                 log.warn(f"{e}")
     except Exception as e:
         pass
- 
-    # parse command line
-    root_parser.parse_default_args()
-    args = root_parser.parse_args()
 
-#     # TODO: version
-     
-    if args.target is not None:
-        config.set("default-target", args.target)
- 
-    # call asked commands
-    while args is not None:
-        if hasattr(args, "func"):
-            args.func(config, args)
-        if hasattr(args, "subspace"):
-            args = args.subspace
-        else:
-            args = None
-        
+    # parse command line
+    cli() 
+
     
 if __name__ == "__main__":
 

@@ -1,6 +1,10 @@
 from army.api.repository import Repository
 from army.api.log import log
 
+class GitRepositoryException(Exception):
+    def __init__(self, message):
+        self.message = message
+
 class GitRepository(Repository):
     TYPE="git"
     DEV=False
@@ -14,7 +18,7 @@ class GitRepository(Repository):
 
     # load package list from repository
     def load(self):
-        log.warning(f"{self.name()}: GitRepository.load: not yet implemented")
+        raise GitRepositoryException(f"{self.name()}: GitRepository: not yet implemented")
 
     def packages(self):
         return self._packages 
