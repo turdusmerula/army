@@ -4,6 +4,7 @@ from army.api.project import load_project
 from army.api.repository import load_repositories
 from army.army import prefix
 from army.api.click import verbose_option 
+from army.api.package import load_installed_packages, load_installed_package
 from army.army import cli
 import click
 import os
@@ -11,16 +12,26 @@ import fnmatch
 import shutil
 
 class PackageDependency(object):
-    def __init__(self, package, from_package=None):
+    def __init__(self, package, repository, from_package=None):
         self._package = package
         self._from_package = from_package
-    
+        self._repository = repository
+        
+    @property 
     def package(self):
         return self._package
     
+    @property
     def from_package(self):
         return self._from_package
-    
+
+    @property
+    def repository(self):
+        return self._repository
+
+    def __repr__(self):
+        return f"{self._package.name}:{self._package.version}"
+
 @cli.command(name='install', help='Install package')
 @verbose_option()
 @click.option('-l', '--link', help='Link files instead of copy (local repository only)', is_flag=True)
@@ -30,163 +41,140 @@ class PackageDependency(object):
 # @click.option('--save-dev', help='Update project dev package list', is_flag=True) # TODO
 @click.argument('name', nargs=-1)
 @click.pass_context
-def install(ctx, name, **kwargs):
-    log.info(f"install {name}")
+def install(ctx, name, link, reinstall, **kwargs):
+    log.info(f"install {name} {kwargs}")
     
-    project_config = None
-    if os.path.exists("army.toml"):
-        try:
-            # load project configuration
-            project_config = load_project(config)
-            config = project_config
-        except Exception as e:
-            print_stack()
-            log.error(e)
-            exit(1)
-     
-    if project_config is None:
-        log.debug(f"no project loaded")
-#             project_config = config
+    _global = kwargs['global']  # not in parameters due to conflict with global keywoard
+    
+    # load configuration
+    config = ctx.parent.config
+    project = None
+    try:
+        # load project configuration
+        project = load_project()
+    except Exception as e:
+        print_stack()
+        log.debug(e)
+        log.info(f"no project loaded")
      
     # build repositories list
     repositories = load_repositories(config, prefix)
-
+    
     packages = []
 
-    if len(args.NAME)==0:
-        if project_config is None:
+    if len(name)==0:
+        if project is None:
             log.error(f"{os.getcwd()}: army.toml not found")
             exit(1)
 
-        for package in project_config.project.dependencies:
-            pkg = self.find_package(package.value(), repositories)
-            packages.append(PackageDependency(pkg))
-
-        for package in project_config.project.get("dev-dependencies"):
-            pkg = self.find_package(package.value(), repositories)
-            packages.append(PackageDependency(pkg))
+        for package in project.dependencies:
+            pkg, repo = _find_package(package, project.dependencies[package], repositories)
+            packages.append(PackageDependency(package=pkg, repository=repo))
             
-        for plugin in project_config.plugin:
-            pkg = self.find_package(plugin, repositories)
-            packages.append(PackageDependency(pkg))
+        for plugin in project.plugins:
+            pkg, repo = _find_package(plugin, project.plugins[plugin], repositories)
+            packages.append(PackageDependency(package=pkg, repository=repo))
     else:
-        for package in args.NAME:
-            pkg = self.find_package(package, repositories)
-            packages.append(PackageDependency(pkg))
+        for package in name:
+            pkg, repo = _find_package(package, repositories)
+            packages.append(PackageDependency(package=pkg, repository=repo))
 
     # locate install folder
-    if getattr(args, 'global'):
+    if _global:
         path = os.path.join(prefix, "~/.army/dist/")
     else:
         path = "dist"
     
-    link = False
-    if args.link:
-        link = True
-        
     force = False
-    if args.reinstall:
+    if reinstall:
         force = True
 
     dependencies = []
     while(len(packages)>0):
-        # get dependencies fro top level package to end level
+        # get dependencies from top level package to end level
         package_dep = packages.pop(0)
-        package = package_dep.package()
-
-        try:
-            # load package
-            package.load()
-        except Exception as e:
-            print_stack()
-            log.error(e)
-            exit(1)
-        
+        package = package_dep.package
+        print("****", type(package), package)
         # dependency treated ok, append to list
         dependencies.append(package_dep)
         
         # append dependencies to list
-        for dependency in package.dependencies():
-            pkg = self.find_package(dependency, repositories)
-            dep_pkg = PackageDependency(package=pkg, from_package=package)
-            self.check_dependency_version_conflict(dependencies, dep_pkg)
+        for dependency in package.dependencies:
+            pkg, repo = _find_package(dependency, package.dependencies[dependency], repositories)
+            dep_pkg = PackageDependency(package=pkg, repository=repo, from_package=package)
             packages.append(dep_pkg)
 
-        # append dependencies to list
-        for dependency in package.dev_dependencies():
-            pkg = self.find_package(dependency, repositories)
-            dep_pkg = PackageDependency(package=pkg, from_package=package)
-            self.check_dependency_version_conflict(dependencies, dep_pkg)
-            packages.append(dep_pkg)
-    
         # append plugins to list
-        for dependency in package.plugins():
-            pkg = self.find_package(dependency, repositories)
-            dep_pkg = PackageDependency(package=pkg, from_package=package)
-            self.check_dependency_version_conflict(dependencies, dep_pkg)
+        for plugin in package.plugins:
+            pkg, repo = _find_package(plugin, package.plugins[plugin], repositories)
+            dep_pkg = PackageDependency(package=pkg, repository=repo, from_package=package)
             packages.append(dep_pkg)
-    
+
+    # treat dependencies first
     dependencies.reverse()
+    
+    log.debug(f"packages: {dependencies}")
+    # checks
+    _check_dependency_version_conflict(dependencies)
+    _check_installed_version_conflict(dependencies)
+    
+    # install
     for dependency in dependencies:
         install = False
-        installed_package = self.find_installed_package(dependency.package(), path)
+        installed_package = load_installed_package(dependency.package.name, prefix=prefix)
         if installed_package:
             if force==True:
-                log.info(f"reinstall package {dependency.package()}")
+                print(f"reinstall {dependency.package}")
                 install = True
-
-                def rmtree_error(func, path, exc_info):
-                    print(exc_info)
-                    exit(1)
-                shutil.rmtree(os.path.join(path, installed_package), onerror=rmtree_error)
             else:
-                print(f"package {dependency.package()} already installed, skip")
+                print(f"package {dependency.package} already installed, skip")
                 install = False
         else:
             install = True
+            print(f"install package {dependency.package}")
             
         if install==True:
-            if dependency.package().repository().DEV==True:
-                dependency.package().install(path=os.path.join(path, str(dependency.package())), link=link)
+            if dependency.repository.DEV==True:
+                dependency.package.install(path=os.path.join(path, dependency.package.name), link=link)
             else:
                 # link mode is only possible with repository DEV
-                dependency.package().install(path=os.path.join(path, str(dependency.package())), link=False)
+                dependency.package.install(path=os.path.join(path, dependency.package.name), link=False)
     
     # TODO save and save-dev
+
+def _check_dependency_version_conflict(dependencies):
+    """ Check if dependencies contains same package with version mismatch
+    """
+    for dependency in dependencies:
+        for dep in dependencies:
+            if dep.package.name==dependency.package.name and dep.package.version!=dependency.package.version:
+                msg = f"'{dependency.package.name}': version conflicts: "
+                if dependency.from_package is None:
+                    msg += f"'{dependency.package.version}' from project"
+                else:
+                    msg += f"'{dependency.package.version}' from '{dependency.from_package.name}'"
+                msg += " conflicts with "
+                if dep.from_package is None:
+                    msg += f"'{dep.package.version}' from project"
+                else:
+                    msg += f"'{dep.package.version}' from '{dep.from_package.name}'"
+                print(msg)
+                exit(1)
+
+def _check_installed_version_conflict(dependencies):
+    """ Check if dependencies contains a package already installed with a version mismatch
+    """
+    installed = load_installed_packages(prefix=prefix)
+    # TODO
     
-    # TODO global
-
-def check_dependency_version_conflict(self, dependencies, dependency):
-    for dep in dependencies:
-        if dep.package().name()==dependency.package().name() and dep.package().version()!=dependency.package().version():
-            msg = f"'{dependency.package().name()}': version conflicts: "
-            if dependency.from_package() is None:
-                msg += f"'{dependency.package().version()}' from project"
-            else:
-                msg += f"'{dependency.package().version()}' from '{dependency.from_package().name()}'"
-            msg += " conflicts with "
-            if dep.from_package() is None:
-                msg += f"'{dep.package().version()}' from project"
-            else:
-                msg += f"'{dep.package().version()}' from '{dep.from_package().name()}'"
-            log.error(msg)
-            exit(1)
-
-def find_package(self, package, repositories):
+def _find_package(name, version, repositories):
     # search for module in repositories
     for repo in repositories:
-        res = repo.search(package, fullname=True)
+        res = repo.search(name, version, fullname=True)
         if len(res)>0:
             # result can contain only one element as fullname is True
             for package in res:
-                return res[package]
-    log.error(f"{package}: package not found")
+                return res[package], repo
+    print(f"{package}: package not found")
     exit(1)
-
-def find_installed_package(self, package, path):
-    if os.path.exists(path):
-        for entry in os.listdir(path):
-            if fnmatch.fnmatch(entry, f"{package.name()}:*"):
-                return entry
-    return None
     

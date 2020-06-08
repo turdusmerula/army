@@ -1,31 +1,37 @@
 from army.api.log import log
-from army.api.package import find_installed_package
+from army.api.package import load_installed_package
 from army.api.debugtools import print_stack
-import importlib
+from army.api.version import Version
 import importlib.util
 import os
 
 def load_plugin(name, config):
     log.info(f"load plugin '{name}'")
 
-    package = find_installed_package(name)
+    search_name = name
+    search_version = None
+    if ':' in name:
+        search_name, search_version = name.split(':')
+
+    package = load_installed_package(search_name)
 
     if package is None:
-        raise PluginException(f"{name}: plugin not found")
+        raise PluginException(f"{name}: plugin not installed")
+        return
+
+    if search_version and package.version!=Version(search_version):
+        raise PluginException(f"{name}: require version '{search_version}' but '{package.version}' found")
 
     try:
-        spec = importlib.util.spec_from_file_location("plugin", os.path.join(package.path(), '__init__.py'))
+        spec = importlib.util.spec_from_file_location("plugin", os.path.join(package.path, '__init__.py'))
         plugin = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(plugin)
     except Exception as e:
         print_stack()
         log.debug(e)
-        log.error(f"Failed to load plugin {name}")
+        raise PluginException(f"{name}: failed to load plugin")
 
 class PluginException(Exception):
     def __init__(self, message):
         self.message = message
 
-
-def plugin(func):
-    pass

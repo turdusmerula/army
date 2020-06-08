@@ -18,6 +18,10 @@ verbose = "debug"
 	type = "git-local"
 	uri = "project2"
 
+[repo."project2-error"]
+	type = "git-local"
+	uri = "project2-error"
+
 [repo.project3]
 	type = "git-local"
 	uri = "project3"
@@ -26,6 +30,10 @@ verbose = "debug"
 	type = "git-local"
 	uri = "project4"
 	
+[repo."project4-bis"]
+	type = "git-local"
+	uri = "project4-bis"
+
 [repo.project5]
 	type = "git-local"
 	uri = "project5"

@@ -1,105 +1,43 @@
 import toml
 import os
-import sys
 from army.api.log import log
 from army.api.debugtools import print_stack
-from army.api.config import ArmyConfigFile, Config, ConfigString, ConfigVersion
-from army.api.config import ConfigList, ConfigStringList, ConfigDict
+from army.api.package import Package
+
+# from army.api.config import ArmyConfigFile, Config, ConfigString, ConfigVersion
+# from army.api.config import ConfigList, ConfigStringList, ConfigDict
 
 # load project army file 
 # @param parent parent configuration
 # @param prefix mainly used for unit tests purpose
 # @return the loaded project configuration or None if project was not loaded
-def load_project(parent=None, prefix=""):
+def load_project(path='army.toml'):
     
-    # load main config file
-    config = ArmyProjectFile(parent=parent, file=os.path.join(prefix, 'army.toml'))
+    # TODO find a way to add line to error message
+    file = os.path.expanduser(path)
+    if os.path.exists(file)==False:
+        raise ProjectException(f"{file}: file not found")
 
-    return config
-
-class ConfigPackaging(Config):
-    def __init__(self, value=None, parent=None):
-        super(ConfigPackaging, self).__init__(
-            value=value,
-            parent=parent,
-            fields={
-                'include': [ ConfigStringList, [] ],
-                'exclude': [ ConfigStringList, [] ]
-            }
-        )
-
-class ConfigProject(Config):
-    def __init__(self, value=None, parent=None):
-        super(ConfigProject, self).__init__(
-            value=value,
-            parent=parent,
-            fields={
-                'name': [ ConfigString ],
-                'description': [ ConfigString ],
-                'version': [ ConfigVersion ],
-                'dependencies': [ ConfigRepositoryList, [] ],
-                'dev-dependencies': [ ConfigRepositoryList, [] ],
-                'target': [ ConfigString, "" ],
-            }
-        )
-
-class ConfigPlugin(Config):
-    def __init__(self, value=None, parent=None):
-        super(ConfigPlugin, self).__init__(
-            value=value,
-            parent=parent,
-            fields={}
-        )
-
-class ConfigPluginDict(ConfigDict):
-    def __init__(self, parent=None, value=None):
-        super(ConfigPluginDict, self).__init__(
-            parent=parent,
-            value=value,
-            field=[ ConfigPlugin, {} ]
-        )
-
-
-class ConfigTarget(Config):
-    def __init__(self, value=None, parent=None):
-        super(ConfigTarget, self).__init__(
-            value=value,
-            parent=parent,
-            fields={
-                'arch': [ ConfigString, "" ],
-                'include': [ ConfigString, "" ],
-                'dependencies': [ ConfigRepositoryList, [] ],
-                'dev-dependencies': [ ConfigRepositoryList, [] ],
-            }
-        )
-
-class ConfigTargetDict(ConfigDict):
-    def __init__(self, parent=None, value=None):
-        super(ConfigTargetDict, self).__init__(
-            parent=parent,
-            value=value,
-            field=[ ConfigTarget, {} ]
-        )
-
-class ArmyProjectFile(ArmyConfigFile):
-    def __init__(self, file, parent=None):
-        super(ArmyProjectFile, self).__init__(
-            file=file,
-            parent=parent,
-            fields={
-                'project': [ ConfigProject ],
-                'packaging': [ ConfigPackaging, {} ],
-                'plugin': [ ConfigPluginDict, {} ],
-                'target': [ ConfigTargetDict, {} ]
-            }
-        )
+    content = {}
+    try:
+        log.info(f"Load project '{file}'")
+        content = toml.load(file)
+        log.debug(f"content: {content}")
+    except Exception as e:
+        print_stack()
+        log.debug(e)
+        raise ProjectException(f"{format(e)}")
     
+    project = Project(data=content)
+    project.check()
 
-class ConfigRepositoryList(ConfigList):
-    
-    def __init__(self, parent=None, value=None):
-        super(ConfigRepositoryList, self).__init__(
-            parent=parent,
-            value=value,
-            field=[ ConfigString, "" ]
-        )
+    return project
+
+class ProjectException(Exception):
+    def __init__(self, message):
+        self.message = message
+
+
+class Project(Package):
+    def __init__(self, data):
+        super(Project, self).__init__(data, schema={})

@@ -1,10 +1,7 @@
-name = "project2"
+name = "project2-error"
 description = "test project 2"
 version = "1.0.0" 
 
 [dependencies]
 	project3 = "1.1.0"
 	project4 = "1.3.0"
-
-[plugins]
-	plugin1 = "1.0.0"

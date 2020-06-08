@@ -6,7 +6,7 @@ import pkg_resources
 sys.path.append(os.path.dirname(pkg_resources.resource_filename(__name__, "army.py")))
 
 from army.api.config import ArmyConfig, load_configuration
-from army.api.log import log, get_log_level, set_log_level
+from army.api.log import log, get_log_level
 from army.api.debugtools import print_stack
 from army.api.project import load_project
 from army.api.plugin import load_plugin
@@ -73,45 +73,39 @@ config = None
 @verbose_option()
 @click.pass_context
 def cli_init(ctx, v, **kwargs):
-    pass
-#    set_log_level(v)
+    # configure logger
+    root_config.set("verbose", get_log_level())
 
 
 # create the top-level parser
 @click.group()
 @verbose_option()
 @click.option('-t', '--target', help='select target')
-@click.option('--version', help='show army version', is_flag=True)
 @click.pass_context
 # TODO add version with version_option
 def cli(ctx, **kwargs):
     global config
     ctx.config = config
-
-    # TODO: version
-    
     # TODO target
 #     if target is not None:
 #         config.set("default-target", args.target)
 
 # path prefix, used to provide unit tests data path
 prefix = ""
+prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_project_data")
 #prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_compile_data")
-prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_data")
+#prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_data")
 
 def main():
     global prefix
     global config
     
     try:
-        # cliinit will initialize the logger only
-        # we need to load the plugins before showing any help or it will not be complete
+        # cli_init will initialize the logger only, everything else is ignored at this point
+        # we need to load the plugins before showing any help
         cli_init()
     except:
         pass
-
-    # configure logger
-    root_config.set("verbose", get_log_level())
 
     # load army configuration files
     if prefix!="":
@@ -125,19 +119,21 @@ def main():
 
     # load plugins
     try:
-        project_config = load_project(config)
+        project_config = load_project()
         for plugin in project_config.plugin:
             try:
                 load_plugin(plugin, config)
             except Exception as e:
                 print_stack()
-                log.warn(f"{e}")
+                print(f"{e}")
     except Exception as e:
-        pass
+        print_stack()
+        log.debug(e)
+        log.info("no project loaded")
 
     # parse command line
     cli() 
-
+    
     
 if __name__ == "__main__":
 

@@ -12,31 +12,88 @@ from army.api.version import Version
 # @param prefix mainly used for unit tests purpose
 def load_configuration(parent=None, prefix="/"):
     # load main config file
-    config = ArmyConfigFile(parent=parent, file=os.path.join(prefix, 'etc/army/army.toml'))
+    config = load_configuration_file(path=os.path.join(prefix, 'etc/army/army.toml'), parent=parent)
     
     # load main repositories
     path = os.path.join(prefix, 'etc/army/repo.d')
     if os.path.exists(path) and os.path.isdir(path):
         for f in os.listdir(path):
             if os.path.isfile(os.path.join(path, f)) and f.endswith(".toml"):
-                config = ConfigRepositoryFile(parent=config, file=os.path.join(path, f))
+                config = load_configuration_repository_file(path=os.path.join(path, f), parent=config)
 
     # load user config file
     path = os.path.join(prefix, '~/.army/army.toml')
     if os.path.exists(path):
-        config = ArmyConfigFile(parent=config, file=path)
+        config = load_configuration_file(path=path, parent=config)
      
     # load user repositories
     path = os.path.join(prefix, '~/.army/repo.d')
     if os.path.exists(path) and os.path.isdir(path):
         for f in os.listdir(path):
             if os.path.isfile(os.path.join(path, f)) and f.endswith(".toml"):
-                config = ConfigRepositoryFile(parent=config, file=os.path.join(path, f))
+                config = load_configuration_repository_file(path=os.path.join(path, f), parent=config)
 
     return config
 
 
+def load_configuration_file(path, parent=None):
+    # TODO find a way to add line to error message
+    file = os.path.expanduser(path)
+    if os.path.exists(file)==False:
+        raise ConfigException(f"{file}: file not found")
 
+    config = {}
+    try:
+        log.info(f"load config '{path}'")
+        config = toml.load(file)
+        log.debug(f"content: {config}")
+    except Exception as e:
+        print_stack()
+        log.debug(e)
+        raise ConfigException(f"{format(e)}")
+    
+    res = ArmyConfig(parent=parent, value=config)
+    return res
+#     for item in config:
+#         try:
+#             log.debug(f"load '{item}': {config[item]}")
+#             res.set(item, config[item])
+#         except Exception as e:
+#             print_stack()
+#             log.debug(e)
+#             raise ConfigException(f"{path}: {e}")
+#     res.check()
+    
+
+def load_configuration_repository_file(path, parent=None):
+    # TODO find a way to add line to error message
+    file = os.path.expanduser(path)
+    if os.path.exists(file)==False:
+        raise ConfigException(f"{file}: file not found")
+
+    config = {}
+    try:
+        log.info(f"Load config '{path}'")
+        config = toml.load(file)
+        log.debug(f"content: {config}")
+    except Exception as e:
+        print_stack()
+        log.debug(e)
+        raise ConfigException(f"{format(e)}")
+    
+    res = ArmyConfigRepository(parent=parent, value=config)
+    return res
+#     for item in config:
+#         try:
+#             log.debug(f"load '{item}': {config[item]}")
+#             res.set(item, config[item])
+#         except Exception as e:
+#             print_stack()
+#             log.debug(e)
+#             raise ConfigException(f"{path}: {e}")
+    
+
+    
 class ConfigException(Exception):
     def __init__(self, message):
         self.message = message
@@ -464,56 +521,17 @@ class ConfigLogLevel(ConfigString):
 
 
 class ArmyConfig(Config):
-    def __init__(self, parent=None, fields={}):
+    def __init__(self, value=None, parent=None):
         super(ArmyConfig, self).__init__(
+            value=value,
             parent=parent,
             fields={
-                **fields,
                 'verbose': [ ConfigLogLevel, "error" ],
-                'default-target': [ ConfigString, "" ]
-            }
-        )
-
-
-class ArmyConfigFile(ArmyConfig):
-    def __init__(self, file, parent=None, fields={}):
-        self._file = file
-
-        super(ArmyConfigFile, self).__init__(
-            parent=parent,
-            fields={
-                **fields,
+                'default-target': [ ConfigString, "" ],
                 "repo": [ ConfigRepositoryDict, {}, self._allocate_repo ]
             }
         )
-    
-    def file(self):
-        return self._file 
-    
-    def load(self):
-        # TODO find a way to add line to error message
-        file = os.path.expanduser(self._file)
-        if os.path.exists(file)==False:
-            raise ConfigException(f"{file}: file not found")
 
-        config = {}
-        try:
-            log.info(f"Load config '{self._file}'")
-            config = toml.load(file)
-            log.debug(f"content: {config}")
-        except Exception as e:
-            print_stack()
-            raise ConfigException(f"{format(e)}")
-        
-        for item in config:
-            try:
-                log.debug(f"load '{item}': {config[item]}")
-                self.set(item, config[item])
-            except Exception as e:
-                print_stack()
-                raise ConfigException(f"{self._file}: {e}")
-        self.check()
-        
     # define a custom allocator for the repo field, this field is not replaced by childs but needs to be merged
     # as each child just adds or superseed repository list
     def _allocate_repo(self, value):
@@ -535,7 +553,17 @@ class ArmyConfigFile(ArmyConfig):
         if parent:  
             return ConfigRepositoryDict(value=value, parent=parent.repo)
         return res
+        
 
+class ConfigRepositoryDict(ConfigDict):
+    
+    def __init__(self, parent=None, value=None):
+        super(ConfigRepositoryDict, self).__init__(
+            parent=parent,
+            value=value,
+            field=[ ConfigRepository, {} ]
+        )
+        
 class ConfigRepository(Config):
     def __init__(self, parent=None, value=None):
         super(ConfigRepository, self).__init__(
@@ -547,43 +575,16 @@ class ConfigRepository(Config):
             }
         )
     
-class ConfigRepositoryDict(ConfigDict):
-    
+class ArmyConfigRepository(Config):
     def __init__(self, parent=None, value=None):
-        super(ConfigRepositoryDict, self).__init__(
-            parent=parent,
-            value=value,
-            field=[ ConfigRepository, {} ]
-        )
-
-class ConfigRepositoryFile(Config):
-    def __init__(self, file, parent=None, value=None):
-        self._file = file
-
-        super(ConfigRepositoryFile, self).__init__(
+        super(ConfigRepository, self).__init__(
             parent=parent,
             value=value,
             fields={
-                "repo": [ ConfigRepositoryDict, {}, self._allocate_repo ]
+                'repo': [ ConfigRepositoryDict, {}, self._allocate_repo ]
             }
         )
-        
-    def load(self):
-        # TODO find a way to add line to error message
-        file = os.path.expanduser(self._file)
-        if os.path.exists(file):
-            config_toml = {}
-            try:
-                log.info(f"Load repository config '{self._file}'")
-                config_toml = toml.load(file)
-                log.debug(f"content: {config_toml}")
-            except Exception as e:
-                print_stack()
-                raise ConfigException(f"{format(e)}")
-            
-            self._value = config_toml
-            self.check()
-    
+
     # define a custom allocator for the repo field, this field is not replaced by childs but needs to be merged
     # as each child just adds or superseed repository list
     def _allocate_repo(self, value):
@@ -605,3 +606,5 @@ class ConfigRepositoryFile(Config):
         if parent:  
             return ConfigRepositoryDict(value=value, parent=parent.repo)
         return res
+    
+
