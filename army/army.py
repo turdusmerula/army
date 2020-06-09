@@ -118,6 +118,7 @@ def main():
 #     import army.plugin.build
 
     # load plugins
+    # TODO load plugins from installed packages
     try:
         project_config = load_project()
         for plugin in project_config.plugin:

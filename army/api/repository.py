@@ -5,6 +5,7 @@ from army.api.version import Version
 import os
 import subprocess
 import shutil
+import toml
 from schema import Schema, And, Use, Optional
 
 repository_types = {}
@@ -105,7 +106,7 @@ class Repository(object):
             match_name = False
             match_version = False
             
-            if fullname==False and name in package.description().lower():
+            if fullname==False and name in package.description.lower():
                 match_name = True
                 
             if fullname==True and name==package.name:
@@ -132,13 +133,16 @@ class Repository(object):
 
 
 class RepositoryPackage(Package):
-    def __init__(self, data, path):
+    def __init__(self, data, repository):
         super(RepositoryPackage, self).__init__(data=data, schema={})
-        self._path = path
+        self._repository = repository
+    
+    @property
+    def repository(self):
+        return self._repository
         
     def install(self, path, link):
         includes = self.packaging.include
-        includes.append("army.toml")
         
         dest = path
 
@@ -150,12 +154,12 @@ class RepositoryPackage(Package):
             shutil.rmtree(path, onerror=rmtree_error)
 
         # execute preinstall step
-        if os.path.exists(os.path.join(self._path, 'pkg', 'preinstall')):
-            subprocess.check_call([os.path.join(self._path, 'pkg', 'preinstall')])
+        if os.path.exists(os.path.join(self._repository._uri, 'pkg', 'preinstall')):
+            subprocess.check_call([os.path.join(self._repository._uri, 'pkg', 'preinstall')])
 
         # check that all files exists
         for include in includes:
-            source = os.path.join(self._path, include)
+            source = os.path.join(self._repository._uri, include)
             if os.path.exists(source)==False:
                 raise PackageException(f"{include}: package include file not found")
 
@@ -164,7 +168,7 @@ class RepositoryPackage(Package):
             os.makedirs(dest)
             
         for include in includes:
-            source = os.path.join(self._path, include)
+            source = os.path.join(self._repository._uri, include)
             
             if link==True:
                 self._link(source, dest)
@@ -172,10 +176,23 @@ class RepositoryPackage(Package):
                 self._copy(source, dest)
         
         # add repository informations to army.toml
-        
+        try:
+            self._copy(os.path.join(self._repository._uri, "army.toml"), dest)
+            filepath = os.path.join(dest, 'army.toml')
+            content = toml.load(filepath)
+            content['repository'] = {
+                'uri': self._repository._uri,
+                'name': self._repository._name
+                }
+            with open(filepath, "w") as file:
+                toml.dump(content, file)
+        except Exception as e:
+            print_stack()
+            log.debug(e)
+
         #execute postinstall command
-        if os.path.exists(os.path.join(self._path, 'pkg', 'postinstall')):
-            subprocess.check_call([os.path.join(self._path, 'pkg', 'postinstall')])
+        if os.path.exists(os.path.join(self._repository._uri, 'pkg', 'postinstall')):
+            subprocess.check_call([os.path.join(self._repository._uri, 'pkg', 'postinstall')])
         
     def _copy(self, source, dest):
         log.debug(f"copy {source} -> {dest}")

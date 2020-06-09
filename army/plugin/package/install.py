@@ -8,8 +8,7 @@ from army.api.package import load_installed_packages, load_installed_package
 from army.army import cli
 import click
 import os
-import fnmatch
-import shutil
+import sys
 
 class PackageDependency(object):
     def __init__(self, package, repository, from_package=None):
@@ -56,7 +55,11 @@ def install(ctx, name, link, reinstall, **kwargs):
         print_stack()
         log.debug(e)
         log.info(f"no project loaded")
-     
+    
+    if len(name)==0 and project is None:
+        print("nothing to install", file=sys.stderr)
+        exit(1)
+        
     # build repositories list
     repositories = load_repositories(config, prefix)
     
@@ -94,7 +97,7 @@ def install(ctx, name, link, reinstall, **kwargs):
         # get dependencies from top level package to end level
         package_dep = packages.pop(0)
         package = package_dep.package
-        print("****", type(package), package)
+
         # dependency treated ok, append to list
         dependencies.append(package_dep)
         
@@ -127,7 +130,7 @@ def install(ctx, name, link, reinstall, **kwargs):
                 print(f"reinstall {dependency.package}")
                 install = True
             else:
-                print(f"package {dependency.package} already installed, skip")
+                print(f"package {dependency.package} already installed")
                 install = False
         else:
             install = True
@@ -158,7 +161,7 @@ def _check_dependency_version_conflict(dependencies):
                     msg += f"'{dep.package.version}' from project"
                 else:
                     msg += f"'{dep.package.version}' from '{dep.from_package.name}'"
-                print(msg)
+                print(msg, file=sys.stderr)
                 exit(1)
 
 def _check_installed_version_conflict(dependencies):
@@ -175,6 +178,6 @@ def _find_package(name, version, repositories):
             # result can contain only one element as fullname is True
             for package in res:
                 return res[package], repo
-    print(f"{package}: package not found")
+    print(f"{package}: package not found", file=sys.stderr)
     exit(1)
     

@@ -36,9 +36,9 @@ def repos(ctx, **kwargs):
     column_uri = ['uri']
 
     for r in repositories:
-        column_name.append(r.name())
-        column_type.append(r.type())
-        column_uri.append(r.uri())
+        column_name.append(r.name)
+        column_type.append(r.type)
+        column_uri.append(r.uri)
 
     max_name = len(max(column_name, key=len))
     max_type = len(max(column_type, key=len))
@@ -46,4 +46,7 @@ def repos(ctx, **kwargs):
   
     if len(column_name)>0:
         for i in range(len(column_name)):
-            print(f"{column_name[i].ljust(max_name, ' ')} | {column_type[i].ljust(max_type)} | {column_uri[i].ljust(max_uri)}")
+            print(f"{column_name[i].ljust(max_name, ' ')} | ", end='')
+            print(f"{column_type[i].ljust(max_type)} | ", end='')
+            print(f"{column_uri[i].ljust(max_uri)}", end='')
+            print()

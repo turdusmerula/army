@@ -10,6 +10,10 @@ verbose = "debug"
 	type = "git-local"
 	uri = "plugin1"
 
+[repo.plugin2]
+	type = "git-local"
+	uri = "plugin2"
+
 [repo.project1]
 	type = "git-local"
 	uri = "project1"

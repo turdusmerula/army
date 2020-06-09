@@ -8,3 +8,4 @@ version = "1.0.0"
 
 [plugins]
 	plugin1 = "1.0.0"
+	plugin2 = "1.0.0"

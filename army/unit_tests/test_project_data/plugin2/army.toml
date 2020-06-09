@@ -1,0 +1,10 @@
+name = "plugin2"
+description = "test plugin 2"
+version = "1.0.0" 
+
+[packaging]
+	include = [
+		"__init__.py",
+		"plugin2"
+	]
+

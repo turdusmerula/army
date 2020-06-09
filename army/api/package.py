@@ -13,26 +13,28 @@ def load_installed_packages(local=True, _global=True, prefix=""):
         if os.path.exists(os.path.expanduser(path))==False:
             return []
         
+        res = []
         for package in os.listdir(os.path.expanduser(path)):
             print("---", package)
             try:
-                pkg = InstalledPackage(os.path.join(path, package))
+                pkg = _load_installed_package(os.path.join(path, package))
+                res.append(pkg)
             except Exception as e:
                 print_stack()
                 log.debug(e)
                 log.error(f"{os.path.join(path, package)}: not a valid package")
                 
-        return []
+        return res
     
     # search package in local project
     if local:
-        res = _search_dir(os.path.join(prefix, 'dist'))
+        res += _search_dir('dist')
     if res is not None:
         return res
 
     # search package in user space
     if _global: 
-        res = _search_dir(os.path.join(prefix, '~/.army/dist'))
+        res += _search_dir(os.path.join(prefix, '~/.army/dist'))
 
     return res
 
@@ -54,7 +56,7 @@ def load_installed_package(name, local=True, _global=True, prefix=""):
     
     # search package in local project
     if local:
-        res = _search_dir(os.path.join(prefix, 'dist'))
+        res = _search_dir('dist')
 
     # search package in user space
     if res is None and _global: 
@@ -64,7 +66,7 @@ def load_installed_package(name, local=True, _global=True, prefix=""):
 
 def _load_installed_package(path):
     # TODO find a way to add line to error message
-    file = os.path.expanduser('army.toml')
+    file = os.path.expanduser(os.path.join(path, 'army.toml'))
     if os.path.exists(file)==False:
         raise PackageException(f"{file}: file not found")
 
@@ -169,7 +171,7 @@ class Package(Schema):
 class InstalledPackage(Package):
     def __init__(self, data, path):
         super(InstalledPackage, self).__init__(data, schema={
-                'repository_uri': String()
+                'repository': Variant()
             })
 
         self._path = path
@@ -179,5 +181,17 @@ class InstalledPackage(Package):
         return self._path
 
     @property
-    def repository_uri(self):
-        return self._data['repository_uri']
+    def repository(self):
+        class Repository(object):
+            def __init__(self, data):
+                self._data = data
+        
+            @property
+            def name(self):
+                return self._data['name']
+        
+            @property
+            def uri(self):
+                return self._data['uri']
+
+        return Repository(self._data['repository'])
