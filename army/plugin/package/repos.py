@@ -22,6 +22,7 @@ def repos(ctx, **kwargs):
         # load project configuration
         project_config = load_project(config)
     except Exception as e:
+        print_stack()
         log.debug(f"no project loaded")
         project_config = config
     

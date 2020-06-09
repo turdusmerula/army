@@ -4,7 +4,7 @@ from army.api.debugtools import print_stack
 from army.api.schema import Schema, String, VersionString, Optional, PackageString, Array, Dict, VariableDict, Variant
 import os
 import toml
-
+import shutil
 
 def load_installed_packages(local=True, _global=True, prefix=""):
     res = []
@@ -15,7 +15,6 @@ def load_installed_packages(local=True, _global=True, prefix=""):
         
         res = []
         for package in os.listdir(os.path.expanduser(path)):
-            print("---", package)
             try:
                 pkg = _load_installed_package(os.path.join(path, package))
                 res.append(pkg)
@@ -195,3 +194,12 @@ class InstalledPackage(Package):
                 return self._data['uri']
 
         return Repository(self._data['repository'])
+
+    def uninstall(self):
+        def rmtree_error(func, path, exc_info):
+            print(exc_info)
+            exit(1)
+        if os.path.exists(self._path):
+            log.debug(f"rm {self._path}")
+            shutil.rmtree(self._path, onerror=rmtree_error)
+    

@@ -6,7 +6,6 @@ import os
 import subprocess
 import shutil
 import toml
-from schema import Schema, And, Use, Optional
 
 repository_types = {}
 

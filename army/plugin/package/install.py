@@ -37,7 +37,6 @@ class PackageDependency(object):
 @click.option('-g', '--global', help='Install module in user space', is_flag=True)
 @click.option('-r', '--reinstall', help='Force reinstall module if already exists', is_flag=True)
 # @click.option('--save', help='Update project package list', is_flag=True)    # TODO
-# @click.option('--save-dev', help='Update project dev package list', is_flag=True) # TODO
 @click.argument('name', nargs=-1)
 @click.pass_context
 def install(ctx, name, link, reinstall, **kwargs):

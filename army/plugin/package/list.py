@@ -8,17 +8,7 @@ from army.army import cli
 import click
 import sys
 
-class PackageDependency(object):
-    def __init__(self, package, from_package=None):
-        self._package = package
-        self._from_package = from_package
-    
-    def package(self):
-        return self._package
-    
-    def from_package(self):
-        return self._from_package
-    
+
 @cli.command(name='list', help='List installed packages')
 @verbose_option()
 @click.pass_context
@@ -37,7 +27,7 @@ def list(ctx, **kwargs):
         log.debug(e)
         log.info(f"no project loaded")
 
-    packages = load_installed_packages()
+    packages = load_installed_packages(prefix=prefix)
 
     if len(packages)==0:
         print('no package found', file=sys.stderr)
