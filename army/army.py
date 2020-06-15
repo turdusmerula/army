@@ -91,22 +91,6 @@ def cli(ctx, target, **kwargs):
     if target is not None:
         config.target = target
 
-# @cli.group(chain=True)
-# def toto():
-#     pass
-# 
-# @toto.command()
-# def aa():
-#     pass
-# 
-# @toto.command()
-# def bb():
-#     pass
-# 
-# @toto.command()
-# def cc():
-#     pass
-
 # path prefix, used to provide unit tests data path
 prefix = None
 #prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_project_data")
