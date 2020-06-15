@@ -1,4 +1,4 @@
-from army.api.version import Version
+from army.api.version import Version, VersionRange
 
 class SchemaException(Exception):
     def __init__(self, message):
@@ -50,7 +50,17 @@ class String(Validator):
     
     def check(self, value):
         if not isinstance(value, str):
-            raise ValidatorException(f"'{str}' is not a valid string")
+            raise ValidatorException(f"'{value}' is not a valid string")
+
+class VersionRangeString(Validator):
+    def __init__(self):
+        super(VersionRangeString, self).__init__()
+    
+    def check(self, value):
+        try:
+            version = VersionRange(value)
+        except Exception as e:
+            raise ValidatorException(f"'{value}' is not a valid version")
 
 class VersionString(Validator):
     def __init__(self):

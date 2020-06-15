@@ -1,7 +1,7 @@
 from army.api.log import log
 from army.api.package import Package, PackageException
 from army.api.debugtools import print_stack
-from army.api.version import Version
+from army.api.version import Version, VersionRange
 import os
 import subprocess
 import shutil
@@ -18,11 +18,11 @@ def register_repository(repository_class):
 
 
 # build repository list from configuration
-def load_repositories(config, prefix=""):
+def load_repositories(config, prefix=None):
     global repository_types
     res = []
     
-    if prefix=="":
+    if prefix is None:
         log.debug(f"load repositories")
     else:
         log.debug(f"load repositories from {prefix}")
@@ -38,7 +38,7 @@ def load_repositories(config, prefix=""):
     for repo_name in repos:
         try:
             repo_type_name = repos[repo_name].type.value()
-            repo_uri = os.path.join(prefix, repos[repo_name].uri.value())
+            repo_uri = os.path.join(prefix or "", repos[repo_name].uri.value())
 
             if repo_type_name in repository_types:
                     
@@ -94,16 +94,54 @@ class Repository(object):
     def update(self):
         self.load()
     
+#     # search for a package inside the package list
+#     # @param fullname if True then package name must match exactly, if version is given then fullname is True
+#     def search(self, name, version=None, fullname=False):
+#         res = {}
+#         
+#         packages = self.packages
+# 
+#         for package in packages:
+#             match_name = False
+#             match_version = False
+#             
+#             if fullname==False and name in package.description.lower():
+#                 match_name = True
+#                 
+#             if fullname==True and name==package.name:
+#                 match_name = True
+#             elif fullname==False and name in package.name:
+#                 match_name = True
+#             
+#             if version is None:
+#                 match_version = True
+#             elif match_name==True and Version(version)==package.version:
+#                 match_version = True
+#             
+#             if match_name==True and match_version==True:
+#                 # package match
+#                 max_version = None
+#                 if package.name in res:
+#                     max_version = res[package.name].version
+#                 
+#                 if max_version is None or package.version>max_version:
+#                     res[package.name] = package
+# 
+#         return res
+
     # search for a package inside the package list
     # @param fullname if True then package name must match exactly, if version is given then fullname is True
     def search(self, name, version=None, fullname=False):
-        res = {}
+        versions = {}
         
         packages = self.packages
 
+        if version is not None:
+            fullname = True
+        
+        # select packages matching name criteria in package list
         for package in packages:
             match_name = False
-            match_version = False
             
             if fullname==False and name in package.description.lower():
                 match_name = True
@@ -113,22 +151,24 @@ class Repository(object):
             elif fullname==False and name in package.name:
                 match_name = True
             
-            if version is None:
-                match_version = True
-            elif match_name==True and Version(version)==package.version:
-                match_version = True
-            
-            if match_name==True and match_version==True:
-                # package match
-                max_version = None
-                if package.name in res:
-                    max_version = res[package.name].version
-                
-                if max_version is None or package.version>max_version:
-                    res[package.name] = package
+            if match_name==True:
+                if package.name in versions:
+                    versions[package.name].version.add_version(package.version)
+                else:
+                    if version is None:
+                        # no version specified, give latest by default
+                        versions[package.name] = VersionRange(value='latest', versions=[package.version])
+                    else:
+                        versions[package.name] = VersionRange(value=version, versions=[package.version])
 
+        res = {}
+        # select packages matching version in found packages
+        for name in versions:
+            for package in packages:
+                if package.version==versions[name].value:
+                    res[name] = package
+                    
         return res
-
 
 
 class RepositoryPackage(Package):
@@ -159,7 +199,7 @@ class RepositoryPackage(Package):
         # check that all files exists
         for include in includes:
             source = os.path.join(self._repository._uri, include)
-            if os.path.exists(source)==False:
+            if os.path.exists(os.path.expanduser(source))==False:
                 raise PackageException(f"{include}: package include file not found")
 
         # create detination tree

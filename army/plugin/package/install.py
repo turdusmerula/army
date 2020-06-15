@@ -47,14 +47,16 @@ def install(ctx, name, link, reinstall, **kwargs):
     # load configuration
     config = ctx.parent.config
     project = None
-    try:
-        # load project configuration
-        project = load_project()
-    except Exception as e:
-        print_stack()
-        log.debug(e)
+    if os.path.exists('army.toml'):
+        try:
+            # load project configuration
+            project = load_project()
+        except Exception as e:
+            print_stack()
+            log.debug(e)
+    if project is None:
         log.info(f"no project loaded")
-    
+            
     if len(name)==0 and project is None:
         print("nothing to install", file=sys.stderr)
         exit(1)
@@ -83,7 +85,7 @@ def install(ctx, name, link, reinstall, **kwargs):
 
     # locate install folder
     if _global:
-        path = os.path.join(prefix, "~/.army/dist/")
+        path = os.path.join(prefix or "", "~/.army/dist/")
     else:
         path = "dist"
     
@@ -177,6 +179,6 @@ def _find_package(name, version, repositories):
             # result can contain only one element as fullname is True
             for package in res:
                 return res[package], repo
-    print(f"{package}: package not found", file=sys.stderr)
+    print(f"{name}: package not found", file=sys.stderr)
     exit(1)
     

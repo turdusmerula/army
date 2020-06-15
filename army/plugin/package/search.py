@@ -5,7 +5,7 @@ from army.api.repository import load_repositories
 from army.army import cli
 from army.api.click import verbose_option 
 import click
-
+import os
 from army.army import prefix
 
 # TODO: implement multiple search criteria
@@ -19,17 +19,6 @@ def search(ctx, name, **kwargs):
     
     # load configuration
     config = ctx.parent.config
-    project_config = None
-    try:
-        # load project configuration
-        project_config = load_project(config)
-        config = project_config
-    except Exception as e:
-        print_stack()
-        log.debug(e)
-        log.info(f"no project loaded")
-
-    log.debug(f"search {name}")
     
     # build repositories list
     repositories = load_repositories(config, prefix)

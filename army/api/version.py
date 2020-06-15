@@ -113,3 +113,49 @@ class Version():
 
     def __le__(self, other):
         return self.compare(other)<=0
+
+class VersionRange(object):
+    def __init__(self, value, versions={}):
+        self._tree = {} # for future parsing 
+        self._value = value
+        self._versions = versions
+
+        self.parse(value)
+    
+        
+    def parse(self, value):
+        if value=='latest':
+            return
+        else:
+            Version(value)
+    
+    @property
+    def value(self):
+        if self._value=='latest':
+            if len(self._versions)==0:
+                raise VersionException(f"no version range specified")
+            max = Version(self._versions[0])
+            for version in self._versions:
+                if Version(version)>max:
+                    max = Version(version)
+            return max
+        else:
+            return Version(self._value)
+    
+    def add_version(self, value):
+        self._versions.append(value)
+    
+    def match(self, value):
+        if Version(value)==self.value():
+            return True
+        else:
+            for version in self._versions:
+                if Version(version)==Version(value):
+                    return True
+        return False
+    
+    def __str__(self):
+        return str(self.value())
+    
+    def __repr__(self):
+        return self.__str__()

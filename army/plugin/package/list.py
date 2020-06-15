@@ -7,7 +7,7 @@ from army.api.package import load_installed_packages
 from army.army import cli
 import click
 import sys
-
+import os
 
 @cli.command(name='list', help='List installed packages')
 @verbose_option()
@@ -17,15 +17,6 @@ def list(ctx, **kwargs):
     
     # load configuration
     config = ctx.parent.config
-    project_config = None
-    try:
-        # load project configuration
-        project_config = load_project(config)
-        config = project_config
-    except Exception as e:
-        print_stack()
-        log.debug(e)
-        log.info(f"no project loaded")
 
     packages = load_installed_packages(prefix=prefix)
 

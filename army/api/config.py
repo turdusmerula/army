@@ -10,27 +10,30 @@ from army.api.version import Version
 # User configuration: ~/.army/army.tom
 # @param parent parent configuration
 # @param prefix mainly used for unit tests purpose
-def load_configuration(parent=None, prefix="/"):
+def load_configuration(parent=None, prefix=None):
     # load main config file
-    config = load_configuration_file(path=os.path.join(prefix, 'etc/army/army.toml'), parent=parent)
+    config = ArmyConfig(parent=parent)
+    path = os.path.join(prefix or "/", 'etc/army/army.toml')
+    if os.path.exists(path):
+        config = load_configuration_file(path=path, parent=parent)
     
     # load main repositories
-    path = os.path.join(prefix, 'etc/army/repo.d')
+    path = os.path.join(prefix or "/", 'etc/army/repo.d')
     if os.path.exists(path) and os.path.isdir(path):
         for f in os.listdir(path):
             if os.path.isfile(os.path.join(path, f)) and f.endswith(".toml"):
                 config = load_configuration_repository_file(path=os.path.join(path, f), parent=config)
 
     # load user config file
-    path = os.path.join(prefix, '~/.army/army.toml')
-    if os.path.exists(path):
+    path = os.path.join(prefix or "", '~/.army/army.toml')
+    if os.path.exists(os.path.expanduser(path)):
         config = load_configuration_file(path=path, parent=config)
      
     # load user repositories
-    path = os.path.join(prefix, '~/.army/repo.d')
-    if os.path.exists(path) and os.path.isdir(path):
-        for f in os.listdir(path):
-            if os.path.isfile(os.path.join(path, f)) and f.endswith(".toml"):
+    path = os.path.join(prefix or "", '~/.army/repo.d')
+    if os.path.exists(os.path.expanduser(path)) and os.path.isdir(os.path.expanduser(path)):
+        for f in os.listdir(os.path.expanduser(path)):
+            if os.path.isfile(os.path.join(os.path.expanduser(path), f)) and f.endswith(".toml"):
                 config = load_configuration_repository_file(path=os.path.join(path, f), parent=config)
 
     return config
@@ -286,6 +289,11 @@ class ConfigString(Config):
         if not isinstance(self.value(), str):
             raise ConfigException(f"'{self.value()}': invalid string")
 
+    def __str__(self):
+        return f"{self.value()}"
+    
+    def __repr__(self):
+        return f"{self.value()}"
 
 class ConfigVersion(Config):
     def __init__(self, value=None, parent=None):
@@ -527,7 +535,7 @@ class ArmyConfig(Config):
             parent=parent,
             fields={
                 'verbose': [ ConfigLogLevel, "error" ],
-                'default-target': [ ConfigString, "" ],
+                'target': [ ConfigString, "" ],
                 "repo": [ ConfigRepositoryDict, {}, self._allocate_repo ]
             }
         )
@@ -577,7 +585,7 @@ class ConfigRepository(Config):
     
 class ArmyConfigRepository(Config):
     def __init__(self, parent=None, value=None):
-        super(ConfigRepository, self).__init__(
+        super(ArmyConfigRepository, self).__init__(
             parent=parent,
             value=value,
             fields={

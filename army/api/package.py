@@ -1,12 +1,12 @@
 from army.api.version import Version
 from army.api.log import log
 from army.api.debugtools import print_stack
-from army.api.schema import Schema, String, VersionString, Optional, PackageString, Array, Dict, VariableDict, Variant
+from army.api.schema import Schema, String, VersionString, Optional, PackageString, Array, Dict, VariableDict, Variant, VersionRangeString
 import os
 import toml
 import shutil
 
-def load_installed_packages(local=True, _global=True, prefix=""):
+def load_installed_packages(local=True, _global=True, prefix=None):
     res = []
 
     def _search_dir(path):
@@ -33,11 +33,11 @@ def load_installed_packages(local=True, _global=True, prefix=""):
 
     # search package in user space
     if _global: 
-        res += _search_dir(os.path.join(prefix, '~/.army/dist'))
+        res += _search_dir(os.path.join(prefix or "", '~/.army/dist'))
 
     return res
 
-def load_installed_package(name, local=True, _global=True, prefix=""):
+def load_installed_package(name, local=True, _global=True, prefix=None):
     res = None
     
     def _search_dir(path):
@@ -59,9 +59,20 @@ def load_installed_package(name, local=True, _global=True, prefix=""):
 
     # search package in user space
     if res is None and _global: 
-        res = _search_dir(os.path.join(prefix, '~/.army/dist'))
+        res = _search_dir(os.path.join(prefix or "", '~/.army/dist'))
     
     return res
+
+# TODO check version when loading package and in case of package installed both global and local use the best fit
+def load_project_packages(project, target):
+    dependencies = []
+    for dependency in project.dependencies:
+        dependencies.append(load_installed_package(dependency))
+
+    for dependency in project.target[target].dependencies:
+        dependencies.append(load_installed_package(dependency))
+    
+    return dependencies
 
 def _load_installed_package(path):
     # TODO find a way to add line to error message
@@ -96,14 +107,32 @@ class Package(Schema):
                 'name': String(),
                 'description': String(),
                 'version': VersionString(),
-                'arch': Optional(String()),
-                'dependencies': Optional(VariableDict(PackageString(), VersionString())),
-                'plugins': Optional(VariableDict(PackageString(), VersionString())),
+                'dependencies': Optional(VariableDict(PackageString(), VersionRangeString())),
+                'plugins': Optional(VariableDict(PackageString(), VersionRangeString())),
                 'plugin': Optional(VariableDict(PackageString(), Variant())),
                 'packaging': Optional(Dict({
                     'include': Optional(Array(String())),
                     'exclude': Optional(Array(String()))
-                    }))
+                    })),
+                
+                # arch definition
+                'arch': Optional(VariableDict(String(), Dict({
+                    'definition': Optional(String()),
+                    }))),
+
+                # in case of a firmware
+                'default-target': Optional(String()),
+                'target': Optional(VariableDict(String(), Dict({
+                    'arch': String(),
+                    'cmake': Optional(String()),
+                    'dependencies': Optional(VariableDict(PackageString(), VersionRangeString())),
+                    }))),
+                
+                # in case of a library
+                'cmake': Optional(Dict({
+                    'include': Optional(String()),
+                    })),
+
            })
     
     @property
@@ -163,6 +192,54 @@ class Package(Schema):
         if 'packaging' in self._data:
             return Packaging(self._data['packaging'])
         return Packaging({})
+        
+    @property
+    def default_target(self):
+        if 'default-target' in self._data:
+            return self._data['default-target']
+        return None
+        
+    @property
+    def target(self):
+        class TargetDictIterator(object):
+            def __init__(self, values):
+                self._list = values
+                self._iter = iter(self._list)
+             
+            def __next__(self):
+                return next(self._iter)
+
+        class TargetDict(object):
+            def __init__(self, data):
+                self._data = data
+                
+            def __iter__(self):
+                return TargetDictIterator(self._data)
+            
+            def __getitem__(self, item):
+                return Target(self._data[item])
+            
+        class Target(object):
+            def __init__(self, data):
+                self._data = data
+            
+            @property
+            def arch(self):
+                return self._data['arch']
+            
+            @property
+            def cmake(self):
+                return self._data['cmake']
+
+            @property
+            def dependencies(self):
+                if 'dependencies' in self._data:
+                    return self._data['dependencies']
+                return []
+        
+        if 'target' in self._data:
+            return TargetDict(self._data['target'])
+        return TargetDict({})
 
     def __repr__(self):
         return f"{self.name}:{self.version}"

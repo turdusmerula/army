@@ -1,8 +1,11 @@
-import toml
-import os
 from army.api.log import log
 from army.api.debugtools import print_stack
 from army.api.package import Package
+from army.api.schema import SchemaException
+import toml
+import toml.decoder
+import os
+import sys
 
 # from army.api.config import ArmyConfigFile, Config, ConfigString, ConfigVersion
 # from army.api.config import ConfigList, ConfigStringList, ConfigDict
@@ -23,6 +26,10 @@ def load_project(path='army.toml'):
         log.info(f"Load project '{file}'")
         content = toml.load(file)
         log.debug(f"content: {content}")
+    except toml.decoder.TomlDecodeError as e:
+        print_stack()
+        log.debug(e)        
+        raise e
     except Exception as e:
         print_stack()
         log.debug(e)
@@ -30,6 +37,7 @@ def load_project(path='army.toml'):
     
     project = Project(data=content)
     project.check()
+        
 
     return project
 

@@ -83,16 +83,16 @@ def cli_init(ctx, v, **kwargs):
 @click.option('-t', '--target', help='select target')
 @click.pass_context
 # TODO add version with version_option
-def cli(ctx, **kwargs):
+def cli(ctx, target, **kwargs):
     global config
     ctx.config = config
     # TODO target
-#     if target is not None:
-#         config.set("default-target", args.target)
+    if target is not None:
+        config.target = target
 
 # path prefix, used to provide unit tests data path
-prefix = ""
-prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_project_data")
+prefix = None
+#prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_project_data")
 #prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_compile_data")
 #prefix = os.path.join(os.path.dirname(__file__), "unit_tests/test_data")
 
@@ -108,7 +108,7 @@ def main():
         pass
 
     # load army configuration files
-    if prefix!="":
+    if prefix is not None:
         log.debug(f"using {prefix} as path prefix")
     config = load_configuration(parent=root_config, prefix=prefix) 
 
@@ -119,19 +119,19 @@ def main():
 
     # load plugins
     # TODO load plugins from installed packages
-    try:
-        project_config = load_project()
-        for plugin in project_config.plugin:
-            try:
-                load_plugin(plugin, config)
-            except Exception as e:
-                print_stack()
-                print(f"{e}")
-    except Exception as e:
-        print_stack()
-        log.debug(e)
-        log.info("no project loaded")
-
+    if os.path.exists('army.toml'):
+        try:
+            project = load_project()
+            for plugin in project.plugins:
+                try:
+                    load_plugin(plugin, config)
+                except Exception as e:
+                    print_stack()
+                    print(f"{e}")
+        except Exception as e:
+            print_stack()
+            print(f"army.toml: {e}", file=sys.stderr)
+            exit(1)
     # parse command line
     cli() 
     
