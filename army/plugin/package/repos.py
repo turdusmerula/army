@@ -16,18 +16,9 @@ def repos(ctx, **kwargs):
     log.info(f"repos")
     
     config = ctx.parent.config
-    
-    project_config = None
-    try:
-        # load project configuration
-        project_config = load_project(config)
-    except Exception as e:
-        print_stack()
-        log.debug(f"no project loaded")
-        project_config = config
-    
+        
     # build repositories list
-    repositories = load_repositories(project_config, prefix)
+    repositories = load_repositories(config, prefix)
     if len(repositories)==0:
         print("no repository configured")
         return 
