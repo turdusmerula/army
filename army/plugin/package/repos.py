@@ -3,13 +3,13 @@ from army.api.debugtools import print_stack
 from army.api.project import load_project
 from army.api.repository import load_repositories
 from army.api.click import verbose_option 
-from army.army import cli
+from army.army import cli, dependencies
 import click
 import os
 
 from army.army import prefix
 
-@cli.command(name='repos', help='List available repositories')
+@dependencies.command(name='repos', help='List available repositories')
 @verbose_option()
 @click.pass_context
 def repos(ctx, **kwargs):

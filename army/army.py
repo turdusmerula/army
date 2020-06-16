@@ -12,7 +12,7 @@ from army.api.debugtools import print_stack
 from army.api.project import load_project
 from army.api.plugin import load_plugin
 from army.api.click import verbose_option 
-import click
+import army.api.click as click
 
 # TODO add autocomplete https://kislyuk.github.io/argcomplete/
 
@@ -69,8 +69,6 @@ config = None
              add_help_option=False, 
              context_settings=dict(
                  resilient_parsing=True))
-#                  allow_extra_args=True, 
-#                  allow_interspersed_args=True))
 @verbose_option()
 @click.pass_context
 def cli_init(ctx, v, **kwargs):
@@ -79,7 +77,7 @@ def cli_init(ctx, v, **kwargs):
 
 
 # create the top-level parser
-@click.group() #chain=True)
+@click.group()
 @verbose_option()
 @click.option('-t', '--target', help='select target')
 @click.pass_context
@@ -87,9 +85,21 @@ def cli_init(ctx, v, **kwargs):
 def cli(ctx, target, **kwargs):
     global config
     ctx.config = config
-    # TODO target
+
     if target is not None:
         config.target = target
+
+@cli.section("Dependencies Commands")
+@click.pass_context
+def dependencies(ctx, **kwargs):
+    # recopy parent config in context
+    ctx.config = ctx.parent.config
+
+@cli.section("Build Commands", chain=True)
+@click.pass_context
+def build(ctx, **kwargs):
+    # recopy parent config in context
+    ctx.config = ctx.parent.config
 
 # path prefix, used to provide unit tests data path
 prefix = None
