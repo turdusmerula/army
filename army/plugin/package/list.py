@@ -4,12 +4,12 @@ from army.api.project import load_project
 from army.army import prefix
 from army.api.click import verbose_option 
 from army.api.package import load_installed_packages
-from army.army import cli
+from army.army import cli, dependencies
 import click
 import sys
 import os
 
-@cli.command(name='list', help='List installed packages')
+@dependencies.command(name='list', help='List installed packages')
 @verbose_option()
 @click.pass_context
 def list(ctx, **kwargs):

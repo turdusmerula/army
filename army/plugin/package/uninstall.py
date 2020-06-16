@@ -5,12 +5,12 @@ from army.api.repository import load_repositories
 from army.army import prefix
 from army.api.click import verbose_option 
 from army.api.package import load_installed_packages, load_installed_package
-from army.army import cli
+from army.army import cli, dependencies
 import click
 import os
 import sys
 
-@cli.command(name='uninstall', help='uninstall package')
+@dependencies.command(name='uninstall', help='uninstall package')
 @verbose_option()
 # @click.option('--save', help='Update project package list', is_flag=True)    # TODO
 @click.argument('name', nargs=-1)

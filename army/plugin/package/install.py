@@ -5,7 +5,7 @@ from army.api.repository import load_repositories
 from army.army import prefix
 from army.api.click import verbose_option 
 from army.api.package import load_installed_packages, load_installed_package
-from army.army import cli
+from army.army import cli, dependencies
 import click
 import os
 import sys
@@ -31,7 +31,7 @@ class PackageDependency(object):
     def __repr__(self):
         return f"{self._package.name}:{self._package.version}"
 
-@cli.command(name='install', help='Install package')
+@dependencies.command(name='install', help='Install package')
 @verbose_option()
 @click.option('-l', '--link', help='Link files instead of copy (local repository only)', is_flag=True)
 @click.option('-g', '--global', help='Install module in user space', is_flag=True)
