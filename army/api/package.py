@@ -65,6 +65,11 @@ def load_installed_package(name, local=True, _global=True, prefix=None):
 
 # TODO check version when loading package and in case of package installed both global and local use the best fit
 def load_project_packages(project, target):
+<<<<<<< HEAD
+=======
+    print("---1", project, target)
+
+>>>>>>> 324002b20d8471013dc1aa00a1c5791de3b3ded2
     to_load = []
     for dependency in project.dependencies:
         to_load.append(dependency)
