@@ -6,15 +6,11 @@
 # python setup.py sdist upload -r pypi
 #
 
-import io
-from os.path import dirname
-from os.path import join
-from setuptools import setup, find_packages
-from glob import glob
+from setuptools import setup
 
 setup(
     name='army',
-    version='0.0.4',
+    version='0.1.0',
     description='Arm cross compiling toolset',
     url='https://github.com/turdusmerula/army/',
     author='Sebastien Besombes',
@@ -40,7 +36,9 @@ setup(
         'tornado',      # template manager
         'gitpython',    # git repository manager
         'toml',         # toml files
-        'click'
+        'click',
+        'cmake',
+        'schema',
     ],
 )
 
