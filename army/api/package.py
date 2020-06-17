@@ -65,12 +65,23 @@ def load_installed_package(name, local=True, _global=True, prefix=None):
 
 # TODO check version when loading package and in case of package installed both global and local use the best fit
 def load_project_packages(project, target):
-    dependencies = []
+    print("---1", project, target)
+
+    to_load = []
     for dependency in project.dependencies:
-        dependencies.append(load_installed_package(dependency))
+        to_load.append(dependency)
 
     for dependency in project.target[target].dependencies:
-        dependencies.append(load_installed_package(dependency))
+        to_load.append(dependency)
+
+    dependencies = []
+    while len(to_load)>0:
+        dependency = to_load.pop(0)
+        installed = load_installed_package(dependency)
+        dependencies.append(installed)
+        
+        for dependency in installed.dependencies:
+            to_load.append(dependency)
     
     return dependencies
 
@@ -124,7 +135,7 @@ class Package(Schema):
                 'default-target': Optional(String()),
                 'target': Optional(VariableDict(String(), Dict({
                     'arch': String(),
-                    'cmake': Optional(String()),
+                    'definition': Optional(String()),
                     'dependencies': Optional(VariableDict(PackageString(), VersionRangeString())),
                     }))),
                 
@@ -149,9 +160,35 @@ class Package(Schema):
     # 
     @property
     def arch(self):
+        class ArchDictIterator(object):
+            def __init__(self, values):
+                self._list = values
+                self._iter = iter(self._list)
+             
+            def __next__(self):
+                return next(self._iter)
+
+        class ArchDict(object):
+            def __init__(self, data):
+                self._data = data
+                
+            def __iter__(self):
+                return ArchDictIterator(self._data)
+            
+            def __getitem__(self, item):
+                return Arch(self._data[item])
+            
+        class Arch(object):
+            def __init__(self, data):
+                self._data = data
+            
+            @property
+            def definition(self):
+                return self._data['definition']
+        
         if 'arch' in self._data:
-            return self._data['arch']
-        return None
+            return ArchDict(self._data['arch'])
+        return ArchDict({})
 
     @property
     def dependencies(self):
@@ -228,8 +265,8 @@ class Package(Schema):
                 return self._data['arch']
             
             @property
-            def cmake(self):
-                return self._data['cmake']
+            def definition(self):
+                return self._data['definition']
 
             @property
             def dependencies(self):
@@ -241,6 +278,21 @@ class Package(Schema):
             return TargetDict(self._data['target'])
         return TargetDict({})
 
+    @property
+    def cmake(self):
+        class CMake(object):
+            def __init__(self, data):
+                self._data = data
+            
+            @property
+            def include(self):
+                if 'include' in self._data:
+                    return self._data['include']
+                return None
+        if 'cmake' in self._data:
+            return CMake(self._data['cmake'])
+        return CMake({})
+        
     def __repr__(self):
         return f"{self.name}:{self.version}"
 
