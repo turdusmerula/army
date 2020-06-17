@@ -94,41 +94,6 @@ class Repository(object):
     def update(self):
         self.load()
     
-#     # search for a package inside the package list
-#     # @param fullname if True then package name must match exactly, if version is given then fullname is True
-#     def search(self, name, version=None, fullname=False):
-#         res = {}
-#         
-#         packages = self.packages
-# 
-#         for package in packages:
-#             match_name = False
-#             match_version = False
-#             
-#             if fullname==False and name in package.description.lower():
-#                 match_name = True
-#                 
-#             if fullname==True and name==package.name:
-#                 match_name = True
-#             elif fullname==False and name in package.name:
-#                 match_name = True
-#             
-#             if version is None:
-#                 match_version = True
-#             elif match_name==True and Version(version)==package.version:
-#                 match_version = True
-#             
-#             if match_name==True and match_version==True:
-#                 # package match
-#                 max_version = None
-#                 if package.name in res:
-#                     max_version = res[package.name].version
-#                 
-#                 if max_version is None or package.version>max_version:
-#                     res[package.name] = package
-# 
-#         return res
-
     # search for a package inside the package list
     # @param fullname if True then package name must match exactly, if version is given then fullname is True
     def search(self, name, version=None, fullname=False):
@@ -193,8 +158,9 @@ class RepositoryPackage(Package):
             shutil.rmtree(path, onerror=rmtree_error)
 
         # execute preinstall step
-        if os.path.exists(os.path.join(self._repository._uri, 'pkg', 'preinstall')):
-            subprocess.check_call([os.path.join(self._repository._uri, 'pkg', 'preinstall')])
+        if os.path.exists(os.path.expanduser(os.path.join(self._repository._uri, 'pkg', 'preinstall'))):
+            log.info("execute preinstall script")
+            subprocess.check_call([os.path.join(os.path.expanduser(self._repository._uri), 'pkg', 'preinstall')])
 
         # check that all files exists
         for include in includes:
@@ -230,8 +196,9 @@ class RepositoryPackage(Package):
             log.debug(e)
 
         #execute postinstall command
-        if os.path.exists(os.path.join(self._repository._uri, 'pkg', 'postinstall')):
-            subprocess.check_call([os.path.join(self._repository._uri, 'pkg', 'postinstall')])
+        if os.path.exists(os.path.expanduser(os.path.join(self._repository._uri, 'pkg', 'postinstall'))):
+            log.info("execute postinstall script")
+            subprocess.check_call([os.path.join(os.path.expanduser(self._repository._uri), 'pkg', 'postinstall')])
         
     def _copy(self, source, dest):
         log.debug(f"copy {source} -> {dest}")
