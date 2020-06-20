@@ -37,12 +37,10 @@ setup(
         'gitpython',    # git repository manager
         'toml',         # toml files
         'click',
-<<<<<<< HEAD
         'cmake',
         'schema',
-=======
-        'cmake'
->>>>>>> 324002b20d8471013dc1aa00a1c5791de3b3ded2
+        'PyGithub',
+        'keyring'
     ],
 )
 

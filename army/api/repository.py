@@ -135,6 +135,11 @@ class Repository(object):
                     
         return res
 
+    def publish(self, package):
+        pass
+    
+    def login(self, user, password):
+        pass
 
 class RepositoryPackage(Package):
     def __init__(self, data, repository):

@@ -89,9 +89,15 @@ def cli(ctx, target, **kwargs):
     if target is not None:
         config.target = target
 
-@cli.section("Dependencies Commands")
+@cli.section("Dependencies Management Commands")
 @click.pass_context
 def dependencies(ctx, **kwargs):
+    # recopy parent config in context
+    ctx.config = ctx.parent.config
+
+@cli.section("Packaging Commands")
+@click.pass_context
+def packaging(ctx, **kwargs):
     # recopy parent config in context
     ctx.config = ctx.parent.config
 
@@ -125,6 +131,7 @@ def main():
 
     # load internal plugins
     import army.plugin.repository
+    import army.plugin.dependency
     import army.plugin.package
 #     import army.plugin.build
 
