@@ -18,7 +18,7 @@ class GitRepository(Repository):
 
     # load package list from repository
     def load(self):
-        raise GitRepositoryException(f"{self.name()}: GitRepository: not yet implemented")
+        raise GitRepositoryException(f"{self.name}: GitRepository: not yet implemented")
 
     def packages(self):
         return self._packages 

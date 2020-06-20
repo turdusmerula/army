@@ -1,4 +1,4 @@
-from army.api.version import Version
+from army.api.version import Version, VersionRange
 from army.api.log import log
 from army.api.debugtools import print_stack
 from army.api.schema import Schema, String, VersionString, Optional, PackageString, Array, Dict, VariableDict, Variant, VersionRangeString
@@ -37,29 +37,37 @@ def load_installed_packages(local=True, _global=True, prefix=None):
 
     return res
 
-def load_installed_package(name, local=True, _global=True, prefix=None):
+def load_installed_package(name, local=True, _global=True, version_range=None, prefix=None):
     res = None
     
-    def _search_dir(path):
+    def _search_dir(path, version_range):
         if os.path.exists(os.path.expanduser(path))==False:
             return None
-
-        found_package = None
-        found_version = None
          
         for package in os.listdir(os.path.expanduser(path)):
             if name==package:
-                return _load_installed_package(os.path.join(path, package))
-    
-        return found_package
+                try:
+                    pkg = _load_installed_package(os.path.join(path, package))
+                    if version_range is None:
+                        return pkg
+                    else:
+                        version_range = VersionRange(version_range, [pkg.version])
+                        if version_range.match(Version(pkg.version)):
+                            return pkg
+                except Exception as e:
+                    print_stack()
+                    log.debug(e)
+                    log.error(f"{os.path.join(path, package)}: not a valid package")
+                
+        return None
     
     # search package in local project
     if local:
-        res = _search_dir('dist')
+        res = _search_dir('dist', version_range)
 
     # search package in user space
     if res is None and _global: 
-        res = _search_dir(os.path.join(prefix or "", '~/.army/dist'))
+        res = _search_dir(os.path.join(prefix or "", '~/.army/dist'), version_range)
     
     return res
 
@@ -67,19 +75,19 @@ def load_installed_package(name, local=True, _global=True, prefix=None):
 def load_project_packages(project, target):
     to_load = []
     for dependency in project.dependencies:
-        to_load.append(dependency)
+        to_load.append((dependency, project.dependencies[dependency]))
 
     for dependency in project.target[target].dependencies:
-        to_load.append(dependency)
+        to_load.append((dependency, project.dependencies[dependency]))
 
     dependencies = []
     while len(to_load)>0:
-        dependency = to_load.pop(0)
-        installed = load_installed_package(dependency)
+        dependency, version_range = to_load.pop(0)
+        installed = load_installed_package(dependency, version_range=version_range)
         dependencies.append(installed)
         
         for dependency in installed.dependencies:
-            to_load.append(dependency)
+            to_load.append((dependency, installed.dependencies[dependency]))
     
     return dependencies
 
@@ -290,7 +298,12 @@ class Package(Schema):
         if 'cmake' in self._data:
             return CMake(self._data['cmake'])
         return CMake({})
-        
+    
+    def package(self, output_path):
+        """ Packaging command, to be overloaded by package behavior
+        """
+        pass
+    
     def __repr__(self):
         return f"{self.name}:{self.version}"
 

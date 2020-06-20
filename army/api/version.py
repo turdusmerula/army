@@ -13,7 +13,7 @@ class Version():
             self._revision = value._revision
             self._build = value._build
             self._dev = value._dev
-        else:
+        elif isinstance(value, str):
             self._major = None
             self._minor = None
             self._revision = None
@@ -55,7 +55,9 @@ class Version():
                 raise VersionException(f"Invalid version {version}")
             elif self._build and self._build=="dev":
                 self._dev = True
-        
+        else:
+            raise VersionException(f"Invalid version {value}")
+            
     def compare(self, version):
         l = [self._major, self._minor, self._revision, self._build]
         r = [version._major, version._minor, version._revision, version._build]
@@ -115,13 +117,22 @@ class Version():
         return self.compare(other)<=0
 
 class VersionRange(object):
-    def __init__(self, value, versions={}):
+    def __init__(self, value, versions=[]):
         self._tree = {} # for future parsing 
-        self._value = value
+
         self._versions = versions
 
-        self.parse(value)
-    
+        if isinstance(value, Version):
+            self._value = str(value)
+        elif isinstance(value, VersionRange):
+            self._value = value._value
+            self._versions += versions 
+        elif isinstance(value, str):
+            self._value = value
+        else:
+            raise VersionException(f"Invalid version range {value}")
+            
+        self.parse(self._value)
         
     def parse(self, value):
         if value=='latest':
@@ -146,7 +157,7 @@ class VersionRange(object):
         self._versions.append(value)
     
     def match(self, value):
-        if Version(value)==self.value():
+        if Version(value)==self.value:
             return True
         else:
             for version in self._versions:
@@ -155,7 +166,7 @@ class VersionRange(object):
         return False
     
     def __str__(self):
-        return str(self.value())
+        return str(self.value)
     
     def __repr__(self):
         return self.__str__()

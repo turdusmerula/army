@@ -3,6 +3,17 @@
 
 #
 # To publish package release
+
+# add file ~/.pypirc
+#[distutils]
+#index-servers =
+#    pypi
+#
+#[pypi]
+#  username = __token__
+#  password = <get token on https://pypi.org/manage/account/#modal-close>
+
+# then launch
 # python setup.py sdist upload -r pypi
 #
 
@@ -39,6 +50,8 @@ setup(
         'click',
         'cmake',
         'schema',
+        'PyGithub',
+        'keyring'
     ],
 )
 

@@ -135,7 +135,6 @@ def get_command(self, ctx, cmd_name):
 
 @add_method(click.Group)
 def list_commands(self, ctx):
-    print("---", self.commands)
     return sorted(self.commands)
 
 class Section(click.Group):
