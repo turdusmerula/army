@@ -100,7 +100,7 @@ class Repository(object):
         versions = {}
         
         packages = self.packages
-
+        
         if version is not None:
             fullname = True
         
@@ -135,7 +135,7 @@ class Repository(object):
                     
         return res
 
-    def publish(self, package):
+    def publish(self, package, overwrite=False):
         pass
     
     def login(self, user, password):

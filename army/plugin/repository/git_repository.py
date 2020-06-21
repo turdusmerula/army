@@ -20,5 +20,6 @@ class GitRepository(Repository):
     def load(self):
         raise GitRepositoryException(f"{self.name}: GitRepository: not yet implemented")
 
+    @property
     def packages(self):
         return self._packages 

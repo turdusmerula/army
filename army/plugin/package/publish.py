@@ -12,12 +12,24 @@ from army.army import prefix
 
 @packaging.command(name='publish', help='Publish versioned package')
 @verbose_option()
+@click.option('-f', '--force', help='Force create release if already exists', is_flag=True)
 @click.argument('name')
 @click.pass_context
-def publish(ctx, name, **kwargs):
+def publish(ctx, name, force, **kwargs):
     log.info(f"publish")
     
     config = ctx.parent.config
+    project = None
+    if os.path.exists('army.toml'):
+        try:
+            # load project configuration
+            project = load_project()
+        except Exception as e:
+            print_stack()
+            log.debug(e)
+    if project is None:
+        log.info(f"no project loaded")
+        exit(1)
 
     # build repositories list
     repositories = load_repositories(config, prefix)
@@ -52,4 +64,25 @@ def publish(ctx, name, **kwargs):
         print(f"{name}: {e}", file=sys.stderr)
         exit(1)
 
-    print("Not implemented")
+    # TODO check version is tagged and files are commited
+    
+    # package
+    try:    
+        file = project.package(os.getcwd(), 'output')
+        print(f"{os.path.relpath(file, os.getcwd())} generated")
+    except Exception as e:
+        print_stack()
+        log.debug(e)
+        print(f"packaging failed: {e}")
+        exit(1)
+
+    # publish
+    try:
+        repo.publish(project, file, overwrite=force)
+    except Exception as e:
+        print_stack()
+        log.debug(e)
+        print(f"publishing failed: {e}")
+        exit(1)
+
+    print(f"{os.path.relpath(file, os.getcwd())} published")
