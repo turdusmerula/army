@@ -105,3 +105,5 @@ class Project(Package):
         if os.path.exists(os.path.expanduser(os.path.join(path, 'pkg', 'postbuild'))):
             log.info("execute postbuild script")
             subprocess.check_call([os.path.join(os.path.expanduser(path), 'pkg', 'postbuild')])
+
+        return pkg_path

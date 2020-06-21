@@ -23,5 +23,6 @@ class GitlabRepository(Repository):
     def update(self):
         pass
     
+    @property
     def packages(self):
         return self._packages 

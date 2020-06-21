@@ -26,8 +26,14 @@ def package(ctx, **kwargs):
             log.debug(e)
     if project is None:
         log.info(f"no project loaded")
+        exit(1)
 
-    print(project.name)
-    
-    file = project.package(os.getcwd(), 'output')
-    
+    try:    
+        file = project.package(os.getcwd(), 'output')
+    except Exception as e:
+        print_stack()
+        log.debug(e)
+        print(f"packaging failed: {e}")
+        exit(1)
+        
+    print(f"{os.path.relpath(file, os.getcwd())} generated")
