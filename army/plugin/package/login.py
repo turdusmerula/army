@@ -44,11 +44,4 @@ def login(ctx, name, **kwargs):
         print(f"{name}: {e}", file=sys.stderr)
         exit(1)
 
-    service_id = f"army.{name}"
-    
-    # store password on keyring
-    keyring.set_password(service_id, user, password)
-    # store user on keyring
-    keyring.set_password(service_id, 'user', user)
-
     print("logged in")

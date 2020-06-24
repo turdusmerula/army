@@ -38,11 +38,6 @@ def logout(ctx, name, **kwargs):
         user = keyring.get_password(service_id, 'user')
         keyring.delete_password(service_id, 'user')
         keyring.get_password(service_id, user)
-    except keyring.errors.PasswordDeleteError as e:
-        print_stack()
-        log.debug(e)
-        print(f"{name}: not logged to repository", file=sys.stderr)
-        exit(1)
     except Exception as e:
         print_stack()
         log.debug(e)

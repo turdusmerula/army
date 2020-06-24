@@ -64,6 +64,10 @@ def install(ctx, name, link, reinstall, **kwargs):
     # build repositories list
     repositories = load_repositories(config, prefix)
     
+    for repository in repositories:
+        if repository.load_credentials()==False:
+            print(f"{repository.name}: warning: load credentials failed, update may fail due to rate limitation", file=sys.stderr)
+        
     packages = []
 
     if len(name)==0:
@@ -149,6 +153,8 @@ def install(ctx, name, link, reinstall, **kwargs):
 def _check_dependency_version_conflict(dependencies):
     """ Check if dependencies contains same package with version mismatch
     """
+    # TODO: use VersionRange to true comparaison
+    
     for dependency in dependencies:
         for dep in dependencies:
             if dep.package.name==dependency.package.name and dep.package.version!=dependency.package.version:
@@ -173,12 +179,24 @@ def _check_installed_version_conflict(dependencies):
     
 def _find_package(name, version, repositories):
     # search for module in repositories
+
+    # result can contain only one element as fullname is True
+    res_package = None
+    res_repo = None
     for repo in repositories:
-        res = repo.search(name, version, fullname=True)
-        if len(res)>0:
-            # result can contain only one element as fullname is True
-            for package in res:
-                return res[package], repo
+        packages_found = repo.search(name, version, fullname=True)
+        for package_found in packages_found:
+            package = packages_found[package_found]
+            if res_package is None:
+                res_package = package
+                res_repo = repo
+            elif package.version>res_package.version:
+                res_package = package
+                res_repo = repo
+
+    if package:
+        return res_package, res_repo
+
     print(f"{name}: package not found", file=sys.stderr)
     exit(1)
     

@@ -1,6 +1,7 @@
 from army.api.repository import Repository, RepositoryPackage
 from army.api.project import load_project, Project
 from army.api.debugtools import print_stack
+from army.api.version import Version, VersionRange
 from army.api.log import log
 from army.api.package import Package
 from army.army import prefix
@@ -19,8 +20,6 @@ class LocalGitRepository(Repository):
         super(LocalGitRepository, self).__init__(name=name, uri=path)
 
         self._project = None
-        
-        self.load()
         
     # load package list from repository
     def load(self):
@@ -50,3 +49,45 @@ class LocalGitRepository(Repository):
     def update(self):
         # nothing to do in a local repository
         pass
+
+    # search for a package inside the package list
+    # @param fullname if True then package name must match exactly, if version is given then fullname is True
+    def search(self, name, version=None, fullname=False):
+        versions = {}
+        
+        packages = self.packages
+        
+        if version is not None:
+            fullname = True
+        
+        name = name.lower()
+        # select packages matching name criteria in package list
+        for package in packages:
+            match_name = False
+            
+            if fullname==False and name in package.description.lower():
+                match_name = True
+                
+            if fullname==True and name==package.name:
+                match_name = True
+            elif fullname==False and name in package.name:
+                match_name = True
+            
+            if match_name==True:
+                if package.name in versions:
+                    versions[package.name].version.add_version(package.version)
+                else:
+                    if version is None:
+                        # no version specified, give latest by default
+                        versions[package.name] = VersionRange('latest', versions=[package.version])
+                    else:
+                        versions[package.name] = VersionRange(version, versions=[package.version])
+
+        res = {}
+        # select packages matching version in found packages
+        for name in versions:
+            for package in packages:
+                if package.version==versions[name].value:
+                    res[name] = package
+                    
+        return res
