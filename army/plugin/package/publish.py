@@ -56,12 +56,8 @@ def publish(ctx, name, force, **kwargs):
         print(f"{name}: {e}", file=sys.stderr)
         exit(1)
 
-    try:
-        repo.login(user, password)
-    except Exception as e:
-        print_stack()
-        log.debug(e)
-        print(f"{name}: {e}", file=sys.stderr)
+    if repo.load_credentials()==False:
+        print(f"{name}: no credentials found", file=sys.stderr)
         exit(1)
 
     # TODO check version is tagged and files are commited

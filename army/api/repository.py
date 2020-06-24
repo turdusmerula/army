@@ -6,6 +6,7 @@ import os
 import subprocess
 import shutil
 import toml
+import datetime
 
 repository_types = {}
 
@@ -46,6 +47,7 @@ def load_repositories(config, prefix=None):
                 
                 # instanciate repository and load it
                 repo = repo_type(name=repo_name, path=repo_uri)
+                repo.load()
                 res.append(repo)
             else:
                 log.warning(f"{repo_type_name}: unhandheld repository type")
@@ -85,6 +87,9 @@ class Repository(object):
     @property
     def type(self):
         return self.TYPE
+
+    def load_credentials(self):
+        return True
     
     # load package list from repository
     def load(self):
@@ -92,48 +97,12 @@ class Repository(object):
 
     # if repository has an internal cache this is where it should be reconstructed
     def update(self):
-        self.load()
+        pass
     
     # search for a package inside the package list
     # @param fullname if True then package name must match exactly, if version is given then fullname is True
     def search(self, name, version=None, fullname=False):
-        versions = {}
-        
-        packages = self.packages
-        
-        if version is not None:
-            fullname = True
-        
-        # select packages matching name criteria in package list
-        for package in packages:
-            match_name = False
-            
-            if fullname==False and name in package.description.lower():
-                match_name = True
-                
-            if fullname==True and name==package.name:
-                match_name = True
-            elif fullname==False and name in package.name:
-                match_name = True
-            
-            if match_name==True:
-                if package.name in versions:
-                    versions[package.name].version.add_version(package.version)
-                else:
-                    if version is None:
-                        # no version specified, give latest by default
-                        versions[package.name] = VersionRange(value='latest', versions=[package.version])
-                    else:
-                        versions[package.name] = VersionRange(value=version, versions=[package.version])
-
-        res = {}
-        # select packages matching version in found packages
-        for name in versions:
-            for package in packages:
-                if package.version==versions[name].value:
-                    res[name] = package
-                    
-        return res
+        return {}
 
     def publish(self, package, overwrite=False):
         pass
@@ -141,11 +110,15 @@ class Repository(object):
     def login(self, user, password):
         pass
 
+    def logout(self):
+        pass
+
 class RepositoryPackage(Package):
     def __init__(self, data, repository):
         super(RepositoryPackage, self).__init__(data=data, schema={})
         self._repository = repository
-    
+        self._source_path = repository._uri
+        
     @property
     def repository(self):
         return self._repository
@@ -163,13 +136,13 @@ class RepositoryPackage(Package):
             shutil.rmtree(path, onerror=rmtree_error)
 
         # execute preinstall step
-        if os.path.exists(os.path.expanduser(os.path.join(self._repository._uri, 'pkg', 'preinstall'))):
+        if os.path.exists(os.path.expanduser(os.path.join(self._source_path, 'pkg', 'preinstall'))):
             log.info("execute preinstall script")
-            subprocess.check_call([os.path.join(os.path.expanduser(self._repository._uri), 'pkg', 'preinstall')])
+            subprocess.check_call([os.path.join(os.path.expanduser(self._source_path), 'pkg', 'preinstall')])
 
         # check that all files exists
         for include in includes:
-            source = os.path.join(self._repository._uri, include)
+            source = os.path.join(self._source_path, include)
             if os.path.exists(os.path.expanduser(source))==False:
                 raise PackageException(f"{include}: package include file not found")
 
@@ -178,8 +151,7 @@ class RepositoryPackage(Package):
             os.makedirs(dest)
             
         for include in includes:
-            source = os.path.join(self._repository._uri, include)
-            
+            source = os.path.join(self._source_path, include)
             if link==True:
                 self._link(source, dest)
             else:
@@ -187,7 +159,7 @@ class RepositoryPackage(Package):
         
         # add repository informations to army.toml
         try:
-            self._copy(os.path.join(self._repository._uri, "army.toml"), dest)
+            self._copy(os.path.join(self._source_path, "army.toml"), dest)
             filepath = os.path.join(dest, 'army.toml')
             content = toml.load(filepath)
             content['repository'] = {
@@ -201,9 +173,9 @@ class RepositoryPackage(Package):
             log.debug(e)
 
         #execute postinstall command
-        if os.path.exists(os.path.expanduser(os.path.join(self._repository._uri, 'pkg', 'postinstall'))):
+        if os.path.exists(os.path.expanduser(os.path.join(self._source_path, 'pkg', 'postinstall'))):
             log.info("execute postinstall script")
-            subprocess.check_call([os.path.join(os.path.expanduser(self._repository._uri), 'pkg', 'postinstall')])
+            subprocess.check_call([os.path.join(os.path.expanduser(self._source_path), 'pkg', 'postinstall')])
         
     def _copy(self, source, dest):
         log.debug(f"copy {source} -> {dest}")
@@ -217,3 +189,133 @@ class RepositoryPackage(Package):
         log.debug(f"link {source} -> {dest}")
         source = os.path.expanduser(source)
         os.symlink(os.path.abspath(source), os.path.join(dest, os.path.basename(source)))
+
+
+class IndexedRepositoryPackage(RepositoryPackage):
+    def __init__(self, data, repository):
+        super(IndexedRepositoryPackage, self).__init__(data, repository)
+        self._loaded = False
+
+    def load(self):
+        pass
+
+    def install(self, path, link):
+        if self._loaded==False:
+            self.load()
+        
+        super(IndexedRepositoryPackage, self).install(path, link)
+
+class IndexedRepository(Repository):
+    def __init__(self, name, uri):
+        super(IndexedRepository, self).__init__(name, uri)
+        self._loaded = False
+        self._index = {}
+        
+        self._index = {
+                'updated': None,
+                'packages': {}
+            } 
+        
+    def load(self):
+        # load repository index from cache
+        try:
+            file = os.path.join("~/.army/.cache", f"{self.name}.toml")
+            if os.path.exists(os.path.expanduser(file))==False:
+                log.error(f"{self.name}: index not built")
+            else:
+                log.info(f"load index file {file}")
+                self._index = toml.load(os.path.expanduser(file))
+        except Exception as e:
+            print_stack()
+            log.debug(f"{e}")
+            raise RepositoryException(f"{self.name}: load repository index failed")
+    
+        # build packages list from index
+        # TODO
+        
+        self._loaded = True
+    
+    def save(self):
+        pass
+
+    # if repository has an internal cache this is where it should be reconstructed
+    def update(self):
+        self._index['updated'] = datetime.datetime.now()
+        
+        try:
+            os.makedirs(os.path.expanduser(os.path.join("~/.army/.cache")), exist_ok=True)
+            
+            file = os.path.join("~/.army/.cache", f"{self.name}.toml")
+            log.info(f"write index file {file}")
+            with open(os.path.expanduser(file), "w") as f:
+                toml.dump(self._index, f)
+        except Exception as e:
+            print_stack()
+            log.debug(f"{e}")
+            raise RepositoryException(f"{self.name}: load repository index failed")
+
+    @property
+    def packages(self):
+        raise "not yet implemented"
+    
+    def _create_package(self, data):
+        return IndexedRepositoryPackage(data, self)
+    
+    def _index_package(self, name, version, description):
+        # add package to index
+        if name not in self._index['packages']:
+            self._index['packages'][name] = {
+                    'description': description,
+                    'versions': []
+                }
+        if version not in self._index['packages'][name]['versions']:
+            self._index['packages'][name]['versions'].append(version)
+        
+        # update common fields in case version is the latest
+        if Version(version)>=Version(max(self._index['packages'][name]['versions'], key=lambda x: Version(x))):
+            self._index['packages'][name]['description'] = description
+            
+    def search(self, name, version=None, fullname=False):
+        # check if index is loaded
+        if self._loaded==False:
+            raise RepositoryException(f"{self.name}: index not loaded")
+        
+        if version is not None:
+            fullname = True
+        
+        res = {}
+        name = name.lower()
+        # select packages matching name criteria in package list
+        for package in self._index['packages']:
+            description = self._index['packages'][package]['description']
+            versions = self._index['packages'][package]['versions']
+            match_name = False
+            
+            if fullname==False and name in description.lower():
+                match_name = True
+                
+            if fullname==True and name==package:
+                match_name = True
+            elif fullname==False and name in package:
+                match_name = True
+            
+            if match_name==True:
+                if version is None:
+                    # no version specified, give latest by default
+                    version_range = VersionRange('latest', versions=versions)
+                else:
+                    version_range = VersionRange(version, versions=versions)
+                
+                for version in versions:
+                    if version_range.match(version):
+                        if (package in res and version>res[package].version) or package not in res:
+                            package_data = {
+                                    'name': package,
+                                    'description': description,
+                                    'version': version
+                                }
+                            pkg = self._create_package(package_data)
+                            res[package] = pkg
+
+        return res
+    
