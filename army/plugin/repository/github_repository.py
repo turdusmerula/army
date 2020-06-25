@@ -265,7 +265,6 @@ class GithubRepository(IndexedRepository):
         try:
             # check if release already exists
             for r in project.get_releases():
-                print("--", r.tag_name)
                 if r.tag_name==f"v{package.version}":
                     release = r
             
