@@ -43,19 +43,6 @@ def publish(ctx, name, force, **kwargs):
         print(f"{name}: repository not found", file=sys.stderr)
         exit(1)
 
-    try:
-        service_id = f"army.{name}"
-        user = keyring.get_password(service_id, 'user')
-        if user is None:
-            print(f"{name}: not logged to repository", file=sys.stderr)
-            exit(1)
-        password = keyring.get_password(service_id, user)
-    except Exception as e:
-        print_stack()
-        log.debug(e)
-        print(f"{name}: {e}", file=sys.stderr)
-        exit(1)
-
     if repo.load_credentials()==False:
         print(f"{name}: no credentials found", file=sys.stderr)
         exit(1)

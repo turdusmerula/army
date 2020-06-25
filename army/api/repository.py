@@ -308,7 +308,7 @@ class IndexedRepository(Repository):
                 
                 for version in versions:
                     if version_range.match(version):
-                        if (package in res and version>res[package].version) or package not in res:
+                        if (package in res and Version(version)>res[package].version) or package not in res:
                             package_data = {
                                     'name': package,
                                     'description': description,
