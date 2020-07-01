@@ -40,7 +40,8 @@ setup(
         'cmake',
         'schema',
         'PyGithub',
-        'keyring'
+        'keyring',
+        "python-gitlab"
     ],
 )
 

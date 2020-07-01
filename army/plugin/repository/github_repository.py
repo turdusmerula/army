@@ -74,7 +74,7 @@ class GithubRepositoryPackage(IndexedRepositoryPackage):
             log.debug(f"{type(e)} {e}")
             raise GithubRepositoryException(f"{e}")
 
-        if release is None:
+        if asset is None:
             raise GithubRepositoryException(f"{self.name}-{self.version}.zip: not found from github repository")
 
         try:
@@ -82,7 +82,8 @@ class GithubRepositoryPackage(IndexedRepositoryPackage):
             tmpd = tempfile.mkdtemp()
             tmpf = tempfile.mktemp()
 
-            r = requests.get(a.browser_download_url, allow_redirects=True)
+            # TODO: add credentials for private repository
+            r = requests.get(asset.browser_download_url, allow_redirects=True)
             with open(tmpf, mode="wb") as f:
                 f.write(r.content)
             
@@ -105,7 +106,7 @@ class GithubRepositoryPackage(IndexedRepositoryPackage):
         except toml.decoder.TomlDecodeError as e:
             os.remove(tmpf)
             print_stack()
-            log.debug(e)        
+            log.debug(f"{type(e)} {e}")
             raise GithubRepositoryException(f"{e}")
         
         os.remove(tmpf)
@@ -154,7 +155,7 @@ class GithubRepository(IndexedRepository):
             password = keyring.get_password(service_id, user)
         except Exception as e:
             print_stack()
-            log.debug(e)
+            log.debug(f"{type(e)} {e}")
             return False
         
         self._user = user
@@ -218,7 +219,7 @@ class GithubRepository(IndexedRepository):
             log.debug(f"{type(e)} {e}")
             raise GithubRepositoryException("login failed")
         
-        service_id = f"army.{name}"
+        service_id = f"army.{self.name}"
         # store password on keyring
         keyring.set_password(service_id, user, password)
         # store user on keyring
@@ -295,7 +296,6 @@ class GithubRepository(IndexedRepository):
             if overwrite==True:
                 log.info(f"remove tag v{package.version}")
                 try:
-                    print("+++", type(project), project.__dict__)
                     project.delete_tag(f"v{package.version}")
                 except Exception as e:
                     print_stack()

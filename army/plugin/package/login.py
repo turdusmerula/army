@@ -14,9 +14,10 @@ from click.decorators import password_option
 
 @packaging.command(name='login', help='Login to repository')
 @verbose_option()
+@click.option('-t', '--token', help='Login using a token', is_flag=True)
 @click.argument('name')
 @click.pass_context
-def login(ctx, name, **kwargs):
+def login(ctx, name, token, **kwargs):
     log.info(f"login {name}")
     
     config = ctx.parent.config
@@ -33,15 +34,25 @@ def login(ctx, name, **kwargs):
         print(f"{name}: repository not found", file=sys.stderr)
         exit(1)
     
-    user = input("login: ")
-    password = getpass.getpass(prompt='password: ', stream=None) 
-    
-    try:
-        repo.login(user, password)
-    except Exception as e:
-        print_stack()
-        log.debug(e)
-        print(f"{name}: {e}", file=sys.stderr)
-        exit(1)
+    if token==True:
+        token = getpass.getpass(prompt='token: ', stream=None) 
+        try:
+            repo.login(token=token)
+        except Exception as e:
+            print_stack()
+            log.debug(e)
+            print(f"{name}: {e}", file=sys.stderr)
+            exit(1)
+    else:
+        user = input("login: ")
+        password = getpass.getpass(prompt='password: ', stream=None) 
+        
+        try:
+            repo.login(user=user, password=password)
+        except Exception as e:
+            print_stack()
+            log.debug(e)
+            print(f"{name}: {e}", file=sys.stderr)
+            exit(1)
 
     print("logged in")

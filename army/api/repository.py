@@ -107,7 +107,7 @@ class Repository(object):
     def publish(self, package, overwrite=False):
         pass
     
-    def login(self, user, password):
+    def login(self, user=None, password=None, token=None):
         pass
 
     def logout(self):
@@ -229,9 +229,6 @@ class IndexedRepository(Repository):
             print_stack()
             log.debug(f"{e}")
             raise RepositoryException(f"{self.name}: load repository index failed")
-    
-        # build packages list from index
-        # TODO
         
         self._loaded = True
     

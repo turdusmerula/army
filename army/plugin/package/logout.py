@@ -35,9 +35,7 @@ def logout(ctx, name, **kwargs):
     service_id = f"army.{name}"
     
     try:
-        user = keyring.get_password(service_id, 'user')
-        keyring.delete_password(service_id, 'user')
-        keyring.get_password(service_id, user)
+        repo.logout()
     except Exception as e:
         print_stack()
         log.debug(e)

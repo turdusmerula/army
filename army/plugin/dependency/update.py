@@ -6,7 +6,7 @@ from army.api.click import verbose_option
 from army.army import cli, dependencies
 import click
 import os
-
+import sys
 from army.army import prefix
 
 @dependencies.command(name='update', help='Update repository indexes')
@@ -25,4 +25,10 @@ def update(ctx, **kwargs):
     
     for r in repositories:
         print(f"update {r.name}")
-        r.update()
+        try:
+            r.update()
+        except Exception as e:
+            print_stack()
+            log.debug(f"{type(e)} {e}")
+            print(f"{r.name}: {e}", file=sys.stderr)
+    print("updated")
