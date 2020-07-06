@@ -87,7 +87,7 @@ class LocalGitRepository(Repository):
         # select packages matching version in found packages
         for name in versions:
             for package in packages:
-                if package.version==versions[name].value:
+                if package.version in versions[name]:
                     res[name] = package
                     
         return res

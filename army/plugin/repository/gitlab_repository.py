@@ -163,8 +163,7 @@ class GitlabRepository(IndexedRepository):
     def update(self):
         logged = self.load_credentials()
         if logged==False:
-            print(f"{self.name}: warning: load credentials failed, update may be incomplete", file=sys.stderr)
-            
+            print(f"{self.name}: warning: load credentials failed, update may be incomplete when using private repository", file=sys.stderr)
         try:
             uri, groupuri = self._decompose_uri()
             if logged:
@@ -179,7 +178,10 @@ class GitlabRepository(IndexedRepository):
             raise GitlabRepositoryException(f"{e}")
 
         try:
-            group = g.groups.get(groupuri)
+            group = None
+            for ig in g.groups.list():
+                if ig.name==groupuri:
+                    group = ig
         except gitlab.exceptions.GitlabGetError as e:
             print_stack()
             log.debug(f"{type(e)} {e}")
@@ -188,15 +190,29 @@ class GitlabRepository(IndexedRepository):
             print_stack()
             log.debug(f"{type(e)} {e}")
             raise GitlabRepositoryException(f"{e}")
+        if group is None:
+            raise GitlabRepositoryException(f"{groupuri}: group not found")
 
         try:
             # get versions
-            for project in group.projects.list(all=True):
-                log.debug(f"update repo {project.name}")
-                p = g.projects.get(project.id)
-                for release in p.releases.list():
+            projects = {}
+            for p in g.projects.list():
+                projects[p.name] = p
+        except Exception as e:
+            print_stack()
+            log.debug(f"{type(e)} {e}")
+            raise GitlabRepositoryException(f"{e}")
+        
+        try:
+            for p in group.projects.list(all=True):
+                log.debug(f"update repo {p.name}")
+                if p.name not in projects:
+                    log.error(f"{p.name}: update failed")
+                    continue # TODO raise error?
+                project = projects[p.name]
+                for release in project.releases.list():
                     if release.tag_name.startswith("v"):
-                        self._index_package(p.name, release.tag_name[1:], p.description)
+                        self._index_package(project.name, release.tag_name[1:], project.description)
         except Exception as e:
             print_stack()
             log.debug(f"{type(e)} {e}")

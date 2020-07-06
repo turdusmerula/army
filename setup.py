@@ -41,7 +41,8 @@ setup(
         'schema',
         'PyGithub',
         'keyring',
-        "python-gitlab"
+        "python-gitlab",
+        "semantic_version"
     ],
 )
 

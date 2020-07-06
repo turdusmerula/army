@@ -1,4 +1,6 @@
 from army.api.version import Version, VersionRange
+from army.api.debugtools import print_stack
+from army.api.log import log
 
 class SchemaException(Exception):
     def __init__(self, message):
@@ -58,9 +60,12 @@ class VersionRangeString(Validator):
     
     def check(self, value):
         try:
-            version = VersionRange(value)
+            # provide at least one version to resolve 'latest'
+            version = VersionRange(value, versions=["0.0.0"])
         except Exception as e:
-            raise ValidatorException(f"'{value}' is not a valid version")
+            print_stack()
+            log.debug(f"{type(e)} {e}")
+            raise ValidatorException(f"'{value}' is not a valid version range")
 
 class VersionString(Validator):
     def __init__(self):
