@@ -13,6 +13,9 @@ def load_plugin(name, config):
     if ':' in name:
         search_name, search_version = name.split(':')
 
+    if search_name.endswith("-plugin")==False:
+        search_name = f"{search_name}-plugin"
+        
     package = load_installed_package(search_name)
 
     if package is None:

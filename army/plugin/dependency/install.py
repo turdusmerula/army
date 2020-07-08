@@ -76,15 +76,19 @@ def install(ctx, name, link, reinstall, **kwargs):
             exit(1)
 
         for package in project.dependencies:
-            pkg, repo = _find_package(package, project.dependencies[package], repositories)
+            pkg, repo = _find_package(package, project.dependencies[package], repositories, priority_dev=link)
             packages.append(PackageDependency(package=pkg, repository=repo))
             
         for plugin in project.plugins:
-            pkg, repo = _find_package(plugin, project.plugins[plugin], repositories)
+            pkg, repo = _find_package(plugin, project.plugins[plugin], repositories, plugin=True, priority_dev=link)
             packages.append(PackageDependency(package=pkg, repository=repo))
     else:
         for package in name:
-            pkg, repo = _find_package(package, 'latest', repositories)
+            if ':' in package:
+                package, version = package.split(':')
+            else:
+                version = 'latest'
+            pkg, repo = _find_package(package, version, repositories, priority_dev=link)
             packages.append(PackageDependency(package=pkg, repository=repo))
 
     # locate install folder
@@ -108,13 +112,13 @@ def install(ctx, name, link, reinstall, **kwargs):
         
         # append dependencies to list
         for dependency in package.dependencies:
-            pkg, repo = _find_package(dependency, package.dependencies[dependency], repositories)
+            pkg, repo = _find_package(dependency, package.dependencies[dependency], repositories, priority_dev=link)
             dep_pkg = PackageDependency(package=pkg, repository=repo, from_package=package)
             packages.append(dep_pkg)
 
         # append plugins to list
         for plugin in package.plugins:
-            pkg, repo = _find_package(plugin, package.plugins[plugin], repositories)
+            pkg, repo = _find_package(plugin, package.plugins[plugin], repositories, priority_dev=link)
             dep_pkg = PackageDependency(package=pkg, repository=repo, from_package=package)
             packages.append(dep_pkg)
 
@@ -122,10 +126,13 @@ def install(ctx, name, link, reinstall, **kwargs):
     dependencies.reverse()
     
     log.debug(f"packages: {dependencies}")
-    # checks
+    
+    # TODO checks
     _check_dependency_version_conflict(dependencies)
     _check_installed_version_conflict(dependencies)
     
+    # TODO clean dependency duplicates to avoid installing several times same package
+     
     # install
     for dependency in dependencies:
         install = False
@@ -142,6 +149,8 @@ def install(ctx, name, link, reinstall, **kwargs):
             print(f"install package {dependency.package}")
             
         if install==True:
+            if link==True and dependency.repository.DEV==False:
+                print(f"{dependency.package.name}: repository is not local, link not applied", file=sys.stderr)
             if dependency.repository.DEV==True:
                 dependency.package.install(path=os.path.join(path, dependency.package.name), link=link)
             else:
@@ -177,24 +186,43 @@ def _check_installed_version_conflict(dependencies):
     installed = load_installed_packages(prefix=prefix)
     # TODO
     
-def _find_package(name, version, repositories):
-    # search for module in repositories
+def _find_package(name, version_range, repositories, plugin=False, priority_dev=False):
+    """ search for a package in repositories
+    package with the greatest version in version_range is returned
+    if priority_dev is True _find_package will try to match a local dev repository if possible 
+    
+    :param name: name of the package to find
+    :param version_range: version range to match, if None then match 'latest'
+    :param repositories: list of repositories to search into
+    :param plugin: indicates if search package is a plugin, plugin names terminate by '-plugin'
+    :param priority_dev: if True _find_package will try to find a suitable version with a local dev repository
+    """
+
+    if plugin and name.endswith("-plugin")==False:
+        name = f"{name}-plugin"
 
     # result can contain only one element as fullname is True
     res_package = None
     res_repo = None
     for repo in repositories:
-        packages_found = repo.search(name, version, fullname=True)
+        # search a package in repo that matches name and version
+        packages_found = repo.search(name, version_range, fullname=True)
+
         for package_found in packages_found:
             package = packages_found[package_found]
+#             if package.version in 
             if res_package is None:
                 res_package = package
                 res_repo = repo
             elif package.version>res_package.version:
                 res_package = package
                 res_repo = repo
+            elif priority_dev==True and repo.DEV==True and res_package.repository.DEV==False and package.version>=res_package.version:
+                # previous match was not a dev repository and current match is version ok
+                res_package = package
+                res_repo = repo
 
-    if package:
+    if res_package:
         return res_package, res_repo
 
     print(f"{name}: package not found", file=sys.stderr)
