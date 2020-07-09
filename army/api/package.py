@@ -143,6 +143,8 @@ class Package(Schema):
                     'arch': String(),
                     'definition': Optional(String()),
                     'dependencies': Optional(VariableDict(PackageString(), VersionRangeString())),
+                    'plugins': Optional(VariableDict(PackageString(), VersionRangeString())),
+                    'plugin': Optional(VariableDict(PackageString(), Variant())),
                     }))),
                 
                 # in case of a library
@@ -280,6 +282,18 @@ class Package(Schema):
                     return self._data['dependencies']
                 return []
         
+            @property
+            def plugins(self):
+                if 'plugins' in self._data:
+                    return self._data['plugins']
+                return []
+            
+            @property
+            def plugin(self):
+                if 'plugin' in self._data:
+                    return self._data['plugin']
+                return []
+
         if 'target' in self._data:
             return TargetDict(self._data['target'])
         return TargetDict({})

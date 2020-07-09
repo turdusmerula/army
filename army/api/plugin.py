@@ -5,7 +5,7 @@ from army.api.version import Version
 import importlib.util
 import os
 
-def load_plugin(name, config):
+def load_plugin(name, config, plugin_config):
     log.info(f"load plugin '{name}'")
 
     search_name = name
@@ -28,6 +28,7 @@ def load_plugin(name, config):
     try:
         spec = importlib.util.spec_from_file_location("plugin", os.path.join(package.path, '__init__.py'))
         plugin = importlib.util.module_from_spec(spec)
+        plugin.args = plugin_config
         spec.loader.exec_module(plugin)
     except Exception as e:
         print_stack()

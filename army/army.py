@@ -62,6 +62,9 @@ import army.api.click as click
 # default configuration
 root_config = ArmyConfig()
 config = None
+project = None
+default_target = None
+target_name = None
 
 # create the config parser, this parser is mainly used to catch logger verbosity
 @click.group(invoke_without_command=True, 
@@ -70,8 +73,12 @@ config = None
              context_settings=dict(
                  resilient_parsing=True))
 @verbose_option()
+@click.option('-t', '--target', help='select target')
 @click.pass_context
-def cli_init(ctx, v, **kwargs):
+def cli_init(ctx, v, target, **kwargs):
+    global target_name
+    
+    target_name = target
     # configure logger
     root_config.set("verbose", get_log_level())
 
@@ -84,28 +91,39 @@ def cli_init(ctx, v, **kwargs):
 # TODO add version with version_option
 def cli(ctx, target, **kwargs):
     global config
+    global project
+    global default_target
+    
     ctx.config = config
-
+    ctx.project = project
+    ctx.target = default_target
+    
     if target is not None:
-        config.target = target
+        ctx.target = target
 
 @cli.section("Dependencies Management Commands")
 @click.pass_context
 def dependencies(ctx, **kwargs):
     # recopy parent config in context
     ctx.config = ctx.parent.config
+    ctx.project = ctx.parent.project
+    ctx.target = ctx.parent.target
 
 @cli.section("Packaging Commands")
 @click.pass_context
 def packaging(ctx, **kwargs):
     # recopy parent config in context
     ctx.config = ctx.parent.config
+    ctx.project = ctx.parent.project
+    ctx.target = ctx.parent.target
 
 @cli.section("Build Commands", chain=True)
 @click.pass_context
 def build(ctx, **kwargs):
     # recopy parent config in context
     ctx.config = ctx.parent.config
+    ctx.project = ctx.parent.project
+    ctx.target = ctx.parent.target
 
 # path prefix, used to provide unit tests data path
 prefix = None
@@ -116,6 +134,9 @@ prefix = None
 def main():
     global prefix
     global config
+    global project
+    global default_target
+    global target_name
     
     try:
         # cli_init will initialize the logger only, everything else is ignored at this point
@@ -140,16 +161,60 @@ def main():
     if os.path.exists('army.toml'):
         try:
             project = load_project()
-            for plugin in project.plugins:
-                try:
-                    load_plugin(plugin, config)
-                except Exception as e:
-                    print_stack()
-                    print(f"{e}")
         except Exception as e:
             print_stack()
             print(f"army.toml: {e}", file=sys.stderr)
             exit(1)
+
+    # load default target if exists
+    if project is not None:
+        # get target config
+        default_target = None
+        if target_name is None and project.default_target:
+            target_name = project.default_target
+            
+        if target_name is not None:
+            if target_name in project.target:
+                default_target = project.target[target_name]
+            else:
+                print(f"{target_name}: target not defined in project", file=sys.stderr)
+                exit(1)
+            log.info(f"current target: {target_name}")
+    
+    if project is not None:
+        # load plugins at project level
+        for plugin in project.plugins:
+            plugin_config = None
+            
+            # search for plugin configuration in project
+            if plugin in project.plugin:
+                plugin_config = project.plugin[plugin]
+            
+            # search plugin configuration in target
+            if plugin in default_target.plugin:
+                plugin_config = default_target.plugin[plugin]
+            
+            try:
+                load_plugin(plugin, config, plugin_config)
+            except Exception as e:
+                print_stack()
+                print(f"{e}")
+
+    if default_target is not None:
+        # load plugins at target level
+        for plugin in default_target.plugins:
+            plugin_config = None
+            
+            # search plugin configuration in target
+            if plugin in default_target.plugin:
+                plugin_config = default_target.plugin[plugin]
+            
+            try:
+                load_plugin(plugin, config, plugin_config)
+            except Exception as e:
+                print_stack()
+                print(f"{e}")
+
     # parse command line
     cli() 
     
@@ -157,3 +222,4 @@ def main():
 if __name__ == "__main__":
 
     main()
+
