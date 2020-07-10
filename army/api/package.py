@@ -73,6 +73,7 @@ def load_installed_package(name, local=True, _global=True, version_range=None, p
 
 # TODO check version when loading package and in case of package installed both global and local use the best fit
 def load_project_packages(project, target):
+    loaded = []
     to_load = []
     for dependency in project.dependencies:
         to_load.append((dependency, project.dependencies[dependency]))
@@ -83,14 +84,18 @@ def load_project_packages(project, target):
     dependencies = []
     while len(to_load)>0:
         dependency, version_range = to_load.pop(0)
-        installed = load_installed_package(dependency, version_range=version_range)
-        if installed is None:
-            raise PackageException(f"{dependency}: package not installed")
-        dependencies.append(installed)
+        if dependency not in loaded:
+            installed = load_installed_package(dependency, version_range=version_range)
+            if installed is None:
+                raise PackageException(f"{dependency}: package not installed")
+            dependencies.append(installed)
         
-        for dependency in installed.dependencies:
-            to_load.append((dependency, installed.dependencies[dependency]))
-    
+            for subdependency in installed.dependencies:
+                to_load.append((subdependency, installed.dependencies[subdependency]))
+                
+            loaded.append(dependency)
+        else:
+            log.info(f"{dependency} already loaded, skip")
     return dependencies
 
 def _load_installed_package(path):

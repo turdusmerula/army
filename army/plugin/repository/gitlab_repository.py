@@ -85,8 +85,6 @@ class GitlabRepositoryPackage(IndexedRepositoryPackage):
 
             # TODO: need this bug to be corrected to make this working
             # https://gitlab.com/gitlab-org/gitlab/-/issues/28978
-            print("+++", asset['url'], self.repository._token)
-
             headers = {'Private-Token': self.repository._token}
             r = requests.get(asset['url'], headers=headers, allow_redirects=True)
             with open(tmpf, mode="wb") as f:
