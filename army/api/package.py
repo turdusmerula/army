@@ -78,12 +78,14 @@ def load_project_packages(project, target):
         to_load.append((dependency, project.dependencies[dependency]))
 
     for dependency in project.target[target].dependencies:
-        to_load.append((dependency, project.dependencies[dependency]))
+        to_load.append((dependency, project.target[target].dependencies[dependency]))
 
     dependencies = []
     while len(to_load)>0:
         dependency, version_range = to_load.pop(0)
         installed = load_installed_package(dependency, version_range=version_range)
+        if installed is None:
+            raise PackageException(f"{dependency}: package not installed")
         dependencies.append(installed)
         
         for dependency in installed.dependencies:

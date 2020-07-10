@@ -46,17 +46,18 @@ def install(ctx, name, link, reinstall, **kwargs):
     
     # load configuration
     config = ctx.parent.config
-    project = None
-    if os.path.exists('army.toml'):
-        try:
-            # load project configuration
-            project = load_project()
-        except Exception as e:
-            print_stack()
-            log.debug(e)
+    
+    # load project
+    project = ctx.parent.project
     if project is None:
         log.info(f"no project loaded")
-            
+
+    # get target config
+    target = ctx.parent.target
+    if target is None:
+        print(f"no target specified", file=sys.stderr)
+        exit(1)
+
     if len(name)==0 and project is None:
         print("nothing to install", file=sys.stderr)
         exit(1)
@@ -78,10 +79,20 @@ def install(ctx, name, link, reinstall, **kwargs):
         for package in project.dependencies:
             pkg, repo = _find_package(package, project.dependencies[package], repositories, priority_dev=link)
             packages.append(PackageDependency(package=pkg, repository=repo))
+
+        if target is not None:
+            for package in target.dependencies:
+                pkg, repo = _find_package(package, target.dependencies[package], repositories, priority_dev=link)
+                packages.append(PackageDependency(package=pkg, repository=repo))
             
         for plugin in project.plugins:
             pkg, repo = _find_package(plugin, project.plugins[plugin], repositories, plugin=True, priority_dev=link)
             packages.append(PackageDependency(package=pkg, repository=repo))
+        
+        if target is not None:
+            for plugin in target.plugins:
+                pkg, repo = _find_package(plugin, target.plugins[plugin], repositories, plugin=True, priority_dev=link)
+                packages.append(PackageDependency(package=pkg, repository=repo))
     else:
         for package in name:
             if ':' in package:

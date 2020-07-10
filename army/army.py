@@ -92,14 +92,22 @@ def cli_init(ctx, v, target, **kwargs):
 def cli(ctx, target, **kwargs):
     global config
     global project
+    global target_name
     global default_target
     
     ctx.config = config
     ctx.project = project
     ctx.target = default_target
+    ctx.target_name = target_name
     
-    if target is not None:
-        ctx.target = target
+    if target is not None: 
+        if target in project.target:
+            ctx.target = project.target[target]
+            ctx.target_name = target
+        else:
+            print(f"{target}: target not defined in project", file=sys.stderr)
+            exit(1)
+        log.info(f"current target: {target}")
 
 @cli.section("Dependencies Management Commands")
 @click.pass_context
@@ -108,6 +116,7 @@ def dependencies(ctx, **kwargs):
     ctx.config = ctx.parent.config
     ctx.project = ctx.parent.project
     ctx.target = ctx.parent.target
+    ctx.target_name = ctx.parent.target_name
 
 @cli.section("Packaging Commands")
 @click.pass_context
@@ -116,6 +125,7 @@ def packaging(ctx, **kwargs):
     ctx.config = ctx.parent.config
     ctx.project = ctx.parent.project
     ctx.target = ctx.parent.target
+    ctx.target_name = ctx.parent.target_name
 
 @cli.section("Build Commands", chain=True)
 @click.pass_context
@@ -124,6 +134,7 @@ def build(ctx, **kwargs):
     ctx.config = ctx.parent.config
     ctx.project = ctx.parent.project
     ctx.target = ctx.parent.target
+    ctx.target_name = ctx.parent.target_name
 
 # path prefix, used to provide unit tests data path
 prefix = None
