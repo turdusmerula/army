@@ -281,7 +281,9 @@ class Package(Schema):
             
             @property
             def definition(self):
-                return self._data['definition']
+                if 'definition' in self._data:
+                    return self._data['definition']
+                return None
 
             @property
             def dependencies(self):

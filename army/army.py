@@ -79,6 +79,7 @@ def cli_init(ctx, v, target, **kwargs):
     global target_name
     
     target_name = target
+
     # configure logger
     root_config.set("verbose", get_log_level())
 
