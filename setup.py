@@ -3,6 +3,24 @@
 
 #
 # To publish package release
+
+# add ~/.pypirc:
+# [distutils]
+# index-servers =
+#   pypi
+#   pypitest
+# 
+# [pypi]
+# repository=https://upload.pypi.org/legacy/
+# username= # username
+# password= # password
+# 
+# [pypitest]
+# repository=https://test.pypi.org/legacy/
+# username= # username
+# password= # password
+
+# publish command:
 # python setup.py sdist upload -r pypi
 #
 

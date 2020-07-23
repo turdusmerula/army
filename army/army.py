@@ -66,6 +66,17 @@ project = None
 default_target = None
 target_name = None
 
+# due to resilient_parsing this is needed to ensure we quit after cli_init
+premature_exit = False
+
+def show_version():
+    print("army, version 0.1.0")
+    print("Copyright (C) 2016 Free Software Foundation, Inc.")
+    print("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>")
+    print("")
+    print("This is free software; you are free to change and redistribute it.")
+    print("There is NO WARRANTY, to the extent permitted by law.")
+
 # create the config parser, this parser is mainly used to catch logger verbosity
 @click.group(invoke_without_command=True, 
              no_args_is_help=False, 
@@ -74,9 +85,16 @@ target_name = None
                  resilient_parsing=True))
 @verbose_option()
 @click.option('-t', '--target', help='select target')
+@click.option('--version', help='show army version', is_flag=True)
 @click.pass_context
-def cli_init(ctx, v, target, **kwargs):
+def cli_init(ctx, v, target, version, **kwargs):
     global target_name
+
+    if version:
+        global premature_exit
+        premature_exit = True
+        show_version()
+        exit(1)
     
     target_name = target
 
@@ -88,14 +106,15 @@ def cli_init(ctx, v, target, **kwargs):
 @click.group()
 @verbose_option()
 @click.option('-t', '--target', help='select target')
+@click.option('--version', help='show army version', is_flag=True)
 @click.pass_context
 # TODO add version with version_option
-def cli(ctx, target, **kwargs):
+def cli(ctx, target, version, **kwargs):
     global config
     global project
     global target_name
     global default_target
-    
+        
     ctx.config = config
     ctx.project = project
     ctx.target = default_target
@@ -156,6 +175,9 @@ def main():
         cli_init()
     except:
         pass
+    global premature_exit
+    if premature_exit:
+        exit(1)
 
     # load army configuration files
     if prefix is not None:
