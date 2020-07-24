@@ -142,6 +142,7 @@ class Package(Schema):
                 # arch definition
                 'arch': Optional(VariableDict(String(), Dict({
                     'definition': Optional(String()),
+                    'cpu': Optional(String()),                    
                     }))),
 
                 # in case of a firmware
@@ -199,8 +200,16 @@ class Package(Schema):
             
             @property
             def definition(self):
-                return self._data['definition']
-        
+                if 'definition' in self._data:
+                    return self._data['definition']
+                return None
+            
+            @property
+            def cpu(self):
+                if 'cpu' in self._data:
+                    return self._data['cpu']
+                return None
+            
         if 'arch' in self._data:
             return ArchDict(self._data['arch'])
         return ArchDict({})

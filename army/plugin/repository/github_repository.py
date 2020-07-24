@@ -187,8 +187,12 @@ class GithubRepository(IndexedRepository):
             raise GithubRepositoryException(f"{e}")
 
         try:
+            
             # get versions
             for repo in organization.get_repos():
+                # remove previous index state
+                self._index_remove_package(repo.name)
+
                 log.debug(f"update repo {repo}")
                 for release in repo.get_releases():
                     if release.tag_name.startswith("v"):

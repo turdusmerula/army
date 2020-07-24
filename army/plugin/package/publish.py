@@ -47,7 +47,7 @@ def publish(ctx, name, force, **kwargs):
         print(f"{name}: no credentials found", file=sys.stderr)
         exit(1)
 
-    # TODO check version is tagged and files are commited
+    # TODO check version is tagged and files are commited and pushed
     
     # package
     try:    

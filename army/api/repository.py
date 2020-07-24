@@ -258,6 +258,10 @@ class IndexedRepository(Repository):
     def _create_package(self, data):
         return IndexedRepositoryPackage(data, self)
     
+    def _index_remove_package(self, name):
+        if name in self._index['packages']:
+            del self._index['packages'][name]
+            
     def _index_package(self, name, version, description):
         # add package to index
         if name not in self._index['packages']:
