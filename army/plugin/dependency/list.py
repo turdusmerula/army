@@ -1,10 +1,10 @@
 from army.api.log import log
 from army.api.debugtools import print_stack
 from army.api.project import load_project
-from army.army import prefix
+from army import prefix
 from army.api.click import verbose_option 
 from army.api.package import load_installed_packages
-from army.army import cli, dependencies
+from army import cli, dependencies
 import click
 import sys
 import os

@@ -109,7 +109,7 @@ class BaseConfig(object):
         
         self._parent = parent
         self._value = value
-        
+    
     def parent(self):
         return self._parent 
 

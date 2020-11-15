@@ -45,7 +45,7 @@ setup(
     include_package_data=True,
     entry_points={
         'console_scripts': [
-            'army = army.army:main',
+            'army = army.__main__:main',
         ]
     },
     zip_safe=False, # force egg extraction

@@ -5,4 +5,4 @@ import army.plugin.dependency.list
 import army.plugin.dependency.uninstall
 import army.plugin.dependency.update
 import army.api.click as click
-from army.army import cli
+from army import cli

@@ -4,7 +4,7 @@ from army.api.debugtools import print_stack
 from army.api.version import Version, VersionRange
 from army.api.log import log
 from army.api.package import Package
-from army.army import prefix
+from army import prefix
 import os
 import toml
 

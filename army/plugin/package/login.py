@@ -2,14 +2,14 @@ from army.api.log import log
 from army.api.debugtools import print_stack
 from army.api.repository import load_repositories
 from army.api.click import verbose_option 
-from army.army import packaging
+from army import packaging
 import click
 import os
 import sys
 import getpass
 import keyring
 
-from army.army import prefix
+from army import prefix
 from click.decorators import password_option
 
 @packaging.command(name='login', help='Login to repository')

@@ -3,11 +3,11 @@ from army.api.debugtools import print_stack
 from army.api.project import load_project
 from army.api.repository import load_repositories
 from army.api.click import verbose_option 
-from army.army import cli, dependencies
+from army import cli, dependencies
 import click
 import os
 import sys
-from army.army import prefix
+from army import prefix
 
 @dependencies.command(name='update', help='Update repository indexes')
 @verbose_option()

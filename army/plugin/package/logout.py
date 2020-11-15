@@ -3,13 +3,13 @@ from army.api.debugtools import print_stack
 from army.api.project import load_project
 from army.api.repository import load_repositories
 from army.api.click import verbose_option 
-from army.army import cli, packaging
+from army import cli, packaging
 import click
 import os
 import sys
 import keyring.errors
 
-from army.army import prefix
+from army import prefix
 
 @packaging.command(name='logout', help='Logout from repository')
 @verbose_option()
