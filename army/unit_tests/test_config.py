@@ -72,8 +72,8 @@ class ConfigStringEnum(ConfigString):
 
     def check(self):
         super(ConfigStringEnum, self).check() 
-        if self.value() not in {"a", "b", "c"}:
-            raise ConfigException(f"'{self.value()}': invalid value")
+        if self.value not in {"a", "b", "c"}:
+            raise ConfigException(f"'{self.value}': invalid value")
 
 assert raised(ConfigStringEnum)==ConfigException
 assert raised(ConfigStringEnum, "d")==ConfigException

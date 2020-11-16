@@ -38,8 +38,8 @@ def load_repositories(config, prefix=None):
     
     for repo_name in repos:
         try:
-            repo_type_name = repos[repo_name].type.value()
-            repo_uri = os.path.join(prefix or "", repos[repo_name].uri.value())
+            repo_type_name = repos[repo_name].type
+            repo_uri = os.path.join(prefix or "", repos[repo_name].uri)
 
             if repo_type_name in repository_types:
                     

@@ -5,7 +5,6 @@ import pkg_resources
 from itertools import chain
 
 sys.path.append(os.path.dirname(pkg_resources.resource_filename(__name__, "__main__.py")))
-print("---", sys.path)
 
 from army.api.config import ArmyConfig, load_configuration
 from army.api.log import log, get_log_level

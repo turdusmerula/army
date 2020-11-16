@@ -4,6 +4,27 @@ import sys
 from army.api.log import log
 from army.api.debugtools import print_stack
 from army.api.version import Version
+from schema import Schema, And, Use, Optional
+
+repo_schema = {
+    "type": str,
+    "uri": str
+}
+
+repo_dict_schema = {
+    str: repo_schema
+}
+
+config_file_schema = {
+    Optional('verbose'): And(lambda s: s in ["debug", "info", "warning", "error", "critical"], error="verbose: invalid log level"),
+    Optional('repo'): repo_dict_schema
+}
+
+config_repository_file_schema = {
+    Optional('repo'): {
+        str: repo_schema
+    }
+}
 
 # load army configuration files, each file supersedes the previous
 # Global configuration: /etc/army/army.toml
@@ -55,18 +76,14 @@ def load_configuration_file(path, parent=None):
         log.debug(e)
         raise ConfigException(f"{format(e)}")
     
-    res = ArmyConfig(parent=parent, value=config)
+    try:
+        res = ArmyConfig(parent=parent, value=config)
+    except Exception as e:
+        print_stack()
+        log.debug(e)
+        raise ConfigException(f"{format(e)}")
+        
     return res
-#     for item in config:
-#         try:
-#             log.debug(f"load '{item}': {config[item]}")
-#             res.set(item, config[item])
-#         except Exception as e:
-#             print_stack()
-#             log.debug(e)
-#             raise ConfigException(f"{path}: {e}")
-#     res.check()
-    
 
 def load_configuration_repository_file(path, parent=None):
     # TODO find a way to add line to error message
@@ -84,448 +101,102 @@ def load_configuration_repository_file(path, parent=None):
         log.debug(e)
         raise ConfigException(f"{format(e)}")
     
-    res = ArmyConfigRepository(parent=parent, value=config)
+    try:
+        res = ArmyConfigRepository(value=config, parent=parent)
+    except Exception as e:
+        print_stack()
+        log.debug(e)
+        raise ConfigException(f"{format(e)}")
+        
     return res
-#     for item in config:
-#         try:
-#             log.debug(f"load '{item}': {config[item]}")
-#             res.set(item, config[item])
-#         except Exception as e:
-#             print_stack()
-#             log.debug(e)
-#             raise ConfigException(f"{path}: {e}")
-    
 
-    
+
+
 class ConfigException(Exception):
     def __init__(self, message):
         self.message = message
 
-# Configuration base class
-class BaseConfig(object):
-
-    def __init__(self, value=None, parent=None):
-        super(BaseConfig, self).__init__()
-        
-        self._parent = parent
+class Config(object):
+    def __init__(self, value=None, parent=None, schema={}):
         self._value = value
-    
-    def parent(self):
-        return self._parent 
-
-    def set_parent(self, parent):
         self._parent = parent
-        self.check()
+        self._schema = Schema(schema)
 
-    # get item value stored inside the item
+        if value is not None:
+            log.debug(f"validate: {self.value} with {self.schema}")
+            self.schema.validate(self.value)
+        
+    @property
     def value(self):
         return self._value
+    
+    @property
+    def parent(self):
+        return self._parent
 
+    @property
+    def schema(self):
+        return self._schema
 
-class Config(BaseConfig):
-    ITEM_TYPE=0          # mandatory: field type
-    ITEM_DEFAULT_VALUE=1 # mandatory: define default field value
-    ITEM_ALLOCATOR=2     # facultative: custom allocator for field
-
-    def __init__(self, value=None, parent=None, fields=None):
-        super(Config, self).__init__(value=value, parent=parent)
+    def __getattr__(self, name):
+        if self.parent is not None:
+            return getattr(self.parent, name)
+        raise AttributeError(f"'{type(self)}' object has no attribute '{name}'")
         
-        # configuration fields
-        # key: field name
-        # value: [ <item class>, default value ]
-        self._fields = fields
-        
-        self.load() ;
-        
-    # check value content
-    def check(self):
-        # check for mandatory fields
-        for field_name in self.get_fields():
-            field = self.get_field(field_name)
+    def get(self, name, default=None):
+        if self.value is None or name not in self.value:
+            if self.parent is not None:
+                return self.parent.get(name, default)
+        elif self.value is not None and name in self.value:
+            return self.value[name]
+        return default
 
-            if isinstance(field, list)==False:
-                raise ConfigException(f"{field_name}: invalid field format")                
-            if len(field)==0:
-                raise ConfigException(f"{field_name}: missing field type")
-            if len(field)==1 and ( self._value is None or field_name not in self._value):
-                raise ConfigException(f"{field_name}: missing value")
+    def _recursive_get_dict(self, name, values):
+        if self.value is not None and name in self.value:
+            for item in self.value[name]:
+                if item not in values:
+                    values[item] = self.value[name][item]
+        if self.parent is not None:
+            return self.parent._recursive_get_dict(name, values)
+        return values
+
+    def recursive_get_dict(self, name, default={}):
+        values = {}
+        if self.value is not None and name in self.value:
+            for item in self.value[name]:
+                if item not in values:
+                    values[item] = self.value[name][item]
+        if self.parent is not None:
+            values = self.parent._recursive_get_dict(name, values)
+        
+        for item in default:
+            if item not in values:
+                values[item] = default[item]
                 
+        return values
         
-        # check for extraneous elements
-        if isinstance(self._value, dict):
-            err = []
-            # check all fields
-            for value in self._value:
-                if self.get_field(value) is None:
-                    raise ConfigException(f"{value}: unexpected value")
-#             for value in self._value:
-#                 try:
-#                     self.get(value)
-#                 except ConfigException as e:
-#                     err.append(f"{e}")
-#                     
-#             if len(err)>0:
-#                 raise ConfigException(err)
-
-    def load(self):
-        self.check() 
-
-    def get_fields(self):
-        if self._fields:
-            return self._fields
-        return {}
-
-    def get_field(self, item):
-        if self._fields and item in self._fields:
-            return self._fields[item]
-            
-        if self._parent:
-            return self._parent.get_field(item)
-        return None
-    
-    # @description get subitem value
-    # @param item name of the item to look for
-    # @param default when the item is not found, if True  return its default value, when False return None
-    def get(self, item, default=True):
-        # check that field exists somewhere in the configuration tree
-        field = self.get_field(item)
-        
-        if field is None:
-            raise ConfigException(f"'{item}': unexpected value")
-
-        if len(field)==3:
-            # custom allocator given for this field
-            allocator = field[self.ITEM_ALLOCATOR]
-        else:
-            # use default allocator
-            allocator = field[self.ITEM_TYPE]
-        
-        value = None
-        if isinstance(self.value(), dict) and item in self.value():
-            # item exists in the current configuration
-            # instantiate configuration item from loaded value
-            value = self.value()[item]
-        elif self.parent() and self.parent().get_field(item) is None:
-            # item does not exists either in the parent
-            if default==True:
-                # set default value
-                value = field[self.ITEM_DEFAULT_VALUE]
-            else:
-                # no value
-                value = None
-        elif self.parent():
-            # parent exists and has the item
-            value = self.parent().get(item).value()
-
-        if value:
-            # we have a value
-            return allocator(value=value)
-        elif default==True:
-            # item not found in herarchy, return default value
-            return allocator(value=field[self.ITEM_DEFAULT_VALUE])
-        return None
-
-    def __getattribute__(self, name):
-        try:
-            return object.__getattribute__(self, name)
-        except AttributeError:
-            if self.get_field(name):
-                return object.__getattribute__(self, "get")(name)
-            else:
-                raise AttributeError(name)
-    
-    def set(self, item, value):
-        field = self.get_field(item)
-
-        if field is None:
-            raise ConfigException(f"'{item}': unexpected value")
-        
-        if self._value is None:
-            self._value = {}
-            
-        if self._value and not isinstance(self._value, dict):
-            # this should not happen, means there is a problem to investigate upstream
-            raise ConfigException(f"'{item}': parent type mismatch")
-        
-        # create an item, should trigger an error if content is invalid
-        v = field[self.ITEM_TYPE](value=value)
-        self._value[item] = v.value()
-        
-    def expand(self, default=True):
-        res = None
-        if self._fields:
-            res = {}
-        else:
-            return self._value
-        
-        if self.parent():
-            res = self.parent().expand(default)
-        
-        for item in self.get_fields():
-#            field = self.get_field(item)
-            value = self.get(item, default)
-            if value:
-                res[item] = value.expand()
-
-        return res
-
-    def __str__(self):
-        return f"{self.value()}"
-
-class ConfigNullableString(Config):
-    def __init__(self, value=None, parent=None):
-        super(ConfigNullableString, self).__init__(value=value, parent=parent)
-    
-    def check(self):
-        if self.value() and not isinstance(self.value(), str):
-            raise ConfigException(f"'{self.value()}': invalid string")
-
-    
-class ConfigString(Config):
-    def __init__(self, value=None, parent=None):
-        super(ConfigString, self).__init__(value=value, parent=parent)
-    
-    def check(self):
-        if not isinstance(self.value(), str):
-            raise ConfigException(f"'{self.value()}': invalid string")
-
-    def __str__(self):
-        return f"{self.value()}"
-    
-    def __repr__(self):
-        return f"{self.value()}"
-
-class ConfigVersion(Config):
-    def __init__(self, value=None, parent=None):
-        super(ConfigVersion, self).__init__(value=Version(value), parent=parent)
-
-    def check(self):
-        if not isinstance(self.value(), Version):
-            raise ConfigException(f"'{self.value()}': invalid version")
-
-class ConfigInt(Config):
-    def __init__(self, value=None, parent=None):
-        super(ConfigInt, self).__init__(value=value, parent=parent)
-
-    def check(self):
-        if not isinstance(self.value(), int):
-            raise ConfigException(f"'{self.value()}': invalid integer")
-    
-    def __int__(self):
-        return self._value
-
-
 class _ConfigDictIterator(object):
     def __init__(self, values):
-        self._list = values
-        
-        self._items = values.value()
-        parent = values.parent()
-        while parent:
-            self._items = { **parent.value(), **self._items }
-            parent = parent.parent()
-
-        self._iter = iter(self._items)
-     
+        self.values = values
+        self._iter = iter(self.values)
+      
     def __next__(self):
         return next(self._iter)
 #         return self._list.get_field()[ConfigDict.ITEM_TYPE](value=val)
- 
 
-class ConfigDict(BaseConfig):
-    ITEM_TYPE=0
-    ITEM_DEFAULT_VALUE=1
+class ConfigDict(Config):
+    def __init__(self, value=None, item_type=None, schema={}):
+        super(ConfigDict, self).__init__(value=value, schema=schema)
+        self.item_type = item_type
 
-    def __init__(self, value=None, parent=None, field=None):
-        super(ConfigDict, self).__init__(value=value, parent=parent)
-
-        # fields will contain only the type of dict items
-        self._field = field
-
-        self.load() ;
- 
-    def check(self):
-        if self._parent and not isinstance(self.parent(), ConfigDict):
-            raise ConfigException(f"'{self.parent()}': invalid parent type")
-        
-        if not isinstance(self.value(), dict):
-            raise ConfigException(f"'{self.value()}': invalid value dict")
-         
-    def load(self):
-        self.check()
-        
-    def get_field(self):
-        return self._field
-    
-    def append(self, name, item):
-        # check that field exists somewhere in the configuration tree
-        field = self.get_field()
-        
-        if isinstance(item, type(field))==False:
-            raise ConfigException(f"{item}: invalid type")
-        
-        self.value()[name] = item.value()
-        
-    def expand(self):
-        res = None
-        if self._field:
-            res = {}
-        else:
-            return self._value
-        
-        if self.parent():
-            res = self.parent().expand()
-
-        for item in self:
-            res[item] = self[item].expand()
-
-        return res
-    
     def __len__(self):
-        list = self.value()
-        parent = self.parent()
-        while parent:
-            list = { **parent.value(), **list }
-            parent = parent.parent()
-        return len(list)
-    
+        return len(self.value)
+
+    def __iter__(self):
+        return _ConfigDictIterator(self.value)
+
     def __getitem__(self, name):
-        # check that field exists somewhere in the configuration tree
-        field = self.get_field()
-        
-        if field is None:
-            raise ConfigException(f"None type found")
-
-        value = None
-        if self.value() and name in self.value():
-            # item exists in the current configuration
-            # instantiate configuration item from loaded value
-            return field[self.ITEM_TYPE](value=self.value()[name])
-        elif self.parent():
-            return self.parent()[name]
-        else:
-            raise ConfigException(f"{name}: does not exists")
-            
-        return None
-
-    def __str__(self):
-        return f"{self.value()}"
-
-    def __iter__(self):
-        return _ConfigDictIterator(self)
-
-
-class _ConfigListIterator(object):
-    def __init__(self, list):
-        self._list = list
-#         self._field = field
-#         self._list = values
-        self._index = 0
-#         self._iter = iter(values)
-    
-    def __next__(self):
-        if self._index<len(self._list):
-            res = self._list[self._index]
-            self._index += 1
-            return res
-        raise StopIteration()
-    
-class ConfigList(BaseConfig):
-    ITEM_TYPE=0
-    ITEM_DEFAULT_VALUE=1
-
-    def __init__(self, value=None, parent=None, field=None):
-        super(ConfigList, self).__init__(value=value, parent=parent)
-
-        # fields will contain only the type of dict items
-        self._field = field
-
-        self.load() ;
-
-    def check(self):
-        if self._parent and not isinstance(self.parent(), ConfigList):
-            raise ConfigException(f"'{self.parent()}': invalid parent type")
-        
-        if not isinstance(self.value(), list):
-            raise ConfigException(f"'{self.value()}': invalid value list")
-
-    def load(self):
-        self.check()
-        
-    def get_field(self):
-        return self._field
-    
-    def append(self, item):
-        # check that field exists somewhere in the configuration tree
-        field = self.get_field()
-        
-        if isinstance(item, type(field))==False:
-            raise ConfigException(f"{item}: invilad type")
-        
-        self.value().append(item.value())
-        
-    def expand(self, default=True):
-        res = None
-        if self._field:
-            res = []
-        else:
-            return self._value
-        
-        for item in self:
-            res.append(item.expand())
-        return res
-    
-    def __len__(self):
-        res = len(self.value())
-        if self.parent():
-            res += len(self.parent())
-        return res 
-    
-    def __getitem__(self, index):
-        # check that field exists somewhere in the configuration tree
-        field = self.get_field()
-        
-        if field is None:
-            raise ConfigException(f"None type found")
-
-        if index<0 or index>=len(self):
-            raise ConfigException(f"{index}: out of bounds")
-            
-        value = None
-        if index<len(self.value()):
-            # item exists in the current configuration
-            # instantiate configuration item from loaded value
-            return field[self.ITEM_TYPE](value=self.value()[index])
-        elif self.parent():
-            pindex = index-len(self.value())
-            return self.parent()[pindex]
-
-        return None
-
-    def __str__(self):
-        return f"{self.value()}"
-
-    def __iter__(self):
-        return _ConfigListIterator(self)
-
-class ConfigStringList(ConfigList):
-    
-    def __init__(self, parent=None, value=None):
-        super(ConfigStringList, self).__init__(
-            parent=parent,
-            value=value,
-            field=[ ConfigString ]
-        )
-
-# TODO: create type ConfigEnum as base class
-class ConfigLogLevel(ConfigString):
-    def __init__(self, value=None, parent=None):
-        super(ConfigLogLevel, self).__init__(value=value, parent=parent)
-
-    def check(self):
-        super(ConfigLogLevel, self).check() 
-        if self._value not in {"debug", "info", "warning", "error", "fatal"}:
-            raise ConfigException(f"'{self.value()}': invalid value")
+        return self.item_type(value=self.value[name])
 
 
 class ArmyConfig(Config):
@@ -533,86 +204,43 @@ class ArmyConfig(Config):
         super(ArmyConfig, self).__init__(
             value=value,
             parent=parent,
-            fields={
-                'verbose': [ ConfigLogLevel, "error" ],
-                'target': [ ConfigString, "" ],
-                "repo": [ ConfigRepositoryDict, {}, self._allocate_repo ]
-            }
+            schema=config_file_schema
         )
 
-    # define a custom allocator for the repo field, this field is not replaced by childs but needs to be merged
-    # as each child just adds or superseed repository list
-    def _allocate_repo(self, value):
-        res = ConfigRepositoryDict(value=value)
-        current = res
-        
-        # merge repository list with parent repo
-        parent = self.parent()
-        while(parent):
-            try:
-                if(parent.get_field('repo')):
-                    new = ConfigRepositoryDict(value=parent.repo.value())
-                    current.set_parent(new)
-                    current = new
-            except:
-                pass
-            parent = parent.parent()
+    @property
+    def verbose(self):
+        return self.get('verbose', 'critical')
 
-        if parent:  
-            return ConfigRepositoryDict(value=value, parent=parent.repo)
-        return res
-        
+    @property
+    def repo(self):
+        return ConfigDict(self.recursive_get_dict('repo'), ConfigRepository, schema=repo_dict_schema)
 
-class ConfigRepositoryDict(ConfigDict):
-    
-    def __init__(self, parent=None, value=None):
-        super(ConfigRepositoryDict, self).__init__(
-            parent=parent,
-            value=value,
-            field=[ ConfigRepository, {} ]
-        )
-        
-class ConfigRepository(Config):
-    def __init__(self, parent=None, value=None):
-        super(ConfigRepository, self).__init__(
-            parent=parent,
-            value=value,
-            fields={
-                'type': [ ConfigString, "" ],
-                'uri': [ ConfigString, "" ],
-            }
-        )
-    
 class ArmyConfigRepository(Config):
-    def __init__(self, parent=None, value=None):
+    def __init__(self, value=None, parent=None):
         super(ArmyConfigRepository, self).__init__(
-            parent=parent,
             value=value,
-            fields={
-                'repo': [ ConfigRepositoryDict, {}, self._allocate_repo ]
-            }
+            parent=parent,
+            schema=config_repository_file_schema
         )
 
-    # define a custom allocator for the repo field, this field is not replaced by childs but needs to be merged
-    # as each child just adds or superseed repository list
-    def _allocate_repo(self, value):
-        res = ConfigRepositoryDict(value=value)
-        current = res
+    @property
+    def repo(self):
+        return ConfigDict(self.recursive_get_dict('repo'), ConfigRepository, schema=repo_dict_schema)
+
+
+
+class ConfigRepository(Config):
+    def __init__(self, value=None, parent=None):
+        super(ConfigRepository, self).__init__(
+            value=value,
+            parent=parent,
+            schema=repo_schema
+        )
+
+    @property
+    def type(self):
+        return self.get('type')
         
-        # merge repository list with parent repo
-        parent = self.parent()
-        while(parent):
-            try:
-                if(parent.get_field('repo')):
-                    new = ConfigRepositoryDict(value=parent.repo.value())
-                    current.set_parent(new)
-                    current = new
-            except:
-                pass
-            parent = parent.parent()
-
-        if parent:  
-            return ConfigRepositoryDict(value=value, parent=parent.repo)
-        return res
-    
-
+    @property
+    def uri(self):
+        return self.get('uri')
