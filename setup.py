@@ -25,10 +25,16 @@
 #
 
 from setuptools import setup
+import sys
+import os
+
+sys.path.append(os.path.join(os.path.dirname(__file__), 'army'))
+
+import army
 
 setup(
     name='army',
-    version='0.1.0',
+    version=army.version,
     description='Arm cross compiling toolset',
     url='https://github.com/turdusmerula/army/',
     author='Sebastien Besombes',

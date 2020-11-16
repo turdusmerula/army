@@ -14,6 +14,7 @@ from army.api.plugin import load_plugin
 from army.api.click import verbose_option 
 import army.api.click as click
 
+version = "0.1.0"
 # TODO add autocomplete https://kislyuk.github.io/argcomplete/
 
 # Git coupling
@@ -70,7 +71,7 @@ target_name = None
 premature_exit = False
 
 def show_version():
-    print("army, version 0.1.0")
+    print(f"army, version {version}")
     print("Copyright (C) 2016 Free Software Foundation, Inc.")
     print("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>")
     print("")
@@ -180,6 +181,7 @@ def main():
         exit(1)
 
     # load army configuration files
+    prefix = os.getenv('ARMY_PREFIX', None)
     if prefix is not None:
         log.debug(f"using {prefix} as path prefix")
     config = load_configuration(parent=root_config, prefix=prefix) 

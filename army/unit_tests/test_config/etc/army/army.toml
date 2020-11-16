@@ -4,7 +4,7 @@
 # warning
 # error
 # critical
-verbose = "debug"
+verbose = "critical"
 
 
 [repo.main]

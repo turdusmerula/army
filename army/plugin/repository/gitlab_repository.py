@@ -331,7 +331,6 @@ class GitlabRepository(IndexedRepository):
             # create release
             release = project.releases.create({'name': f"{package.name}-{package.version}", 'tag_name': f"v{package.version}", 'description': ''})
             asset = project.upload(f"{package.name}-{package.version}.zip", filepath=file)
-            print("++++", asset['url'])
             url = f"{self._uri}/{project.name}{asset['url']}"
             release.add_link(name=f"{package.name}-{package.version}.zip", url=url, type='package')
         except Exception as e:

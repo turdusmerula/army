@@ -18,54 +18,24 @@ def raised(func, *args,**kwargs):
         print(e)
     return res
 
-#assert raised(load_configuration, None, prefix)==False
-
+# check no error when loading
+assert raised(load_configuration, None, prefix)==False
 config = load_configuration(None, prefix)
 
+# show loaded configuration
 parent = config
 while parent is not None:
     print(parent, parent.value)
     parent = parent.parent
 
+# check repositories
+print(len(config.repo))
+print(config.repo.value)
 for item in config.repo:
     print(item)
+assert len(config.repo)==6
 
-print(config.repo.value)
-print(config.verbose)
+# check attributes
+assert config.verbose=="debug"
 
 assert raised(lambda: config.toto)==AttributeError
-
-# class Config(object):
-#     def __init__(self, value=None, parent=None, schema={}):
-#         self._value = value
-#         self._parent = parent
-#         self._schema = Schema(schema)
-# 
-#     @property
-#     def value(self):
-#         return self._value
-#     
-#     @property
-#     def parent(self):
-#         return self._parent
-# 
-#     @property
-#     def schema(self):
-#         return self._schema
-# 
-#     def get(self, name, default=None):
-#         if self.value is None or name not in self.value:
-#             if self.parent is not None:
-#                 return self.parent.get(name, default)
-#         return default
-#     
-# 
-# class ArmyConfigRepository(Config):
-#     def __init__(self, parent=None, value=None):
-#         super(ArmyConfigRepository, self).__init__(
-#             parent=parent,
-#             value=value,
-#             fields={
-#                 'repo': [ ConfigRepositoryDict, {}, self._allocate_repo ]
-#             }
-#         )

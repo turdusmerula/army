@@ -1,3 +1,5 @@
+verbose = "debug"
+
 [repo.user]
 	type = "git"
 	uri = "~/git/repo_user"
