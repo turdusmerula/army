@@ -14,7 +14,7 @@ from army.api.plugin import load_plugin
 from army.api.click import verbose_option 
 import army.api.click as click
 
-version = "0.1.0"
+version = "0.1.1"
 # TODO add autocomplete https://kislyuk.github.io/argcomplete/
 
 # Git coupling
