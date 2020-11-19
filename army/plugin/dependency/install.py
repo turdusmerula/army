@@ -34,7 +34,7 @@ class PackageDependency(object):
 @dependencies.command(name='install', help='Install package')
 @verbose_option()
 @click.option('-l', '--link', help='Link files instead of copy (local repository only)', is_flag=True)
-# @click.option('-g', '--global', help='Install module in user space', is_flag=True)
+@click.option('-g', '--global', help='Install module in user space', is_flag=True)
 @click.option('-r', '--reinstall', help='Force reinstall module if already exists', is_flag=True)
 # @click.option('--save', help='Update project package list', is_flag=True)    # TODO
 @click.argument('name', nargs=-1)
@@ -52,12 +52,6 @@ def install(ctx, name, link, reinstall, **kwargs):
     if project is None:
         log.info(f"no project loaded")
 
-    # get target config
-    target = ctx.parent.target
-    if target is None:
-        print(f"no target specified", file=sys.stderr)
-        exit(1)
-
     if len(name)==0 and project is None:
         print("nothing to install", file=sys.stderr)
         exit(1)
@@ -74,6 +68,12 @@ def install(ctx, name, link, reinstall, **kwargs):
     if len(name)==0:
         if project is None:
             log.error(f"{os.getcwd()}: army.toml not found")
+            exit(1)
+
+        # get target config
+        target = ctx.parent.target
+        if target is None:
+            print(f"no target specified", file=sys.stderr)
             exit(1)
 
         for package in project.dependencies:

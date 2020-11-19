@@ -34,7 +34,7 @@ from setuptools import setup
 
 setup(
     name='army',
-    version="0.1.1",
+    version="0.1.2",
     description='Arm cross compiling toolset',
     url='https://github.com/turdusmerula/army/',
     author='Sebastien Besombes',
@@ -66,7 +66,9 @@ setup(
         'PyGithub',
         'keyring',
         "python-gitlab",
-        "semantic_version"
+        "semantic_version",
+        "keyrings.alt",
+        "keyring"
     ],
 )
 

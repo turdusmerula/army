@@ -77,7 +77,7 @@ def load_configuration_file(path, parent=None):
         raise ConfigException(f"{format(e)}")
     
     try:
-        res = ArmyConfig(parent=parent, value=config)
+        res = ArmyConfig(parent=parent, value=config, path=path)
     except Exception as e:
         print_stack()
         log.debug(e)
@@ -200,13 +200,18 @@ class ConfigDict(Config):
 
 
 class ArmyConfig(Config):
-    def __init__(self, value=None, parent=None):
+    def __init__(self, value=None, parent=None, path=None):
         super(ArmyConfig, self).__init__(
             value=value,
             parent=parent,
             schema=config_file_schema
         )
-
+        self._path = path
+        
+    @property
+    def path(self):
+        return self._path
+        
     @property
     def verbose(self):
         return self.get('verbose', 'critical')
