@@ -18,7 +18,7 @@
 # -- Project information -----------------------------------------------------
 
 project = 'army'
-copyright = '2020, Sebastien Besombes'
+copyright = '2020, Sebastien Besombes' 
 author = 'Sebastien Besombes'
 
 # The full version, including alpha/beta/rc tags
