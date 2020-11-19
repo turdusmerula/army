@@ -1,11 +1,2 @@
 eclipse.preferences.version=1
-encoding//env/lib/python3.8/site-packages/github/GitRelease.py=utf-8
-encoding//env/lib/python3.8/site-packages/github/GitReleaseAsset.py=utf-8
-encoding//env/lib/python3.8/site-packages/github/GitTag.py=utf-8
-encoding//env/lib/python3.8/site-packages/github/MainClass.py=utf-8
-encoding//env/lib/python3.8/site-packages/github/Organization.py=utf-8
-encoding//env/lib/python3.8/site-packages/github/Repository.py=utf-8
-encoding//env/lib/python3.8/site-packages/github/Requester.py=utf-8
-encoding//env/lib/python3.8/site-packages/github/Tag.py=utf-8
-encoding//env/lib/python3.8/site-packages/gitlab/v4/objects.py=utf-8
 encoding/setup.py=utf-8

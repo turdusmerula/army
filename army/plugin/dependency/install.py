@@ -34,7 +34,7 @@ class PackageDependency(object):
 @dependencies.command(name='install', help='Install package')
 @verbose_option()
 @click.option('-l', '--link', help='Link files instead of copy (local repository only)', is_flag=True)
-@click.option('-g', '--global', help='Install module in user space', is_flag=True)
+# @click.option('-g', '--global', help='Install module in user space', is_flag=True)
 @click.option('-r', '--reinstall', help='Force reinstall module if already exists', is_flag=True)
 # @click.option('--save', help='Update project package list', is_flag=True)    # TODO
 @click.argument('name', nargs=-1)
@@ -135,7 +135,7 @@ def install(ctx, name, link, reinstall, **kwargs):
 
     # treat dependencies first
     dependencies.reverse()
-    
+
     log.debug(f"packages: {dependencies}")
     
     # TODO checks
@@ -143,7 +143,8 @@ def install(ctx, name, link, reinstall, **kwargs):
     _check_installed_version_conflict(dependencies)
     
     # TODO clean dependency duplicates to avoid installing several times same package
-     
+    dependencies = _remove_duplicates(dependencies)
+    
     # install
     for dependency in dependencies:
         install = False
@@ -238,4 +239,20 @@ def _find_package(name, version_range, repositories, plugin=False, priority_dev=
 
     print(f"{name}: package not found", file=sys.stderr)
     exit(1)
+
+def _remove_duplicates(dependencies):
+    """ remove install duplicates inside dependencies
+    """
+    res = []
     
+    for dependency in dependencies:
+        found = False
+        for search_dep in res:
+            if dependency.package==search_dep.package:
+                found = True
+                break
+        
+        if found==False:
+            res.append(dependency)
+        
+    return res
