@@ -53,7 +53,7 @@ def load_repositories(config, prefix=None):
                 log.warning(f"{repo_type_name}: unhandheld repository type")
         except Exception as e:
             print_stack()
-            log.debug(f"{e}")
+            log.error(f"{e}")
             log.error(f"{repo_name}: load repository failed")
             
     return res
@@ -131,6 +131,7 @@ class RepositoryPackage(Package):
         def rmtree_error(func, path, exc_info):
             print(exc_info)
             exit(1)
+
         if os.path.exists(path):
             log.debug(f"rm {path}")
             shutil.rmtree(path, onerror=rmtree_error)

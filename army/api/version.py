@@ -39,6 +39,10 @@ class VersionRange(semantic_version.SimpleSpec):
         else:
             return super(VersionRange, self).match(Version(value))
 
+    def clear_versions(self, value):
+        self._versions.clear()
+        self._latest = None
+
     def add_version(self, value):
         self._versions.append(value)
         self._latest = f"=={self._max_version()}"

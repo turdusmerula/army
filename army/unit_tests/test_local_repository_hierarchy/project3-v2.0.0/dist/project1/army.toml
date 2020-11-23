@@ -1,0 +1,7 @@
+name = "project1"
+description = "project1"
+version = "1.2.0"
+
+[repository]
+uri = "/home/seb/git/army/army/unit_tests/test_local_repository_hierarchy/project1"
+name = "project1"

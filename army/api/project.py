@@ -30,7 +30,7 @@ def load_project(path='army.toml'):
     except toml.decoder.TomlDecodeError as e:
         print_stack()
         log.debug(e)        
-        raise e
+        raise ProjectException(f"{format(e)}")
     except Exception as e:
         print_stack()
         log.debug(e)

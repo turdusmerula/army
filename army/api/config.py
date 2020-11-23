@@ -74,14 +74,14 @@ def load_configuration_file(path, parent=None):
     except Exception as e:
         print_stack()
         log.debug(e)
-        raise ConfigException(f"{format(e)}")
+        raise ConfigException(f"{path}: {format(e)}")
     
     try:
         res = ArmyConfig(parent=parent, value=config, path=path)
     except Exception as e:
         print_stack()
         log.debug(e)
-        raise ConfigException(f"{format(e)}")
+        raise ConfigException(f"{path}: {format(e)}")
         
     return res
 

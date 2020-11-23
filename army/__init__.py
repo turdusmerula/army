@@ -184,7 +184,12 @@ def main():
     prefix = os.getenv('ARMY_PREFIX', None)
     if prefix is not None:
         log.debug(f"using {prefix} as path prefix")
-    config = load_configuration(parent=root_config, prefix=prefix) 
+    try:
+        config = load_configuration(parent=root_config, prefix=prefix)
+    except Exception as e:
+        print_stack()
+        print(f"{e}", file=sys.stderr)
+        exit(1)
 
     # load internal plugins
     import army.plugin.repository

@@ -7,6 +7,7 @@ from army.api.click import verbose_option
 import click
 import os
 from army import prefix
+import sys
 
 # TODO: implement multiple search criteria
 
@@ -16,7 +17,7 @@ from army import prefix
 @click.pass_context
 def search(ctx, name, **kwargs):
     log.info(f"search {name}")
-    
+        
     # load configuration
     config = ctx.parent.config
     
@@ -31,7 +32,7 @@ def search(ctx, name, **kwargs):
                 packages.append(res[pkg])
 
     if len(packages)==0:
-        print(f'No matches found for "{name}"')
+        print(f'No matches found for "{name}"', file=sys.stderr)
         return
  
     column_repo = ['repository']

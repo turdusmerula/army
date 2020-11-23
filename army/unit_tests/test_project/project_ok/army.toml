@@ -1,0 +1,39 @@
+name = "project_ok"
+description = "test project ok"
+version = "1.0.0" 
+
+default-target = "target1"
+
+[dependencies]
+	project2 = "1.0.0"
+
+[plugins]
+	plugin1 = "1.0.0"
+
+[plugin."plugin1"]
+	data = "value"
+	
+[packaging]
+	include = [
+		"folder1",
+		"folder2"
+	]
+	exclude = [
+		"folder1/file2"
+	]
+
+
+[target.target1]
+	arch = "ARCH"
+	definition = "firmware/samd21g18a/board.cmake"
+	
+	[target.target1.dependencies]
+		core-samd21 = "latest"
+		freertos-samd21 = "latest"
+		stream = "latest"
+	
+	[target.target1.plugins]
+		plugin1 = "1.0.0"
+	
+	[target.target1.plugin."plugin1"]
+		data = "value"

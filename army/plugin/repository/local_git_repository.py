@@ -25,6 +25,7 @@ class LocalGitRepository(Repository):
     def load(self):
         # load project file
         # TODO find a way to add line to error message
+
         file = os.path.expanduser(os.path.join(prefix or "", self.uri, 'army.toml'))
         if os.path.exists(file)==False:
             raise LocalGitRepositoryException(f"{file}: file not found")
@@ -37,7 +38,7 @@ class LocalGitRepository(Repository):
         except Exception as e:
             print_stack()
             log.debug(e)
-            raise LocalGitRepositoryException(f"{format(e)}")
+            raise LocalGitRepositoryException(f"{file}: {format(e)}")
         
         self._project = RepositoryPackage(data=content, repository=self)
         self._project.check()

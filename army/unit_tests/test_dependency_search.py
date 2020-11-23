@@ -3,13 +3,14 @@ import army.api.project
 from army.api.version import Version
 import os
 import unittest
-from helper import raised
+from helper import raised, run
+import army
 
-prefix = 'test_project'
+prefix = 'test_local_repository'
 log.setLevel('CRITICAL')
 
 
-class TestProject(unittest.TestCase):
+class TestDependencySearch(unittest.TestCase):
     
     def setUp(self):
         "Hook method for setting up the test fixture before exercising it."
@@ -25,28 +26,23 @@ class TestProject(unittest.TestCase):
         cls.cwd = os.getcwd()
         cls.path = os.path.join(os.path.dirname(os.path.abspath(__file__)), prefix)
         os.chdir(cls.path)
-
+        os.environ["ARMY_PREFIX"] = cls.path
+        
     @classmethod
     def tearDownClass(cls):
         "Hook method for deconstructing the class fixture after running all tests in the class."
         os.chdir(cls.cwd)
-        
-    def test_check_loading(self):
-        # check no error when loading
-        os.chdir('project_ok')
-        assert raised(army.api.project.load_project)==False
-    
-    def test_check_loading_failed(self):
-        # check no error when loading
-        os.chdir('project_failed')
-        assert raised(army.api.project.load_project)==army.api.project.ProjectException
+        del os.environ["ARMY_PREFIX"]
 
-    def test_load_project(self):
-        os.chdir('project_ok')
-        project = army.api.project.load_project()
-
-        assert project.name=="project_ok"
-        assert project.description=="test project ok"
-        assert project.version==Version("1.0.0")
+    def test_search_no_param(self):
+        res, stdout, stderr = run(["army", "search"])
+        assert res!=0
+        assert len(stdout)==0
+        assert len(stderr)>0
         
+    def test_search_package(self):
+        res, stdout, stderr = run(["army", "search", "project"])
+        assert res==0
+        assert len(stdout)==4
+        assert len(stderr)==0
 

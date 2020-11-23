@@ -5,6 +5,7 @@ from army.api.repository import load_repositories
 from army import prefix
 from army.api.click import verbose_option 
 from army.api.package import load_installed_packages, load_installed_package
+from army.api.version import Version, VersionRange
 from army import cli, dependencies
 import click
 import os
@@ -29,7 +30,7 @@ class PackageDependency(object):
         return self._repository
 
     def __repr__(self):
-        return f"{self._package.name}:{self._package.version}"
+        return f"{self._repository.name}@{self._package.name}@{self._package.version}"
 
 @dependencies.command(name='install', help='Install package')
 @verbose_option()
@@ -72,9 +73,9 @@ def install(ctx, name, link, reinstall, **kwargs):
 
         # get target config
         target = ctx.parent.target
-        if target is None:
-            print(f"no target specified", file=sys.stderr)
-            exit(1)
+#         if target is None:
+#             print(f"no target specified", file=sys.stderr)
+#             exit(1)
 
         for package in project.dependencies:
             pkg, repo = _find_package(package, project.dependencies[package], repositories, priority_dev=link)
@@ -95,8 +96,21 @@ def install(ctx, name, link, reinstall, **kwargs):
                 packages.append(PackageDependency(package=pkg, repository=repo))
     else:
         for package in name:
-            if ':' in package:
-                package, version = package.split(':')
+            if '@' in package:
+                chunks = package.split('@')
+                if len(chunks)==3:
+                    package = f"{chunks[0]}@{chunks[1]}"
+                    version = chunks[2]
+                elif len(chunks)==2:
+                    try:
+                        # check if version is valid
+                        test_version = VersionRange(chunks[1], ["0.0.0"])
+                        package, version = chunks
+                    except:
+                        version = 'latest'
+                else:
+                    print(f"{package}: naming error", file=sys.stderr)
+                    exit(1)
             else:
                 version = 'latest'
             pkg, repo = _find_package(package, version, repositories, priority_dev=link)
@@ -142,9 +156,9 @@ def install(ctx, name, link, reinstall, **kwargs):
     _check_dependency_version_conflict(dependencies)
     _check_installed_version_conflict(dependencies)
     
-    # TODO clean dependency duplicates to avoid installing several times same package
+    # clean dependency duplicates to avoid installing several times same package
     dependencies = _remove_duplicates(dependencies)
-    
+
     # install
     for dependency in dependencies:
         install = False
@@ -154,7 +168,7 @@ def install(ctx, name, link, reinstall, **kwargs):
                 print(f"reinstall {dependency.package}")
                 install = True
             else:
-                print(f"package {dependency.package} already installed")
+                print(f"package {dependency.package} already installed", file=sys.stderr)
                 install = False
         else:
             install = True
@@ -175,20 +189,19 @@ def _check_dependency_version_conflict(dependencies):
     """ Check if dependencies contains same package with version mismatch
     """
     # TODO: use VersionRange to true comparaison
-    
     for dependency in dependencies:
         for dep in dependencies:
             if dep.package.name==dependency.package.name and dep.package.version!=dependency.package.version:
-                msg = f"'{dependency.package.name}': version conflicts: "
+                msg = f"'{dependency.package.name}@{dependency.package.version}'"
                 if dependency.from_package is None:
-                    msg += f"'{dependency.package.version}' from project"
+                    msg += f" from project"
                 else:
-                    msg += f"'{dependency.package.version}' from '{dependency.from_package.name}'"
-                msg += " conflicts with "
+                    msg += f" from '{dependency.from_package.name}'"
+                msg += " conflicts with package "
                 if dep.from_package is None:
-                    msg += f"'{dep.package.version}' from project"
+                    msg += f"'{dep.package.name}@{dep.package.version}' from project"
                 else:
-                    msg += f"'{dep.package.version}' from '{dep.from_package.name}'"
+                    msg += f"'{dep.package.name}@{dep.package.version}' from '{dep.from_package.name}'"
                 print(msg, file=sys.stderr)
                 exit(1)
 
@@ -196,7 +209,16 @@ def _check_installed_version_conflict(dependencies):
     """ Check if dependencies contains a package already installed with a version mismatch
     """
     installed = load_installed_packages(prefix=prefix)
-    # TODO
+    for dependency in dependencies:
+        for inst in installed:
+            if inst.name==dependency.package.name and inst.version!=dependency.package.version:
+                msg = f"'{dependency.package.name}@{dependency.package.version}'"
+                if dependency.from_package is not None:
+                    msg += f" from '{dependency.from_package.name}'"
+                msg += f" conflicts with installed package '{inst}'"
+                print(msg, file=sys.stderr)
+                exit(1)
+            
     
 def _find_package(name, version_range, repositories, plugin=False, priority_dev=False):
     """ search for a package in repositories
@@ -213,26 +235,37 @@ def _find_package(name, version_range, repositories, plugin=False, priority_dev=
     if plugin and name.endswith("-plugin")==False:
         name = f"{name}-plugin"
 
+    repository = None
+    package = name
+    if '@' in name:
+        chunks = name.split('@')
+        if len(chunks)==2:
+            repository, package = chunks
+        elif len(chunks)>2:
+            print(f"{name}: naming error", file=sys.stderr)
+            exit(1)
+    
     # result can contain only one element as fullname is True
     res_package = None
     res_repo = None
     for repo in repositories:
-        # search a package in repo that matches name and version
-        packages_found = repo.search(name, version_range, fullname=True)
-
-        for package_found in packages_found:
-            package = packages_found[package_found]
-#             if package.version in 
-            if res_package is None:
-                res_package = package
-                res_repo = repo
-            elif package.version>res_package.version:
-                res_package = package
-                res_repo = repo
-            elif priority_dev==True and repo.DEV==True and res_package.repository.DEV==False and package.version>=res_package.version:
-                # previous match was not a dev repository and current match is version ok
-                res_package = package
-                res_repo = repo
+        if repository is None or repo.name==repository:
+            # search a package in repo that matches name and version
+            packages_found = repo.search(package, version_range, fullname=True)
+    
+            for package_found_name in packages_found:
+                package_found = packages_found[package_found_name]
+    #             if package.version in 
+                if res_package is None:
+                    res_package = package_found
+                    res_repo = repo
+                elif package_found.version>res_package.version:
+                    res_package = package_found
+                    res_repo = repo
+                elif priority_dev==True and repo.DEV==True and res_package.repository.DEV==False and package_found.version>=res_package.version:
+                    # previous match was not a dev repository and current match is version ok
+                    res_package = package_found
+                    res_repo = repo
 
     if res_package:
         return res_package, res_repo

@@ -20,13 +20,14 @@ class TestConfig(unittest.TestCase):
     def setUpClass(cls):
         "Hook method for setting up class fixture before running tests in the class."
         # get current file path to find ressource files
-        path = os.path.dirname(__file__)
-        print(os.getcwd())
+        cls.cwd = os.getcwd()
+        path = os.path.dirname(os.path.abspath(__file__))
         os.chdir(path)
 
     @classmethod
     def tearDownClass(cls):
         "Hook method for deconstructing the class fixture after running all tests in the class."
+        os.chdir(cls.cwd)
          
 
     def test_check_loading(self):

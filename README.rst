@@ -34,3 +34,4 @@ Links
 -   Releases: https://github.com/turdusmerula/army/releases
 -   Code: https://github.com/turdusmerula/army
 -   Issue tracker: https://github.com/turdusmerula/army/issues
+-   Tests: https://travis-ci.com/github/turdusmerula/army

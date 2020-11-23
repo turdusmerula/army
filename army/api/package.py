@@ -337,7 +337,7 @@ class Package(Schema):
         pass
     
     def __repr__(self):
-        return f"{self.name}:{self.version}"
+        return f"{self.name}@{self.version}"
 
 class InstalledPackage(Package):
     def __init__(self, data, path):

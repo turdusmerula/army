@@ -1,0 +1,20 @@
+# verbosty level (default critical):
+# debug
+# info
+# warning
+# error
+# critical
+verbose = "critical"
+
+
+[repo.project1]
+	type = "git-local"
+	uri = "project1"
+
+[repo.project2]
+	type = "git-local"
+	uri = "project2"
+
+[repo.project3]
+	type = "git-local"
+	uri = "project3"
