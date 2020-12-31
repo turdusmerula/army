@@ -78,7 +78,9 @@ def show_version():
     print("This is free software; you are free to change and redistribute it.")
     print("There is NO WARRANTY, to the extent permitted by law.")
 
+
 # create the config parser, this parser is mainly used to catch logger verbosity
+# we can set set the log options prior to any further action
 @click.group(invoke_without_command=True, 
              no_args_is_help=False, 
              add_help_option=False, 
@@ -115,12 +117,13 @@ def cli(ctx, target, version, **kwargs):
     global project
     global target_name
     global default_target
-        
+         
     ctx.config = config
     ctx.project = project
     ctx.target = default_target
     ctx.target_name = target_name
-    
+
+    print("----", target)
     if target is not None: 
         if target in project.target:
             ctx.target = project.target[target]
@@ -129,7 +132,7 @@ def cli(ctx, target, version, **kwargs):
             print(f"{target}: target not defined in project", file=sys.stderr)
             exit(1)
         log.info(f"current target: {target}")
-
+ 
 @cli.section("Dependencies Management Commands")
 @click.pass_context
 def dependencies(ctx, **kwargs):
@@ -138,7 +141,7 @@ def dependencies(ctx, **kwargs):
     ctx.project = ctx.parent.project
     ctx.target = ctx.parent.target
     ctx.target_name = ctx.parent.target_name
-
+ 
 @cli.section("Packaging Commands")
 @click.pass_context
 def packaging(ctx, **kwargs):
@@ -147,10 +150,19 @@ def packaging(ctx, **kwargs):
     ctx.project = ctx.parent.project
     ctx.target = ctx.parent.target
     ctx.target_name = ctx.parent.target_name
-
+ 
 @cli.section("Build Commands", chain=True)
 @click.pass_context
 def build(ctx, **kwargs):
+    # recopy parent config in context
+    ctx.config = ctx.parent.config
+    ctx.project = ctx.parent.project
+    ctx.target = ctx.parent.target
+    ctx.target_name = ctx.parent.target_name
+ 
+@cli.section("Profile Commands")
+@click.pass_context
+def profile(ctx, **kwargs):
     # recopy parent config in context
     ctx.config = ctx.parent.config
     ctx.project = ctx.parent.project
@@ -195,6 +207,8 @@ def main():
     import army.plugin.repository
     import army.plugin.dependency
     import army.plugin.package
+    import army.plugin.target
+    import army.plugin.profile
 #     import army.plugin.build
 
     # load plugins

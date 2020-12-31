@@ -6,7 +6,7 @@ def raised(func, *args,**kwargs):
         func(*args,**kwargs)
     except Exception as e:
         res = type(e)
-#         print(e)
+        print(f"Raised {type(e)}: {e}")
     return res
 
 def run(command, merge=False):

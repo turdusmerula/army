@@ -60,6 +60,7 @@ setup(
         'tornado',      # template manager
         'gitpython',    # git repository manager
         'toml',         # toml files
+        'pyyaml',       # yaml files
         'click',
         'cmake',
         'schema',

@@ -34,8 +34,8 @@ class PackageDependency(object):
 
 @dependencies.command(name='install', help='Install package')
 @verbose_option()
-@click.option('-l', '--link', help='Link files instead of copy (local repository only)', is_flag=True)
-@click.option('-g', '--global', help='Install module in user space', is_flag=True)
+@click.option('-l', '--link', help='Edit mode, link files instead of copy (local repository only)', is_flag=True)
+@click.option('-g', '--global', help='Install package in user space', is_flag=True)
 @click.option('-r', '--reinstall', help='Force reinstall module if already exists', is_flag=True)
 # @click.option('--save', help='Update project package list', is_flag=True)    # TODO
 @click.argument('name', nargs=-1)
@@ -118,7 +118,7 @@ def install(ctx, name, link, reinstall, **kwargs):
 
     # locate install folder
     if _global:
-        path = os.path.join(prefix or "", "~/.army/dist/")
+        path = os.path.expanduser(os.path.join(prefix or "", "~/.army/dist/"))
     else:
         path = "dist"
     
@@ -143,7 +143,7 @@ def install(ctx, name, link, reinstall, **kwargs):
 
         # append plugins to list
         for plugin in package.plugins:
-            pkg, repo = _find_package(plugin, package.plugins[plugin], repositories, priority_dev=link)
+            pkg, repo = _find_package(plugin, package.plugins[plugin], repositories, plugin=True, priority_dev=link)
             dep_pkg = PackageDependency(package=pkg, repository=repo, from_package=package)
             packages.append(dep_pkg)
 
