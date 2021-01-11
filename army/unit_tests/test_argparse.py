@@ -8,7 +8,6 @@ import io
 prefix = 'test_file_dict_data'
 log.setLevel('DEBUG')
 
-# TODO: check two arguments/option does not use the same name
 
 def TestArgparse():
     test_suite = unittest.TestSuite()
@@ -16,6 +15,8 @@ def TestArgparse():
     test_suite.addTest(unittest.makeSuite(TestArgparseArgument))
     test_suite.addTest(unittest.makeSuite(TestArgparseArgumentFixedArray))
     test_suite.addTest(unittest.makeSuite(TestArgparseCommand))
+    test_suite.addTest(unittest.makeSuite(TestArgparseCommandChain))
+    test_suite.addTest(unittest.makeSuite(TestArgparseCheckErrors))
     return test_suite
 
 class TestArgparseOption(unittest.TestCase):
@@ -130,11 +131,11 @@ Commands:
         
     def test_parse_option_shortcut_unknow(self):
         argv = ["army", "-vu"]
-        assert raised(self.parser.parse, argv)==CommandException
+        assert raised(self.parser.parse, argv)==[CommandException, "army: invalid option -u"]
 
     def test_parse_option_shortcut_no_value(self):
         argv = ["army", "-t"]
-        assert raised(self.parser.parse, argv)==CommandException
+        assert raised(self.parser.parse, argv)==[CommandException, "army: -t requires a value"]
 
     def test_parse_option_shortcut_chain_flags(self):
         a = None
@@ -163,7 +164,7 @@ Commands:
 
     def test_parse_option_shortcut_array_count_error(self):
         argv = ["army", "-vvvvv"]
-        assert raised(self.parser.parse, argv)==CommandException
+        assert raised(self.parser.parse, argv)==[CommandException, "army: -v has too much values"]
     
     def test_parse_option_shortcut_value(self):
         t = None
@@ -181,11 +182,11 @@ Commands:
 
     def test_parse_option_name_unknow(self):
         argv = ["army", "--test"]
-        assert raised(self.parser.parse, argv)==CommandException
+        assert raised(self.parser.parse, argv)==[CommandException, "army: invalid option --test"]
 
     def test_parse_option_name_no_value(self):
         argv = ["army", "--target"]
-        assert raised(self.parser.parse, argv)==CommandException
+        assert raised(self.parser.parse, argv)==[CommandException, "army: --target requires a value"]
 
     def test_parse_option_name_equal_value(self):
         name = None
@@ -215,7 +216,7 @@ Commands:
     
     def test_parse_option_name_array_count_error(self):
         argv = ["army", "--file", "a", "--file", "b", "--file", "c", "--file", "d", "--file", "e"]
-        assert raised(self.parser.parse, argv)==CommandException
+        assert raised(self.parser.parse, argv)==[CommandException, "army: --file has too much values"]
 
     
 
@@ -235,11 +236,11 @@ class TestArgparseArgument(unittest.TestCase):
         
     def test_parse_argument_missing(self):
         argv = ["army", "1"]
-        assert raised(self.parser.parse, argv)==CommandException
+        assert raised(self.parser.parse, argv)==[CommandException, "army: argument value2 missing"]
 
     def test_parse_argument_unknown(self):
         argv = ["army", "1", "2", "3"]
-        assert raised(self.parser.parse, argv)==CommandException
+        assert raised(self.parser.parse, argv)==[CommandException, "army: unknown parameter '3'"]
     
     def test_parse_argument(self):
         argv = ["army", "1", "2"]
@@ -270,15 +271,15 @@ class TestArgparseArgumentFixedArray(unittest.TestCase):
         
     def test_parse_argument_missing(self):
         argv = ["army", "1"]
-        assert raised(self.parser.parse, argv)==CommandException
+        assert raised(self.parser.parse, argv)==[CommandException, "army: argument value2 missing"]
 
     def test_parse_argument_missing2(self):
         argv = ["army", "1", "2"]
-        assert raised(self.parser.parse, argv)==CommandException
+        assert raised(self.parser.parse, argv)==[CommandException, "army: not enough values for argument value2"]
 
     def test_parse_argument_unknown(self):
         argv = ["army", "1", "2", "3", "4", "5"]
-        assert raised(self.parser.parse, argv)==CommandException
+        assert raised(self.parser.parse, argv)==[CommandException, "army: unknown parameter '5'"]
     
     def test_parse_argument(self):
         argv = ["army", "1", "2", "3", "4"]
@@ -325,8 +326,92 @@ class TestArgparseCommand(unittest.TestCase):
     
     def test_call_command_unknown(self):
         argv = ["army", "test3"]
-        assert raised(self.parser.parse, argv)==CommandException
+        assert raised(self.parser.parse, argv)==[CommandException, "army: invalid command test3"]
 
     def test_call_command_invalid_parameter(self):
         argv = ["army", "test1", "param"]
-        assert raised(self.parser.parse, argv)==CommandException
+        assert raised(self.parser.parse, argv)==[CommandException, "army test1: unknown parameter 'param'"]
+
+class TestArgparseCommandChain(unittest.TestCase):
+    
+    def setUp(self):
+        self.parser = create_parser(command="army")
+        
+        self.chain_group = self.parser.add_group(chain=True)
+        
+        self.test1_command = self.chain_group.add_command(name="test1", help="test1 command")
+        self.test1_command.add_option(name="help", shortcut="h", help="Show this message and exit", flag=True)
+        
+        self.test2_command = self.chain_group.add_command(name="test2", help="test2 command")
+        self.test2_command.add_option(name="help", shortcut="h", help="Show this message and exit", flag=True)
+
+        self.test3_command = self.chain_group.add_command(name="test3", help="test3 command")
+        self.test3_command.add_option(name="help", shortcut="h", help="Show this message and exit", flag=True)
+
+    def test_call_command_chain(self):
+        argv = ["army", "test1", "test2", "test3"]
+        
+        n = 0
+        def test_callback(ctx, *args, **kwargs):
+            nonlocal n
+            n += 1
+
+        self.test1_command.add_callback(test_callback)
+        self.test2_command.add_callback(test_callback)
+        self.test3_command.add_callback(test_callback)
+
+        self.parser.parse(argv)
+        
+        assert n==3
+
+    def test_show_help(self):
+        output = io.StringIO()
+        self.test1_command.show_help(file=output)
+        print()
+        print(output.getvalue())
+        assert output.getvalue()=="""Usage: test1 [OPTIONS] COMMAND [ARGS]
+
+Options:
+    --help, -h    Show this message and exit
+
+Commands:
+    test1    test1 command
+    test2    test2 command
+    test3    test3 command
+"""
+
+class TestArgparseCheckErrors(unittest.TestCase):
+    def setUp(self):
+        self.parser = create_parser(command="army")
+    
+    def test_check_unique_name(self):
+        self.parser.add_option(name="test", shortcut="t", flag=True)
+        self.parser.add_argument(name="f")
+        self.parser.add_argument(name="file")
+        
+        assert raised(self.parser.add_option, name="test")==[CommandException, ""] 
+        assert raised(self.parser.add_option, shortcut="t")==[CommandException, ""] 
+        assert raised(self.parser.add_option, name="file")==[CommandException, ""] 
+        assert raised(self.parser.add_option, shortcut="f")==[CommandException, ""] 
+        
+        assert raised(self.parser.add_argument, name="test")==[CommandException, ""] 
+        assert raised(self.parser.add_argument, name="t")==[CommandException, ""]
+        assert raised(self.parser.add_argument, name="file")==[CommandException, ""] 
+    
+    def test_check_group_chain_parent(self):
+        group = self.parser.add_group(chain=True)
+        
+        assert group.add_group()==[CommandException, ""]
+
+    def test_check_command_after_wildcard_argument_array(self):
+        self.parser.add_argument(name="f", count='*')
+        
+        assert raised(self.parser.add_command, name="test")==[CommandException, ""] 
+    
+    def test_check_wildcard_argument_array_after_command(self):
+        self.parser.add_command(name="test")
+        
+        assert raised(self.parser.add_argument, name="f", count='*')==[CommandException, ""] 
+    
+    
+    

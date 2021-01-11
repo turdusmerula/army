@@ -1,10 +1,11 @@
+from army.api.log import log
+from army.api.debugtools import print_stack
+from army.api.dict_file import load_dict_file, find_dict_files
+from army.api.version import Version
+from schema import Schema, And, Use, Optional
 import toml
 import os
 import sys
-from army.api.log import log
-from army.api.debugtools import print_stack
-from army.api.version import Version
-from schema import Schema, And, Use, Optional
 
 repo_schema = {
     "type": str,
@@ -26,87 +27,77 @@ config_repository_file_schema = {
     }
 }
 
-# load army configuration files, each file supersedes the previous
-# Global configuration: /etc/army/army.toml
-# User configuration: ~/.army/army.tom
+# load army global file in /etc/army
 # @param parent parent configuration
-# @param prefix mainly used for unit tests purpose
-def load_configuration(parent=None, prefix=None):
+def load_global_configuration(parent=None):
     # load main config file
-    config = ArmyConfig(parent=parent)
-    path = os.path.join(prefix or "/", 'etc/army/army.toml')
-    if os.path.exists(path):
-        config = load_configuration_file(path=path, parent=parent)
-    
-    # load main repositories
-    path = os.path.join(prefix or "/", 'etc/army/repo.d')
-    if os.path.exists(path) and os.path.isdir(path):
-        for f in os.listdir(path):
-            if os.path.isfile(os.path.join(path, f)) and f.endswith(".toml"):
-                config = load_configuration_repository_file(path=os.path.join(path, f), parent=config)
-
-    # load user config file
-    path = os.path.join(prefix or "", '~/.army/army.toml')
-    if os.path.exists(os.path.expanduser(path)):
-        config = load_configuration_file(path=path, parent=config)
-     
-    # load user repositories
-    path = os.path.join(prefix or "", '~/.army/repo.d')
-    if os.path.exists(os.path.expanduser(path)) and os.path.isdir(os.path.expanduser(path)):
-        for f in os.listdir(os.path.expanduser(path)):
-            if os.path.isfile(os.path.join(os.path.expanduser(path), f)) and f.endswith(".toml"):
-                config = load_configuration_repository_file(path=os.path.join(path, f), parent=config)
+    config = load_configuration_file(path='/etc/army', name='army', parent=parent)
+#      
+#     # load user repositories
+#     path = os.path.join(prefix or "", '~/.army/repo.d')
+#     if os.path.exists(os.path.expanduser(path)) and os.path.isdir(os.path.expanduser(path)):
+#         for f in os.listdir(os.path.expanduser(path)):
+#             if os.path.isfile(os.path.join(os.path.expanduser(path), f)) and f.endswith(".toml"):
+#                 config = load_configuration_repository_file(path=os.path.join(path, f), parent=config)
 
     return config
 
+def load_global_configuration_repositories(parent=None):
+    config = parent
+    # load main repositories
+    files = find_dict_files('/etc/army/repo.d')
+    for file in files:
+        config = load_configuration_repository_file(path='/etc/army/repo.d', name=file, parent=config)
 
-def load_configuration_file(path, parent=None):
-    # TODO find a way to add line to error message
-    file = os.path.expanduser(path)
-    if os.path.exists(file)==False:
-        raise ConfigException(f"{file}: file not found")
 
+# load army user file in ~/.army
+# @param parent parent configuration
+def load_user_configuration(parent=None):
+    # load user config file
+    config = load_configuration_file(path='~/.army', name='army', parent=parent)
+    return config
+
+def load_user_configuration_repositories(parent=None):
+    config = parent
+    # load main repositories
+    files = find_dict_files('~/.army/repo.d')
+    for file in files:
+        config = load_configuration_repository_file(path='~/.army/repo.d', name=file, parent=config)
+
+
+def load_configuration_file(path, name, parent=None):
     config = {}
     try:
-        log.info(f"load config '{path}'")
-        config = toml.load(file)
-        log.debug(f"content: {config}")
+        config = load_dict_file(path, name)
     except Exception as e:
         print_stack()
         log.debug(e)
-        raise ConfigException(f"{path}: {format(e)}")
+        raise ConfigException(f"{path}/{name}: {format(e)}")
     
     try:
         res = ArmyConfig(parent=parent, value=config, path=path)
     except Exception as e:
         print_stack()
         log.debug(e)
-        raise ConfigException(f"{path}: {format(e)}")
+        raise ConfigException(f"{path}/{name}: {format(e)}")
         
     return res
 
-def load_configuration_repository_file(path, parent=None):
-    # TODO find a way to add line to error message
-    file = os.path.expanduser(path)
-    if os.path.exists(file)==False:
-        raise ConfigException(f"{file}: file not found")
-
+def load_configuration_repository_file(path, name, parent=None):
     config = {}
     try:
-        log.info(f"Load config '{path}'")
-        config = toml.load(file)
-        log.debug(f"content: {config}")
+        config = load_dict_file(path, name)
     except Exception as e:
         print_stack()
         log.debug(e)
-        raise ConfigException(f"{format(e)}")
+        raise ConfigException(f"{path}/{name}: {format(e)}")
     
     try:
         res = ArmyConfigRepository(value=config, parent=parent)
     except Exception as e:
         print_stack()
         log.debug(e)
-        raise ConfigException(f"{format(e)}")
+        raise ConfigException(f"{path}/{name}: {format(e)}")
         
     return res
 

@@ -5,6 +5,10 @@ from army.api.version import Version
 import importlib.util
 import os
 
+class PluginException(Exception):
+    def __init__(self, message):
+        self.message = message
+
 def load_plugin(name, config, plugin_config):
     log.info(f"load plugin '{name}'")
 
@@ -35,7 +39,4 @@ def load_plugin(name, config, plugin_config):
         log.debug(e)
         raise PluginException(f"{name}: failed to load plugin")
 
-class PluginException(Exception):
-    def __init__(self, message):
-        self.message = message
 

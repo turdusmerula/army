@@ -61,7 +61,6 @@ setup(
         'gitpython',    # git repository manager
         'toml',         # toml files
         'pyyaml',       # yaml files
-        'click',
         'cmake',
         'schema',
         'PyGithub',

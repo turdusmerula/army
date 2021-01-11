@@ -1,24 +1,20 @@
-from army.api.log import log
+from army.api.command import parser, group, command, option 
 from army.api.debugtools import print_stack
+from army.api.log import log
 from army.api.project import load_project
 from army.api.repository import load_repositories
-from army.api.click import verbose_option 
-from army import cli, dependencies
-import click
 import os
 
-from army import prefix
-
-@dependencies.command(name='repos', help='List available repositories')
-@verbose_option()
-@click.pass_context
+@parser
+@group(name="dependency")
+@command(name='repos', help='List available repositories')
 def repos(ctx, **kwargs):
     log.info(f"repos")
     
     config = ctx.parent.config
         
     # build repositories list
-    repositories = load_repositories(config, prefix)
+    repositories = load_repositories(config)
     if len(repositories)==0:
         print("no repository configured")
         return 
@@ -42,3 +38,6 @@ def repos(ctx, **kwargs):
             print(f"{column_type[i].ljust(max_type)} | ", end='')
             print(f"{column_uri[i].ljust(max_uri)}", end='')
             print()
+
+# army_parser = get_army_parser()
+# army_parser.dependency_group.add_command(name='repos', help='List available repositories', callback=repos)

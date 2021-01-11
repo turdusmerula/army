@@ -1,5 +1,6 @@
 from army.api.log import log, get_log_level
 from army.api.debugtools import print_stack
+from army.api.prefix import prefix_path
 import importlib.util
 import toml
 import json
@@ -11,10 +12,28 @@ class DictFileException(Exception):
     def __init__(self, message):
         self.message = message
 
+def dict_file_extensions():
+    return ["py", "yaml", "toml", "json"]
+
+def find_dict_files(path):
+    path = os.path.expanduser(prefix_path(path))
+    
+    files = []
+    if os.path.exists(path) and os.path.isdir(path):
+        for f in os.listdir(path):
+            for ext in dict_file_extensions():
+                if os.path.isfile(os.path.join(path, f)) and f.endswith(f".{ext}"):
+                    name = f.replace(f".{ext}", "")
+                    if name not in files:
+                        files.append(name)
+
+    return files
+
 # load a configuration file containing a dict
 def load_dict_file(path, name, exist_ok=False):
     res = None
     
+    path = prefix_path(path)
     if os.path.exists(os.path.expanduser(path))==False:
         if exist_ok==True:
             return {}
@@ -22,7 +41,7 @@ def load_dict_file(path, name, exist_ok=False):
             raise DictFileException(f"{path}: path not found")
     
     # try to load python file
-    file = os.path.join(path, f"{name}.py")
+    file = os.path.join(os.path.expanduser(path), f"{name}.py")
     if res is None and os.path.exists(file)==True:
         with open(file) as f:
             try:
@@ -38,7 +57,9 @@ def load_dict_file(path, name, exist_ok=False):
         log.info(f"loaded file {file}")
     
     # try to load yaml file
-    file = os.path.join(path, f"{name}.yaml")
+    file = os.path.join(os.path.expanduser(path), f"{name}.yaml")
+    if res is not None and os.path.exists(file)==True:
+        log.warning(f"{file}: {name} already loaded, skipped")
     if res is None and os.path.exists(file)==True:
         with open(file) as f:
             try:
@@ -48,11 +69,11 @@ def load_dict_file(path, name, exist_ok=False):
                 log.debug(f"{e}")
                 raise DictFileException(f"{file}: {e}")
         log.info(f"loaded file {file}")
-    if res is not None and os.path.exists(file)==True:
-        log.warning(f"{file}: {name} already loaded, skipped")
         
     # try to load toml file
-    file = os.path.join(path, f"{name}.toml")
+    file = os.path.join(os.path.expanduser(path), f"{name}.toml")
+    if res is not None and os.path.exists(file)==True:
+        log.warning(f"{file}: {name} already loaded, skipped")
     if res is None and os.path.exists(file)==True:
         try:
             res = toml.load(file)
@@ -61,11 +82,11 @@ def load_dict_file(path, name, exist_ok=False):
             log.debug(f"{e}")
             raise DictFileException(f"{file}: {e}")
         log.info(f"loaded file {file}")
-    if res is not None and os.path.exists(file)==True:
-        log.warning(f"{file}: {name} already loaded, skipped")
     
     # try to load json file
-    file = os.path.join(path, f"{name}.json")
+    file = os.path.join(os.path.expanduser(path), f"{name}.json")
+    if res is not None and os.path.exists(file)==True:
+        log.warning(f"{file}: {name} already loaded, skipped")
     if res is None and os.path.exists(file)==True:
         with open(file) as f:
             try:
@@ -75,8 +96,6 @@ def load_dict_file(path, name, exist_ok=False):
                 log.debug(f"{e}")
                 raise DictFileException(f"{file}: {e}")
         log.info(f"loaded file {file}")
-    if res is not None and os.path.exists(file)==True:
-        log.warning(f"{file}: {name} already loaded, skipped")
     
     if res is None and exist_ok==False:
         raise DictFileException(f"{path}: no file corresponding to {name} found")

@@ -5,7 +5,7 @@ def raised(func, *args,**kwargs):
     try:
         func(*args,**kwargs)
     except Exception as e:
-        res = type(e)
+        res = [type(e), f"{e}"]
         print(f"Raised {type(e)}: {e}")
     return res
 

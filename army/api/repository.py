@@ -10,12 +10,13 @@ import datetime
 
 repository_types = {}
 
+# register a repository type
 def register_repository(repository_class):
     global repository_types
     
     if repository_class.TYPE:
         repository_types[repository_class.TYPE] = repository_class
-        log.debug(f"registered '{repository_class.TYPE}' repository type")
+        log.info(f"registered '{repository_class.TYPE}' repository type")
 
 
 # build repository list from configuration
@@ -56,6 +57,31 @@ def load_repositories(config, prefix=None):
             log.error(f"{e}")
             log.error(f"{repo_name}: load repository failed")
             
+    return res
+
+def load_repository_file(path, parent=None):
+    # TODO find a way to add line to error message
+    file = os.path.expanduser(path)
+    if os.path.exists(file)==False:
+        raise ConfigException(f"{file}: file not found")
+
+    config = {}
+    try:
+        log.info(f"Load config '{path}'")
+        config = toml.load(file)
+        log.debug(f"content: {config}")
+    except Exception as e:
+        print_stack()
+        log.debug(e)
+        raise ConfigException(f"{format(e)}")
+    
+    try:
+        res = ArmyConfigRepository(value=config, parent=parent)
+    except Exception as e:
+        print_stack()
+        log.debug(e)
+        raise ConfigException(f"{format(e)}")
+        
     return res
 
 class RepositoryException(Exception):

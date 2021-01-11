@@ -12,6 +12,7 @@ from test_dependency_search import *
 from test_dependency_install import *
 from test_load_dict_file import *
 from test_argparse import *
+from test_command import *
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

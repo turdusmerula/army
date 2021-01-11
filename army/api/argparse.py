@@ -1,42 +1,15 @@
 from army.api.log import log, get_log_level
-import army.api.click as click
 import os
 import sys
 
-groups = {}
-sections = {}
-commands = {}
 
-class CommandException(Exception):
+class ArgparseException(Exception):
     def __init__(self, message):
         self.message = message
 
 def create_parser(*args, **kwargs):
     parser = Parser(*args, **kwargs)
     return parser
-
-# # add a new command group
-# # @param name group name
-# # @param help group message that will be shown in console
-# # @param callback function to be called when group match
-# # @param parent parent group, by default group is added to the root group
-# # @param chain if Trus then commands inside the group can be chained
-# def add_group(name, help="", callback=None, parent="army", chain=False):
-#     global groups
-#     
-#     if name in groups:
-#         raise CommandException(f"{name}: command group already exists")
-#     
-#     if parent not in groups:
-#         raise CommandException(f"{parent}: command group does not exist")
-#         
-#     parent_group = groups[parent]
-# 
-# def add_section():
-#     pass
-# 
-# def add_command():
-#     pass
 
 
 def _print_command_list(commands, indent=0, file=sys.stderr):
@@ -111,13 +84,20 @@ def _print_option_list(options, indent=0, file=sys.stderr):
             print(f"{column_name[i].ljust(max_name)}", end='', file=file)
             if max_value>0:
                 print(f" {column_value[i].ljust(max_value)}    ", end='', file=file)
+            else:
+                print(f"    ", end='', file=file)
             print(f"{column_help[i].ljust(max_help)}", end='', file=file)
             print(file=file)
 
 
 class Parser(object):
+    instance = create_parser
+    
     def __init__(self, command=None, callback=None):
-        self._command = command
+        if command is None and len(sys.argv)>0:
+            self._command = os.path.basename(sys.argv[0])
+        else:
+            self._command = command
         self._callbacks = []
         self.childs = []
 
@@ -126,8 +106,6 @@ class Parser(object):
 
     @property
     def command(self):
-        if self._command is None and len(sys.argv)>0:
-            return os.path.basename(sys.argv[0])
         return self._command
 
     @property
@@ -141,34 +119,60 @@ class Parser(object):
         for callback in self.callbacks:
             callback(self, *args, **kwargs)
 
+    def _recursive_find_group(self, parent, name):
+        for child in parent.childs:
+            if isinstance(child, Group) and child.name is not None and child.name==name:
+                return child
+            elif isinstance(child, Group):
+                return self._recursive_find_group(child, name)
+        return None
+    
+    # find a non anonymous group inside parser
+    def find_group(self, name):
+        return self._recursive_find_group(self, name)
+        
+
+    def _recursive_find_command(self, parent, name):
+        for child in parent.childs:
+            if isinstance(child, Command) and child.name is not None and child.name==name:
+                return child
+            elif isinstance(child, Group):
+                return self._recursive_find_command(child, name)
+        return None
+    
+    # find a non anonymous command inside parser
+    def find_command(self, name):
+        return self._recursive_find_command(self, name)
+
+        
     def _find_option(self, name=None, shortcut=None):
         if name is not None:
             for child in self.childs:
                 if isinstance(child, Option) and child.name is not None and child.name==name:
                     return child
-            raise CommandException(f"{self.command}: invalid option --{name}")
+            raise ArgparseException(f"{self.command}: invalid option --{name}")
        
         if shortcut is not None:
             for child in self.childs:
                 if isinstance(child, Option) and child.shortcut is not None and child.shortcut==shortcut:
                     return child
-            raise CommandException(f"{self.command}: invalid option -{shortcut}")
+            raise ArgparseException(f"{self.command}: invalid option -{shortcut}")
     
     def _find_command(self, command_list, name):
         for command in command_list:
             if command.name==name:
                 return command
-        raise CommandException(f"{self.command}: invalid command {name}")
+        raise ArgparseException(f"{self.command}: invalid command {name}")
 
     def _check_option_shortcut(self, option, values):
         if option.count is not None and option.count!='*':
             if len(values)>option.count:
-                raise CommandException(f"{self.command}: -{option.shortcut} has too much values")
+                raise ArgparseException(f"{self.command}: -{option.shortcut} has too much values")
     
     def _check_option_name(self, option, values):
         if option.count is not None and option.count!='*':
             if len(values)>option.count:
-                raise CommandException(f"{self.command}: --{option.name} has too much values")
+                raise ArgparseException(f"{self.command}: --{option.name} has too much values")
 
     def _parse_shortcut_option(self, option, rarg, argv):
         # if rarg is not None it contains the what is after the shortcut option that could be consumed as option value
@@ -180,7 +184,7 @@ class Parser(object):
             if rarg is not None:
                 return rarg, argv
             if len(argv)==0:
-                raise CommandException(f"{self.command}: -{option.shortcut} requires a value")
+                raise ArgparseException(f"{self.command}: -{option.shortcut} requires a value")
             return argv[0], argv[1:]
 
     def _parse_name_option(self, option, argv):
@@ -189,7 +193,7 @@ class Parser(object):
             return True, argv
         else:
             if len(argv)==0:
-                raise CommandException(f"{self.command}: --{option.name} requires a value")
+                raise ArgparseException(f"{self.command}: --{option.name} requires a value")
             return argv[0], argv[1:]
 
     def _recursive_build_command_list(self, parent):
@@ -215,16 +219,16 @@ class Parser(object):
         for child in self.childs:
             if isinstance(child, Argument) and child not in arguments:
                 if child.help is not None:
-                    raise CommandException(f"{self.command}: argument {child.help} missing")
+                    raise ArgparseException(f"{self.command}: argument {child.help} missing")
                 else:
-                    raise CommandException(f"{self.command}: argument {child.name} missing")
+                    raise ArgparseException(f"{self.command}: argument {child.name} missing")
                     
         for argument in arguments:
             if argument.count is not None and argument.count!='*' and len(arguments[argument])<argument.count:
                 if child.help is not None:
-                    raise CommandException(f"{self.command}: not enough values for argument {child.help}")
+                    raise ArgparseException(f"{self.command}: not enough values for argument {child.help}")
                 else:
-                    raise CommandException(f"{self.command}: not enough values for argument {child.name}")
+                    raise ArgparseException(f"{self.command}: not enough values for argument {child.name}")
     
     def _set_options_defaults(self, options):
         for child in self.childs:
@@ -304,7 +308,7 @@ class Parser(object):
                 else:
                     if len(command_list)==0:
                         if current_arg is None and len(command_list)==0:
-                            raise CommandException(f"{self.command}: unknown parameter '{arg}'")
+                            raise ArgparseException(f"{self.command}: unknown parameter '{arg}'")
                     else:
                         command = self._find_command(command_list, arg)
                         
@@ -334,11 +338,14 @@ class Parser(object):
                                 current_arg = None
                 
                 if command is not None:
-                    parser = Parser(command=f"{self.command} {command.name}")
+                    parser = Parser.instance(command=f"{self.command} {command.name}")
                     parser._callbacks = command._callbacks
                     parser.childs = command.childs
+                    if command.parent is not None and isinstance(command.parent, Group) and command.parent.chain==True:
+                        parser.childs.append(command.parent)
                     argv = parser.parse([command.name, *argv])
                     
+
         self._check_arguments(arguments)
         self._set_options_defaults(options)
         
@@ -364,30 +371,33 @@ class Parser(object):
 
         self.call_callbacks(**callback_dict_args)
         
+        if command is None and len(command_list)>0:
+            raise ArgparseException(f"{self.command}: command missing")
+
         return argv
     
     def _show_usage(self, file=sys.stderr):
         print(f"Usage: {self.command}", end='', file=file)
         
+        # flatten list of possible arguments / commands
+        argument_list = self._build_argument_list()
+        command_list = self._build_command_list()
+        
         has_option = False
-        has_command = False
         for child in self.childs:
             if isinstance(child, Option):
                 has_option = True
-            elif isinstance(child, Command):
-                has_command = True
         if has_option:
             print(f" [OPTIONS]", end='', file=file)
             
 
-        for child in self.childs:
-            if isinstance(child, Argument):
-                if child.help is not None:
-                    print(f" {child.help}", end='', file=file)
-                else:
-                    print(f" {child.name}", end='', file=file)
+        for argument in argument_list:
+            if argument.help is not None:
+                print(f" {argument.help}", end='', file=file)
+            else:
+                print(f" {argument.name}", end='', file=file)
         
-        if has_command:
+        if len(command_list)>0:
             print(f" COMMAND [ARGS]", end='', file=file)
 
         print(file=file)
@@ -456,6 +466,7 @@ class Group(object):
         self._parent = parent
         self._name = name
         self._help = help
+        self._chain = chain
         self.childs = []
 
     @property
@@ -469,6 +480,11 @@ class Group(object):
     @property
     def help(self):
         return self._help
+
+    @property
+    def chain(self):
+        return self._chain
+
 
     def _show_help(self, indent=0, file=sys.stderr):
         groups = []
@@ -568,6 +584,18 @@ class Command(object):
         self.childs.append(argument)
         return argument
 
+    def _parser_from_command(self):
+        parser = Parser(command=f"{self.name}")
+        parser._callbacks = self._callbacks
+        parser.childs = self.childs
+        if self.parent is not None and isinstance(self.parent, Group) and self.parent.chain==True:
+            parser.childs.append(self.parent)
+        return parser
+    
+    def show_help(self, file=sys.stderr):
+        parser = self._parser_from_command()
+        parser.show_help(file)
+
 class Option(object):
 
     # @param name optional, long option name
@@ -597,7 +625,7 @@ class Option(object):
             self._callbacks.append(callback)
 
         if shortcut is not None and len(shortcut)!=1:
-            raise CommandException(f"{shortcut}: shortcut can only be one letter length")
+            raise ArgparseException(f"{shortcut}: shortcut can only be one letter length")
 
 #         last_varg = parent.childs[-1:][0]
         
