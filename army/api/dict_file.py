@@ -53,8 +53,8 @@ def load_dict_file(path, name, exist_ok=False):
             except Exception as e:
                 print_stack()
                 log.debug(f"{e}")
-                raise DictFileException(f"{file}: {e}")
-        log.info(f"loaded file {file}")
+                raise DictFileException(f"{path}: {e}")
+        log.info(f"loaded file {path}")
     
     # try to load yaml file
     file = os.path.join(os.path.expanduser(path), f"{name}.yaml")

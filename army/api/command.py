@@ -1,5 +1,5 @@
 from army.api.log import log, set_log_level
-from army.api.argparse import Parser, Group, Command, Option
+from army.api.argparse import Parser, Group, Command, Option, Argument
 import os
 import sys
 
@@ -21,15 +21,12 @@ class CommandException(Exception):
         self.message = message
 
 class ArmyBaseParser(Parser):
-    instance = create_parser
-
     def __init__(self, *argv, **kwargs):
         super(ArmyBaseParser, self).__init__(*argv, **kwargs)
         self._log_level = 'fatal'
 
         self.add_verbose_option()
         
-
     def add_verbose_option(self):
         self._verbose_option = self.add_option(shortcut="v", help="Activate verbose/debug", flag=True, count=4, callback=self._verbose_option_callback)
 
@@ -48,24 +45,32 @@ class ArmyBaseParser(Parser):
                 
             set_log_level(self._log_level)
 
-
-class ArmyParser(ArmyBaseParser):
-    instance = create_parser
-
-    def __init__(self, *argv, **kwargs):
-        super(ArmyParser, self).__init__(*argv, **kwargs)
-        
-        self.add_help_option()
-        
-        self._dependency_group = self.add_group(name="dependency", help="Dependencies Management Commands")
-
     def add_help_option(self):
         self._help_option = self.add_option(name="help", shortcut="h", help="Show this message and exit", flag=True, callback=self._help_option_callback)
     
     def _help_option_callback(self, ctx, value):
         self.show_help() 
         exit(0)
+
+class ArmyHelpParser(ArmyBaseParser):
+    def __init__(self, *argv, **kwargs):
+        super(ArmyHelpParser, self).__init__(command_parser=ArmyHelpParser, *argv, **kwargs)
+
+        self.add_help_option()
+        
+    def add_help_option(self):
+        self._help_option = self.add_option(name="help", shortcut="h", help="Show this message and exit", flag=True, callback=self._help_option_callback)
     
+    def _help_option_callback(self, ctx, value):
+        self.show_help() 
+        exit(0)
+
+class ArmyParser(ArmyHelpParser):
+    def __init__(self, *argv, **kwargs):
+        super(ArmyParser, self).__init__(*argv, **kwargs)
+        
+        self._dependency_group = self.add_group(name="dependency", help="Dependencies Management Commands")
+
     @property
     def dependency_group(self):
         return self._dependency_group
@@ -73,14 +78,14 @@ class ArmyParser(ArmyBaseParser):
 ###################################
 ### decorators
 ###################################
-debug_decorators = False
-def debug(*argv, **kwargs):
-    global debug_decorators
-    if debug_decorators:
+_debug_decorators = False
+def _debug(*argv, **kwargs):
+    global _debug_decorators
+    if _debug_decorators:
         print(*argv, **kwargs)
 
 def parser(items):
-    debug(f"-->> parser", items)
+    _debug(f"-->> parser", items)
     
     curr_parser = get_army_parser()
     curr_group = curr_parser    # if no group add commands to parser
@@ -88,16 +93,16 @@ def parser(items):
     
     for item in items:
         if callable(item):
-            debug("func:", item)
+            _debug("func:", item)
             if curr_command is None:
                 raise CommandException(f"no command found")
             else:
                 curr_command.add_callback(item)
         else:
             obj, name, argv, kwargs = item
-            debug("obj:", obj, name, argv, kwargs)
+            _debug("obj:", obj, name, argv, kwargs)
             if obj==Group:
-                debug("group")
+                _debug("group")
                 curr_group = curr_parser.find_group(name)
                 if curr_group is None:
                     if 'help' in kwargs:
@@ -105,7 +110,7 @@ def parser(items):
                     else:
                         raise CommandException(f"{name}: command group does not exists")
             elif obj==Command:
-                debug("command", kwargs)
+                _debug("command", kwargs)
                 curr_command = curr_parser.find_command(name)
                 if curr_command is None:
                     if 'help' in kwargs:
@@ -113,33 +118,48 @@ def parser(items):
                     else:
                         raise CommandException(f"{name}: command does not exists")
             elif obj==Option:
-                debug("option")
+                _debug("option")
+            elif obj==Argument:
+                if curr_command is not None:
+                    curr_command.add_argument(name=name, *argv, **kwargs)
+                elif curr_parser is not None:
+                    curr_parser.add_argument(name=name, *argv, **kwargs)
+                _debug("argument")
             else:
-                debug("error")
+                _debug("error")
     
 def group(name, *argv, **kwargs):
-    debug(f"-->> group {name}")
+    _debug(f"-->> group {name}")
     def wrapper(obj):
-        debug("--- group", obj)
+        _debug("--- group", obj)
         if isinstance(obj, list):
             return [(Group, name, argv, kwargs), *obj]
         return [(Group, name, argv, kwargs), obj]
     return wrapper
 
 def command(name, *argv, **kwargs):
-    debug(f"-->> command {name}")
+    _debug(f"-->> command {name}")
     def wrapper(obj):
-        debug("--- command", obj)
+        _debug("--- command", obj)
         if isinstance(obj, list):
             return [(Command, name, argv, kwargs), *obj]
         return [(Command, name, argv, kwargs), obj]
     return wrapper
 
 def option(name, *argv, **kwargs):
-    debug(f"-->> option {name}")
+    _debug(f"-->> option {name}")
     def wrapper(obj):
-        debug("--- option", obj)
+        _debug("--- option", obj)
         if isinstance(obj, list):
             return [(Option, name, argv, kwargs), *obj]
         return [(Option, name, argv, kwargs), obj]
+    return wrapper
+
+def argument(name, *argv, **kwargs):
+    _debug(f"-->> argument {name}")
+    def wrapper(obj):
+        _debug("--- argument", obj)
+        if isinstance(obj, list):
+            return [(Argument, name, argv, kwargs), *obj]
+        return [(Argument, name, argv, kwargs), obj]
     return wrapper

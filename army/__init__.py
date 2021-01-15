@@ -11,7 +11,7 @@ from army.api.config import ArmyConfig, load_global_configuration, load_global_c
 from army.api.debugtools import print_stack
 from army.api.log import log, get_log_level
 from army.api.plugin import load_plugin
-from army.api.prefix import prefix
+from army.api.prefix import set_prefix_path
 from army.api.project import load_project
 
 version = "0.1.2"
@@ -179,6 +179,7 @@ def main():
     prefix = os.getenv('ARMY_PREFIX', None)
     if prefix is not None:
         log.debug(f"using {prefix} as path prefix")
+        set_prefix_path(prefix)
 
     # load army configuration files
     try:
@@ -190,6 +191,10 @@ def main():
         print_stack()
         print(f"{e}", file=sys.stderr)
         exit(1)
+    
+    # set context
+    army_parser = get_army_parser()
+    army_parser.context.config = config
     
     # load internal plugins
     import army.plugin.repository
@@ -260,11 +265,10 @@ def main():
 # 
     # parse command line
     try:
-        army_parser = get_army_parser()
         army_parser.parse(sys.argv)
     except Exception as e:
         print_stack()
-        print(f"{e}")
+        print(f"{e}", file=sys.stderr)
         exit(1)
     
     exit(0)

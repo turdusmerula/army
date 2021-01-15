@@ -1,28 +1,25 @@
-from army.api.log import log
+from army.api.command import parser, group, command, option, argument
 from army.api.debugtools import print_stack
+from army.api.log import log
 from army.api.project import load_project
 from army.api.repository import load_repositories
-from army import cli, dependencies
-from army.api.click import verbose_option 
-import click
 import os
-from army import prefix
 import sys
 
 # TODO: implement multiple search criteria
 
-@dependencies.command(name='search', help='Search package in repositories')
-@verbose_option()
-@click.argument('name')
-@click.pass_context
+@parser
+@group(name="dependency")
+@command(name='search', help='Search package in repositories')
+@argument(name='name')
 def search(ctx, name, **kwargs):
     log.info(f"search {name}")
         
     # load configuration
-    config = ctx.parent.config
+    config = ctx.config
     
     # build repositories list
-    repositories = load_repositories(config, prefix)
+    repositories = load_repositories(config)
     packages = []
      
     for r in repositories:

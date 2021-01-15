@@ -1,4 +1,4 @@
-# import army.plugin.dependency.search
+import army.plugin.dependency.search
 # import army.plugin.dependency.install
 import army.plugin.dependency.repos
 # import army.plugin.dependency.list

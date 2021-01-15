@@ -49,6 +49,7 @@ def load_global_configuration_repositories(parent=None):
     for file in files:
         config = load_configuration_repository_file(path='/etc/army/repo.d', name=file, parent=config)
 
+    return config
 
 # load army user file in ~/.army
 # @param parent parent configuration
@@ -63,12 +64,12 @@ def load_user_configuration_repositories(parent=None):
     files = find_dict_files('~/.army/repo.d')
     for file in files:
         config = load_configuration_repository_file(path='~/.army/repo.d', name=file, parent=config)
-
+    return config
 
 def load_configuration_file(path, name, parent=None):
     config = {}
     try:
-        config = load_dict_file(path, name)
+        config = load_dict_file(path, name, exist_ok=True)
     except Exception as e:
         print_stack()
         log.debug(e)

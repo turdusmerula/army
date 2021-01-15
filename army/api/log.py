@@ -1,10 +1,11 @@
 import logging
+import sys
 
 FORMAT = '[%(levelname)s] %(message)s'
 logging.basicConfig(format=FORMAT)
 
 log = logging.getLogger('console')
-log.setLevel('ERROR') # default log mode warning
+log.setLevel('FATAL') # default log mode warning
 
 def get_log_level():
     if log.level==10:

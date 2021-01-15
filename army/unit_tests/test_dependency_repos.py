@@ -36,5 +36,6 @@ class TestDependencyRepos(unittest.TestCase):
 
     def test_repos(self):
         res, stdout = run(["army", "repos"], merge=True)
+        print(stdout)
         assert res==0
         assert len(stdout)==4

@@ -11,7 +11,7 @@ import os
 def repos(ctx, **kwargs):
     log.info(f"repos")
     
-    config = ctx.parent.config
+    config = ctx.config
         
     # build repositories list
     repositories = load_repositories(config)
@@ -38,6 +38,3 @@ def repos(ctx, **kwargs):
             print(f"{column_type[i].ljust(max_type)} | ", end='')
             print(f"{column_uri[i].ljust(max_uri)}", end='')
             print()
-
-# army_parser = get_army_parser()
-# army_parser.dependency_group.add_command(name='repos', help='List available repositories', callback=repos)

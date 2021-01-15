@@ -1,4 +1,6 @@
 import subprocess
+from army.api.log import log
+import sys
 
 def raised(func, *args,**kwargs):
     res = False
@@ -26,3 +28,22 @@ def run(command, merge=False):
             stderr = stderr[:-1]
         return res.returncode, stdout, stderr
 
+class redirect_stdout(object): 
+    def __init__(self, dest_stream): 
+        self.dest_stream = dest_stream
+        
+    def __enter__(self):
+        sys.stdout = self.dest_stream
+        
+    def __exit__(self, exc_type, exc_value, tb): 
+        sys.stdout = sys.__stdout__
+
+class redirect_stderr(object): 
+    def __init__(self, dest_stream): 
+        self.dest_stream = dest_stream
+        
+    def __enter__(self):
+        sys.stderr = self.dest_stream
+        
+    def __exit__(self, exc_type, exc_value, tb): 
+        sys.stderr = sys.__stderr__

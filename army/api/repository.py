@@ -1,6 +1,7 @@
 from army.api.log import log
 from army.api.package import Package, PackageException
 from army.api.debugtools import print_stack
+from army.api.prefix import prefix_path
 from army.api.version import Version, VersionRange
 import os
 import subprocess
@@ -20,14 +21,11 @@ def register_repository(repository_class):
 
 
 # build repository list from configuration
-def load_repositories(config, prefix=None):
+def load_repositories(config):
     global repository_types
     res = []
     
-    if prefix is None:
-        log.debug(f"load repositories")
-    else:
-        log.debug(f"load repositories from {prefix}")
+    log.debug(f"load repositories")
 
     repos = {}
     try:
@@ -40,14 +38,13 @@ def load_repositories(config, prefix=None):
     for repo_name in repos:
         try:
             repo_type_name = repos[repo_name].type
-            repo_uri = os.path.join(prefix or "", repos[repo_name].uri)
 
             if repo_type_name in repository_types:
                     
                 repo_type = repository_types[repo_type_name]
                 
                 # instanciate repository and load it
-                repo = repo_type(name=repo_name, path=repo_uri)
+                repo = repo_type(name=repo_name, path=repos[repo_name].uri)
                 repo.load()
                 res.append(repo)
             else:
