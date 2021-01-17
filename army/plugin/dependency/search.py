@@ -1,7 +1,6 @@
 from army.api.command import parser, group, command, option, argument
 from army.api.debugtools import print_stack
 from army.api.log import log
-from army.api.project import load_project
 from army.api.repository import load_repositories
 import os
 import sys
@@ -13,7 +12,7 @@ import sys
 @command(name='search', help='Search package in repositories')
 @argument(name='name')
 def search(ctx, name, **kwargs):
-    log.info(f"search {name}")
+    log.info(f"dependency search {name}")
         
     # load configuration
     config = ctx.config

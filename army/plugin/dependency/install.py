@@ -1,13 +1,10 @@
-from army.api.log import log
+from army.api.command import parser, group, command, option, argument
 from army.api.debugtools import print_stack
+from army.api.log import log
 from army.api.project import load_project
 from army.api.repository import load_repositories
-from army import prefix
-from army.api.click import verbose_option 
 from army.api.package import load_installed_packages, load_installed_package
 from army.api.version import Version, VersionRange
-from army import cli, dependencies
-import click
 import os
 import sys
 
@@ -32,24 +29,24 @@ class PackageDependency(object):
     def __repr__(self):
         return f"{self._repository.name}@{self._package.name}@{self._package.version}"
 
-@dependencies.command(name='install', help='Install package')
-@verbose_option()
-@click.option('-l', '--link', help='Edit mode, link files instead of copy (local repository only)', is_flag=True)
-@click.option('-g', '--global', help='Install package in user space', is_flag=True)
-@click.option('-r', '--reinstall', help='Force reinstall module if already exists', is_flag=True)
-# @click.option('--save', help='Update project package list', is_flag=True)    # TODO
-@click.argument('name', nargs=-1)
-@click.pass_context
-def install(ctx, name, link, reinstall, **kwargs):
-    log.info(f"install {name} {kwargs}")
+@parser
+@group(name="dependency")
+@command(name='install', help='Install package')
+@option(name='edit', shortcut='e', default=False, help='Install packages from local repositories in edit mode', flag=True)
+@option(name='global', shortcut='g', default=False, help='Install package in user space', flag=True)
+@option(name='reinstall', shortcut='r', default=False, help='Force reinstall module if already exists', flag=True)
+#@option(name='save', help='Update project package list', flag=True)    # TODO
+@argument(name='name', count='*')
+def install(ctx, name, edit, reinstall, **kwargs):
+    log.info(f"install {name}")
     
     _global = kwargs['global']  # not in parameters due to conflict with global keywoard
     
     # load configuration
-    config = ctx.parent.config
+    config = ctx.config
     
     # load project
-    project = ctx.parent.project
+    project = ctx.project
     if project is None:
         log.info(f"no project loaded")
 
@@ -58,7 +55,7 @@ def install(ctx, name, link, reinstall, **kwargs):
         exit(1)
         
     # build repositories list
-    repositories = load_repositories(config, prefix)
+    repositories = load_repositories(config)
     
     for repository in repositories:
         if repository.load_credentials()==False:

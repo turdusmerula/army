@@ -1,20 +1,12 @@
-from army.api.log import log
+from army.api.command import parser, group, command, option, argument
 from army.api.debugtools import print_stack
-from army.api.repository import load_repositories
-from army.api.click import verbose_option 
-from army import packaging
-from army.plugin.profile.profile_group import profile
-import click
-import os
-import sys
-import getpass
-import keyring
+from army.api.log import log
 
-from army import prefix
-from click.decorators import password_option
-
-@profile.command(name='set', help='Set current profile')
-@verbose_option()
-@click.pass_context
-def profile_set(ctx, **kwargs):
+@parser
+@group(name="profile")
+@command(name="profile")
+@command(name='set', help='Set current profile')
+@argument(name='name', count='*')
+def profile_set(ctx, name, **kwargs):
     log.info(f"profile set")
+

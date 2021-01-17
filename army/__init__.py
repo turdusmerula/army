@@ -76,90 +76,6 @@ def show_version():
     print("There is NO WARRANTY, to the extent permitted by law.")
 
 
-# due to resilient_parsing this is needed to ensure we quit after cli_init
-# premature_exit = False
-# # create the config parser, this parser is mainly used to catch logger verbosity
-# # we can set set the log options prior to any further action
-# @click.group(invoke_without_command=True, 
-#              no_args_is_help=False, 
-#              add_help_option=False, 
-#              context_settings=dict(
-#                  resilient_parsing=True))
-# @verbose_option()
-# @click.option('-t', '--target', help='select target')
-# @click.option('--version', help='show army version', is_flag=True)
-# @click.pass_context
-# def cli_init(ctx, v, target, version, **kwargs):
-#     global target_name
-# 
-#     if version:
-#         global premature_exit
-#         premature_exit = True
-#         show_version()
-#         exit(1)
-#     
-#     target_name = target
-# 
-#     # configure logger
-#     root_config.set("verbose", get_log_level())
-# 
-# 
-# # create the top-level parser
-# @click.group()
-# @verbose_option()
-# @click.option('-t', '--target', help='select target')
-# @click.option('--version', help='show army version', is_flag=True)
-# @click.pass_context
-# # TODO add version with version_option
-# def cli(ctx, target, version, **kwargs):
-#     global config
-#     global project
-#     global target_name
-#     global default_target
-#          
-#     ctx.config = config
-#     ctx.project = project
-#     ctx.target = default_target
-#     ctx.target_name = target_name
-# 
-#     print("----", target)
-#     if target is not None: 
-#         if target in project.target:
-#             ctx.target = project.target[target]
-#             ctx.target_name = target
-#         else:
-#             print(f"{target}: target not defined in project", file=sys.stderr)
-#             exit(1)
-#         log.info(f"current target: {target}")
-#  
-#  
-# @cli.section("Packaging Commands")
-# @click.pass_context
-# def packaging(ctx, **kwargs):
-#     # recopy parent config in context
-#     ctx.config = ctx.parent.config
-#     ctx.project = ctx.parent.project
-#     ctx.target = ctx.parent.target
-#     ctx.target_name = ctx.parent.target_name
-#  
-# @cli.section("Build Commands", chain=True)
-# @click.pass_context
-# def build(ctx, **kwargs):
-#     # recopy parent config in context
-#     ctx.config = ctx.parent.config
-#     ctx.project = ctx.parent.project
-#     ctx.target = ctx.parent.target
-#     ctx.target_name = ctx.parent.target_name
-#  
-# @cli.section("Profile Commands")
-# @click.pass_context
-# def profile(ctx, **kwargs):
-#     # recopy parent config in context
-#     ctx.config = ctx.parent.config
-#     ctx.project = ctx.parent.project
-#     ctx.target = ctx.parent.target
-#     ctx.target_name = ctx.parent.target_name
-
 def main():
     global prefix
     global config
@@ -195,24 +111,25 @@ def main():
     # set context
     army_parser = get_army_parser()
     army_parser.context.config = config
-    
+        
     # load internal plugins
     import army.plugin.repository
     import army.plugin.dependency
 #     import army.plugin.package
 #     import army.plugin.target
-#     import army.plugin.profile
+    import army.plugin.profile
 # #     import army.plugin.build
-# 
-#     # load plugins
-#     # TODO load plugins from installed packages
-#     if os.path.exists('army.toml'):
-#         try:
-#             project = load_project()
-#         except Exception as e:
-#             print_stack()
-#             print(f"army.toml: {e}", file=sys.stderr)
-#             exit(1)
+
+    # load profile
+
+    # load project
+    if os.path.exists('army.toml'):
+        try:
+            project = load_project()
+        except Exception as e:
+            print_stack()
+            print(f"army.toml: {e}", file=sys.stderr)
+            exit(1)
 # 
 #     # load default target if exists
 #     if project is not None:

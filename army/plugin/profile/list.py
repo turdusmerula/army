@@ -1,17 +1,11 @@
-from army.api.log import log
+from army.api.command import parser, group, command, option, argument
 from army.api.debugtools import print_stack
-from army.api.repository import load_repositories
-from army.api.click import verbose_option 
-from army.api.profile import load_profile_list
-from army.plugin.profile.profile_group import profile
-import click
-import sys
+from army.api.log import log
 
-from army import prefix
-
-@profile.command(name='list', help='List available profiles')
-@verbose_option()
-@click.pass_context
+@parser
+@group(name="profile")
+@command(name="profile")
+@command(name='list', help='List available profiles')
 def profile_list(ctx, **kwargs):
     log.info(f"profile list")
 

@@ -12,7 +12,7 @@ def create_parser(*args, **kwargs):
 def get_army_parser():
     global army_parser
     if army_parser is None:
-        army_parser = create_parser()
+        army_parser = create_parser(name="army")
     return army_parser
     
     
@@ -69,11 +69,12 @@ class ArmyParser(ArmyHelpParser):
     def __init__(self, *argv, **kwargs):
         super(ArmyParser, self).__init__(*argv, **kwargs)
         
-        self._dependency_group = self.add_group(name="dependency", help="Dependencies Management Commands")
+        self._dependency_group = self.add_group(name="dependency", help="Dependency Management Commands")
 
     @property
     def dependency_group(self):
         return self._dependency_group
+
 
 ###################################
 ### decorators
@@ -87,43 +88,47 @@ def _debug(*argv, **kwargs):
 def parser(items):
     _debug(f"-->> parser", items)
     
-    curr_parser = get_army_parser()
-    curr_group = curr_parser    # if no group add commands to parser
-    curr_command = None
+    obj_stack = [get_army_parser()]
+    
+#     curr_parser = get_army_parser()
+#     curr_group = curr_parser    # if no group add commands to parser
+#     curr_command = None
     
     for item in items:
+        _debug("##", obj_stack, obj_stack[-1])
         if callable(item):
             _debug("func:", item)
-            if curr_command is None:
-                raise CommandException(f"no command found")
-            else:
-                curr_command.add_callback(item)
+            obj_stack[-1].add_callback(item)
         else:
             obj, name, argv, kwargs = item
             _debug("obj:", obj, name, argv, kwargs)
             if obj==Group:
                 _debug("group")
-                curr_group = curr_parser.find_group(name)
-                if curr_group is None:
+                curr_obj = obj_stack[-1].find_group(name)
+                if curr_obj is None:
                     if 'help' in kwargs:
-                        curr_group = curr_parser.add_group(name=name, *argv, **kwargs)
+                        curr_obj = obj_stack[-1].add_group(name=name, *argv, **kwargs)
+                        obj_stack.append(curr_obj)
                     else:
                         raise CommandException(f"{name}: command group does not exists")
+                else:
+                    obj_stack.append(curr_obj)
             elif obj==Command:
                 _debug("command", kwargs)
-                curr_command = curr_parser.find_command(name)
-                if curr_command is None:
+                curr_obj = obj_stack[-1].find_command(name)
+                if curr_obj is None:
                     if 'help' in kwargs:
-                        curr_command = curr_group.add_command(name=name, *argv, **kwargs)
+                        curr_obj = obj_stack[-1].add_command(name=name, *argv, **kwargs)
+                        obj_stack.append(curr_obj)
                     else:
                         raise CommandException(f"{name}: command does not exists")
+                else:
+                    obj_stack.append(curr_obj)
             elif obj==Option:
                 _debug("option")
+                obj_stack[-1].add_option(name=name, *argv, **kwargs)
             elif obj==Argument:
-                if curr_command is not None:
-                    curr_command.add_argument(name=name, *argv, **kwargs)
-                elif curr_parser is not None:
-                    curr_parser.add_argument(name=name, *argv, **kwargs)
+                obj_stack[-1].add_argument(name=name, *argv, **kwargs)
                 _debug("argument")
             else:
                 _debug("error")
