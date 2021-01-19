@@ -23,10 +23,23 @@ class CommandException(Exception):
 class ArmyBaseParser(Parser):
     def __init__(self, *argv, **kwargs):
         super(ArmyBaseParser, self).__init__(*argv, **kwargs)
+
+
+class ArmyParser(ArmyBaseParser):
+    def __init__(self, *argv, **kwargs):
+        super(ArmyParser, self).__init__(*argv, **kwargs)
+
         self._log_level = 'fatal'
+        
+        self._dependency_group = self.add_group(name="dependency", help="Dependency Management Commands")
 
         self.add_verbose_option()
-        
+        self.add_help_option()
+
+    @property
+    def dependency_group(self):
+        return self._dependency_group
+
     def add_verbose_option(self):
         self._verbose_option = self.add_option(shortcut="v", help="Activate verbose/debug", flag=True, count=4, callback=self._verbose_option_callback)
 
@@ -51,29 +64,6 @@ class ArmyBaseParser(Parser):
     def _help_option_callback(self, ctx, value):
         self.show_help() 
         exit(0)
-
-class ArmyHelpParser(ArmyBaseParser):
-    def __init__(self, *argv, **kwargs):
-        super(ArmyHelpParser, self).__init__(command_parser=ArmyHelpParser, *argv, **kwargs)
-
-        self.add_help_option()
-        
-    def add_help_option(self):
-        self._help_option = self.add_option(name="help", shortcut="h", help="Show this message and exit", flag=True, callback=self._help_option_callback)
-    
-    def _help_option_callback(self, ctx, value):
-        self.show_help() 
-        exit(0)
-
-class ArmyParser(ArmyHelpParser):
-    def __init__(self, *argv, **kwargs):
-        super(ArmyParser, self).__init__(*argv, **kwargs)
-        
-        self._dependency_group = self.add_group(name="dependency", help="Dependency Management Commands")
-
-    @property
-    def dependency_group(self):
-        return self._dependency_group
 
 
 ###################################

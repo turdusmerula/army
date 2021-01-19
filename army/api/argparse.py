@@ -69,7 +69,7 @@ def _print_option_list(options, indent=0):
             column_value.append(option_list[option].value)
         
         help = option_list[option].help or ""
-        if option_list[option].has_default:
+        if option_list[option].has_default and option_list[option].default is not None:
             help += f" ({option_list[option].default})"
         column_help.append(help) 
             

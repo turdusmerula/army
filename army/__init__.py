@@ -63,33 +63,47 @@ version = "0.1.2"
 # default configuration
 root_config = ArmyConfig()
 config = None
-project = None
+project_file = None
 default_target = None
 target_name = None
 
-def show_version():
+def option_show_version(ctx, value):
     print(f"army, version {version}")
     print("Copyright (C) 2016 Free Software Foundation, Inc.")
     print("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>")
     print("")
     print("This is free software; you are free to change and redistribute it.")
     print("There is NO WARRANTY, to the extent permitted by law.")
+    exit(0)
 
-
+def option_project_file(ctx, value):
+    global project_file
+    project_file = value
+    
 def main():
     global prefix
     global config
-    global project
+    global project_file
     global default_target
     global target_name
     
+    army_parser = get_army_parser()
+    army_parser.context.config = config
+    army_parser.add_option(name="file", shortcut="f", help="Project file to use", value="FILE", default=None, callback=option_project_file)
+    army_parser.add_option(name="version", help="Show version", flag=True, callback=option_show_version)
+
+    sys.stdout = None
+    sys.stderr = None
     try:
         # we only want to initialize the logger here, everything else is ignored at this point
         # we need to load the plugins before showing any help
-        log_parser = ArmyBaseParser()
-        log_parser.parse(sys.argv[:])
-    except Exception as e:
+        army_parser.parse(sys.argv[:])
+    except Exception:
         pass
+    except SystemExit:
+        pass
+    sys.stdout = sys.__stdout__
+    sys.stderr = sys.__stderr__
     
     # set prefix path
     prefix = os.getenv('ARMY_PREFIX', None)
@@ -109,9 +123,8 @@ def main():
         exit(1)
     
     # set context
-    army_parser = get_army_parser()
     army_parser.context.config = config
-        
+    
     # load internal plugins
     import army.plugin.repository
     import army.plugin.dependency
@@ -123,14 +136,19 @@ def main():
     # load profile
 
     # load project
-    if os.path.exists('army.toml'):
-        try:
-            project = load_project()
-        except Exception as e:
-            print_stack()
-            print(f"army.toml: {e}", file=sys.stderr)
-            exit(1)
-# 
+    try:
+        print("----", project_file)
+        if project_file is not None:
+            project = load_project(path=project_file, exist_ok=False)
+        else:
+            project = load_project(exist_ok=True)
+    except Exception as e:
+        print_stack()
+        print(f"{e}", file=sys.stderr)
+        exit(1)
+
+    army_parser.context.project = project
+    
 #     # load default target if exists
 #     if project is not None:
 #         # get target config

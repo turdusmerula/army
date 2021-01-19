@@ -1,6 +1,8 @@
 from army.api.command import parser, group, command, option, argument
 from army.api.debugtools import print_stack
 from army.api.log import log
+from army.api.profile import load_profile_list
+import sys
 
 @parser
 @group(name="profile")

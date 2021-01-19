@@ -1,6 +1,6 @@
-from army.api.log import log
 from army.api.debugtools import print_stack
 from army.api.dict_file import load_dict_file, find_dict_files
+from army.api.log import log
 from army.api.version import Version
 from schema import Schema, And, Use, Optional
 import toml

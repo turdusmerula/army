@@ -1,7 +1,7 @@
-from army.api.log import log
 from army.api.debugtools import print_stack
+from army.api.dict_file import load_dict_file, find_dict_files
+from army.api.log import log
 from army.api.package import Package
-import toml.decoder
 import os
 import subprocess
 import tempfile
@@ -13,32 +13,32 @@ import zipfile
 
 # load project army file 
 # @param parent parent configuration
-# @param prefix mainly used for unit tests purpose
 # @return the loaded project configuration or None if project was not loaded
-def load_project(path='army.toml'):
+def load_project(path='army', exist_ok=False):
     
-    # TODO find a way to add line to error message
-    file = os.path.expanduser(path)
-    if os.path.exists(file)==False:
-        raise ProjectException(f"{file}: file not found")
-
-    content = {}
-    try:
-        log.info(f"Load project '{file}'")
-        content = toml.load(file)
-        log.debug(f"content: {content}")
-    except toml.decoder.TomlDecodeError as e:
-        print_stack()
-        log.debug(e)        
-        raise ProjectException(f"{format(e)}")
-    except Exception as e:
-        print_stack()
-        log.debug(e)
-        raise ProjectException(f"{format(e)}")
+    
+    content = load_dict_file(path=None, name=path, exist_ok=exist_ok)
+    
+#     file = os.path.expanduser(path)
+#     if os.path.exists(file)==False:
+#         raise ProjectException(f"{file}: file not found")
+# 
+#     content = {}
+#     try:
+#         log.info(f"Load project '{file}'")
+#         content = toml.load(file)
+#         log.debug(f"content: {content}")
+#     except toml.decoder.TomlDecodeError as e:
+#         print_stack()
+#         log.debug(e)        
+#         raise ProjectException(f"{format(e)}")
+#     except Exception as e:
+#         print_stack()
+#         log.debug(e)
+#         raise ProjectException(f"{format(e)}")
     
     project = Project(data=content)
     project.check()
-        
 
     return project
 
