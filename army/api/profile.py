@@ -1,32 +1,61 @@
 from army.api.log import log
 from army.api.debugtools import print_stack
-from army import prefix
+from army.api.dict_file import load_dict_file, find_dict_files
 
-profiles = {}
-
-# load profiles from ./profile and ~/.army/profile
-def _load_static_profile_list():
-    pass
-
-# load profiles from project dependencies
-def _load_project_profile_list():
-    pass
 
 def load_profile_list():
-    global profiles
+    profiles = []
     
-    _load_static_profile_list()
-    _load_project_profile_list()
+    profiles += load_global_profile_list()
+    profiles += load_user_profile_list()
+    profiles += load_project_profile_list()
     
     return profiles
 
+# load profiles from /etc/army/profile
+def load_global_profile_list():
+    # load main repositories
+    profiles = find_dict_files('/etc/army/profile')
+    return profiles
+
+# load profiles from ~/.army/profile
+def load_user_profile_list():
+    # load main repositories
+    profiles = find_dict_files('~/.army/profile')
+    return profiles
+
+# load profiles from current project
+def load_project_profile_list():
+    # load main repositories
+    profiles = []
+    # TODO
+    return profiles
+
+
+def load_profile(profiles, name, parent=None):
+    config = {}
+    try:
+        config = load_dict_file(path, name)
+    except Exception as e:
+        print_stack()
+        log.debug(e)
+        raise ConfigException(f"{path}/{name}: {format(e)}")
+    
+    try:
+        res = ArmyConfigRepository(value=config, parent=parent)
+    except Exception as e:
+        print_stack()
+        log.debug(e)
+        raise ConfigException(f"{path}/{name}: {format(e)}")
+        
+    return res
+
 
 class Profile(object):
-    def __init__(self):
-        self._path = None
-        self._name = None
-        self._description = None
-        self._data = {}
+    def __init__(self, name=None, path=None):
+        self._name = name
+        self._path = path
+        self._data = None
         
     @property
     def name(self):
@@ -37,9 +66,10 @@ class Profile(object):
         return self._path
     
     @property
-    def description(self):
-        return self._description
-
-    @property
     def data(self):
         return self._data
+
+    def load(self):
+        if self._data is not None:
+            return
+        pass

@@ -133,11 +133,10 @@ def main():
     import army.plugin.profile
 # #     import army.plugin.build
 
-    # load profile
 
     # load project
+    project = None
     try:
-        print("----", project_file)
         if project_file is not None:
             project = load_project(path=project_file, exist_ok=False)
         else:
@@ -146,9 +145,10 @@ def main():
         print_stack()
         print(f"{e}", file=sys.stderr)
         exit(1)
-
     army_parser.context.project = project
-    
+
+    # load profile
+
 #     # load default target if exists
 #     if project is not None:
 #         # get target config

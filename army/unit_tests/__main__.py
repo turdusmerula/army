@@ -8,7 +8,7 @@ import unittest
 # from test_config2 import *
 # from test_project import *
 # from test_dependency_install import *
-# from test_load_dict_file import *
+from test_load_dict_file import *
 from test_argparse import *
 from test_command import *
 from test_dependency_repos import *

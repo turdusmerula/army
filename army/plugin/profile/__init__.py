@@ -6,4 +6,5 @@ profile_command = profile_group.add_command(name="profile", help="Manage profile
 
 import army.plugin.profile.current
 import army.plugin.profile.list
+import army.plugin.profile.search
 import army.plugin.profile.set
