@@ -14,9 +14,9 @@ def load_project(path='army', exist_ok=False):
     
     
     content = load_dict_file(path=None, name=path, exist_ok=exist_ok)
-    
     if content is None:
         content = {}
+        
     project = Project(data=content)
     project.check()
 

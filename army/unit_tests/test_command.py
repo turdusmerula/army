@@ -42,12 +42,13 @@ Options:
     -v            Activate verbose/debug    
     --help, -h    Show this message and exit
 
-Dependencies Management Commands:
+Dependency Management Commands:
 
 Commands:
     command1    test command 1
     command2    test command 2
     command3    test command 3
+
 """
 
     def test_command1_help(self):
@@ -66,10 +67,13 @@ Options:
     -v            Activate verbose/debug    
     --help, -h    Show this message and exit
 
+Dependency Management Commands:
+
 Commands:
     command1    test command 1
     command2    test command 2
     command3    test command 3
+
 """
 
     def test_check_parser(self):

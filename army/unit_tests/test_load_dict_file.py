@@ -167,9 +167,8 @@ class TestDictObject(unittest.TestCase):
         assert self.dict3.get("/h")=="0 1"
 
     def test_subscript(self):
-#         assert self.dict1["a"]=="1"
-#         assert self.dict2["a"]=="1"
-        pass
+        assert self.dict1["a"]=="1"
+        assert self.dict2["/h"]=="0 1"
     
 
     def test_cut_subst(self):

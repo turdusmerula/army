@@ -27,7 +27,7 @@ class ArmyBaseParser(Parser):
 
 class ArmyParser(ArmyBaseParser):
     def __init__(self, *argv, **kwargs):
-        super(ArmyParser, self).__init__(*argv, **kwargs)
+        super(ArmyParser, self).__init__(*argv, **kwargs, command_parser=create_parser)
 
         self._log_level = 'fatal'
         

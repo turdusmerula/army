@@ -113,6 +113,7 @@ def main():
 
     # load army configuration files
     try:
+        log.debug("load configuration")
         config = load_global_configuration(parent=root_config)
         config = load_global_configuration_repositories(parent=config)
         config = load_user_configuration(parent=config)

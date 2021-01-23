@@ -88,7 +88,7 @@ Options:
     -a                   A (True)                  
     -b                   B (False)                 
     -c                   C                         
-    --target, -t TEXT    Select target (None)      
+    --target, -t TEXT    Select target             
     --name       TEXT    Show name                 
     --help, -h           Show this message and exit
     --version            show army version         
@@ -103,6 +103,7 @@ Build Commands:
 Commands:
     test1    test1 command
     test2    test2 command
+
 """
 
     def test_parser_callback(self):
@@ -263,7 +264,7 @@ class TestArgparseArgument(unittest.TestCase):
         
     def test_parse_argument_missing(self):
         argv = ["army", "1"]
-        assert raised(self.parser.parse, argv)==[ArgparseException, "army: argument value2 missing"]
+        assert raised(self.parser.parse, argv)==[ArgparseException, "army: argument 'value2' missing"]
 
     def test_parse_argument_unknown(self):
         argv = ["army", "1", "2", "3"]
@@ -298,11 +299,11 @@ class TestArgparseArgumentFixedArray(unittest.TestCase):
         
     def test_parse_argument_missing(self):
         argv = ["army", "1"]
-        assert raised(self.parser.parse, argv)==[ArgparseException, "army: argument value2 missing"]
+        assert raised(self.parser.parse, argv)==[ArgparseException, "army: argument 'value2' missing"]
 
     def test_parse_argument_missing2(self):
         argv = ["army", "1", "2"]
-        assert raised(self.parser.parse, argv)==[ArgparseException, "army: not enough values for argument value2"]
+        assert raised(self.parser.parse, argv)==[ArgparseException, "army: not enough values for argument 'value2'"]
 
     def test_parse_argument_unknown(self):
         argv = ["army", "1", "2", "3", "4", "5"]
@@ -406,6 +407,7 @@ Commands:
     test1    test1 command
     test2    test2 command
     test3    test3 command
+
 """
     
 

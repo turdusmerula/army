@@ -108,6 +108,8 @@ def _load_yaml_dict_file(file):
         try:
             log.info(f"load file '{file}'")
             res = yaml.load(f, Loader=yaml.FullLoader)
+            if res is None:
+                res = {}
         except Exception as e:
             print_stack()
             log.debug(f"{e}")
@@ -169,13 +171,7 @@ class Dict(object):
         return iter(self._data)
 
     def __getitem__(self, item):
-        _data = super(Dict, self).__getattribute__("_data")
-        _parent = super(Dict, self).__getattribute__("_parent")
-        if item in _data:
-            return _data[item]
-        else:
-            return _parent.__getattr__(item) 
-        return None
+        return self.get(item)
 
     def _cut_subst(self, value):
         res = []
@@ -194,16 +190,6 @@ class Dict(object):
                 res.append([0, value])
                 value = ""
         return res
-    
-#     def _is_recursive_path(self, path):
-#         
-#         def explore(value, stack):
-#             chuncks = self._cut_subst(value)
-#             recursive = False
-#             for t, v in chuncks:
-#                 if t==1:
-#                     
-#         return explore(value, [])
     
     def _resolve_substs(self, path, stack):
 #         value = dpath.util.get(self._data, path)
