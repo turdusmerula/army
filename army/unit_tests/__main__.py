@@ -13,6 +13,8 @@ from test_argparse import *
 from test_command import *
 from test_dependency_repos import *
 from test_dependency_search import *
+from test_profile_list import *
+from test_profile_inspect import *
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

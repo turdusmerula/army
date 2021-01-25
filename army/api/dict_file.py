@@ -1,15 +1,16 @@
-from army.api.log import log, get_log_level
 from army.api.debugtools import print_stack
+from army.api.log import log, get_log_level
 from army.api.prefix import prefix_path
+import copy
+import collections
+import dpath.util
 import importlib.util
-import toml
 import json
-import yaml
 import os
 import sys
-import dpath.util
-from ttp import ttp
-import copy
+import toml
+#import oyaml as yaml
+import yaml
 
 class DictFileException(Exception):
     def __init__(self, message):
@@ -42,14 +43,15 @@ def load_dict_file(path, name, exist_ok=False):
     config = None
     
     if path is None:
-        path = prefix_path(os.path.expanduser(os.path.dirname(name)))
+        path = prefix_path(os.path.dirname(name))
         if path=="":
             path = os.getcwd()
         name = os.path.basename(name)
     else:
-        path = prefix_path(os.path.expanduser(path))
+        path = prefix_path(path)
 
-    if os.path.exists(os.path.expanduser(path))==False:
+    path = os.path.expanduser(path)
+    if os.path.exists(path)==False:
         if exist_ok==True:
             return {}
         else:
@@ -240,3 +242,99 @@ class Dict(object):
                 value = self._parent.get(path=path, raw=raw, **kwargs)
 
         return value
+
+    def to_dict(self):
+        res = {}
+        
+        def get_value(din, path):
+            def to_value(din):
+                res= ""
+                if din is None:
+                    res = ""
+                elif isinstance(din, dict):
+                    for key in din:
+                        value = to_value(din[key])
+                        if value!="":
+                            if res=="":
+                                res = value
+                            else:
+                                res += f" {value}"
+                elif isinstance(din, list):
+                    for item in din:
+                        value = to_value(item)
+                        if value!="":
+                            if res=="":
+                                res = value
+                            else:
+                                res += f" {value}"
+                else:
+                    value = str(din)
+                    if value!="":
+                        if res=="":
+                            res = value
+                        else:
+                            res += f" {value}"
+                return res
+            
+            try:
+                return to_value(dpath.util.get(din, path))
+            except KeyError as e:
+                return ""
+            
+        def expand_value(din, value):
+            chuncks = self._cut_subst(value)
+            res = ""
+            for t, v in chuncks:
+                if t==0:
+                    res += v
+                else:
+                    value = get_value(din, v)
+                    res += expand_value(din, value)
+            return res
+        
+        def copy(din, dout):
+            def copy_value(din):
+                if isinstance(din, str):
+                    nonlocal res
+                    return expand_value(res, din)
+                else:
+                    return din
+
+            if isinstance(din, dict):
+                for key in din:
+                    if isinstance(din[key], dict):
+                        if key not in dout:
+                            dout[key] = {}
+                        copy(din[key], dout[key])
+                    elif isinstance(din[key], list):
+                        dout[key] = []
+                        copy(din[key], dout[key])
+                    else:
+                        dout[key] = copy_value(din[key])
+            elif isinstance(din, list):
+                for item in din:
+                    if isinstance(item, dict):
+                        value = {}
+                        dout.append(value)
+                        copy(item, value)
+                    elif isinstance(item, list):
+                        value = []
+                        dout.append(value)
+                        copy(item, value)
+                    else:
+                        value = copy_value(item)
+                        if value!="":
+                            dout.append(value)
+        
+        parents = []
+        parent = self
+        while parent is not None:
+            parents.append(parent)
+            parent = parent._parent
+
+        for profile in reversed(parents):
+            print("---", profile)
+            copy(profile._data, res)
+            print("+++", res)
+        return res
+    

@@ -57,6 +57,7 @@ setup(
     zip_safe=False, # force egg extraction
     
     install_requires=[
+        'dpath',
         'tornado',      # template manager
         'gitpython',    # git repository manager
         'toml',         # toml files
