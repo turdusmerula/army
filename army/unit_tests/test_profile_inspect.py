@@ -6,8 +6,8 @@ import tempfile
 import unittest
 
 prefix = 'test_profile'
-# log.setLevel('CRITICAL')
-log.setLevel('DEBUG')
+log.setLevel('CRITICAL')
+# log.setLevel('DEBUG')
 
 
 class TestProfileInspect(unittest.TestCase):
@@ -49,20 +49,101 @@ class TestProfileInspect(unittest.TestCase):
 #         assert len(stdout)==4
 #         assert len(stderr)==0
 
-    def test_inspect_profile_a(self):
-        res, stdout, stderr = run(["army", "profile", "inspect", "a"])
+    def test_inspect_profile_value2(self):
+        res, stdout, stderr = run(["army", "profile", "inspect", "value2"])
         assert res==0
-        assert len(stdout)==4
+        assert stdout==[
+            "value: 2",
+            ""
+            ]
         assert len(stderr)==0
 
-    def test_inspect_profile_a_b(self):
-        res, stdout, stderr = run(["army", "profile", "inspect", "a", "b"])
+    def test_inspect_profile_value2_value3(self):
+        res, stdout, stderr = run(["army", "profile", "inspect", "value2", "value3"])
         assert res==0
-        assert len(stdout)==4
+        assert stdout==[
+            "value: 3",
+            ""
+            ]
         assert len(stderr)==0
 
-    def test_inspect_profile_a_b_c(self):
-        res, stdout, stderr = run(["army", "profile", "inspect", "a", "b", "c"])
+    def test_inspect_profile_dict_value2(self):
+        res, stdout, stderr = run(["army", "profile", "inspect", "dict_value2"])
         assert res==0
-        assert len(stdout)==4
+        assert stdout==[
+            "dict_value:",
+            "  value: 2",
+            ""
+            ]
         assert len(stderr)==0
+
+    def test_inspect_profile_dict_value2_dict_value3(self):
+        res, stdout, stderr = run(["army", "profile", "inspect", "dict_value2", "dict_value3"])
+        assert res==0
+        assert stdout==[
+            "dict_value:",
+            "  value: 3",
+            ""
+            ]
+        assert len(stderr)==0
+
+    def test_inspect_profile_list_value(self):
+        res, stdout, stderr = run(["army", "profile", "inspect", "list_value"])
+        assert res==0
+        assert stdout==['list_value:', '- 1', '- 2', '- 3', '']
+        assert len(stderr)==0
+
+    def test_inspect_profile_list_value_list_value2(self):
+        res, stdout, stderr = run(["army", "profile", "inspect", "list_value", "list_value2"])
+        assert res==0
+        assert stdout==['list_value:', '- 1', '- 2', '- 3', '- 4', '- 5', '- 6', '']
+        assert len(stderr)==0
+
+    def test_inspect_profile_combined_value(self):
+        res, stdout, stderr = run(["army", "profile", "inspect", "combined_value"])
+        assert res==0
+        assert stdout==['combined_value:', '- item1: 1', '- item2: 2', '- item3:', '  - a', '  - b', '  - c', '']
+        assert len(stderr)==0
+
+    def test_inspect_profile_combined_value_combined_value2(self):
+        res, stdout, stderr = run(["army", "profile", "inspect", "combined_value", "combined_value2"])
+        assert res==0
+        assert stdout==['combined_value:', '- item1: 1', '- item2: 2', '- item3:', '  - a', '  - b', '  - c', '- item1: 2', '- item2: 3', '- item3:', '  - d', '  - e', '  - f', '- item4: 4', '']
+        assert len(stderr)==0
+
+    def test_inspect_profile_subst_a(self):
+        res, stdout, stderr = run(["army", "profile", "inspect", "subst_a"])
+        assert res==0
+        assert stdout==['a:', '- value1', '- value2', '']
+        assert len(stderr)==0
+
+    def test_inspect_profile_subst_b(self):
+        res, stdout, stderr = run(["army", "profile", "inspect", "subst_b"])
+        assert res==0
+        assert stdout==['b:', "  item: ''", '']
+        assert len(stderr)==0
+        
+    def test_inspect_profile_subst_a_subst_b(self):
+        res, stdout, stderr = run(["army", "profile", "inspect", "subst_a", "subst_b"])
+        assert res==0
+        assert stdout==['a:', '- value1', '- value2', 'b:', '  item: value1 value2', '']
+        assert len(stderr)==0
+
+
+#     def test_inspect_profile_a(self):
+#         res, stdout, stderr = run(["army", "profile", "inspect", "a"])
+#         assert res==0
+#         assert len(stdout)==4
+#         assert len(stderr)==0
+# 
+#     def test_inspect_profile_a_b(self):
+#         res, stdout, stderr = run(["army", "profile", "inspect", "a", "b"])
+#         assert res==0
+#         assert len(stdout)==4
+#         assert len(stderr)==0
+# 
+#     def test_inspect_profile_a_b_c(self):
+#         res, stdout, stderr = run(["army", "profile", "inspect", "a", "b", "c"])
+#         assert res==0
+#         assert len(stdout)==4
+#         assert len(stderr)==0

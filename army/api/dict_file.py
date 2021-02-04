@@ -20,7 +20,7 @@ def dict_file_extensions():
     return {
         "py": _load_python_dict_file, 
         "yaml": _load_yaml_dict_file, 
-#         "toml": _load_toml_dict_file, 
+        "toml": _load_toml_dict_file, 
 #         "json": _load_json_dict_file
     }
 
@@ -165,16 +165,48 @@ def _load_json_dict_file(file):
 class Dict(object):
     reserved = ["_data", "_parent"]
     
-    def __init__(self, data={}, parent=None):
-        self._data = data
+    def __init__(self, data=None, parent=None):
+        if parent is not None and isinstance(parent, Dict)==False:
+            raise DictFileException(f"{type(parent)}: parent type mismatch")
+        
+        self._raw_data = data
         self._parent = parent
-    
+        
+        self._data = None
+        
     def __iter__(self):
         return iter(self._data)
 
     def __getitem__(self, item):
         return self.get(item)
 
+    def _load_data(self):
+        if self._data is None:
+            self._data = self.to_dict()
+    
+    # get an 
+    def get(self, path, raw=False, **kwargs):
+        self._load_data()
+
+        value = None
+        try:
+            if raw==True:
+                value = dpath.util.get(self._raw_data, path)
+            else:
+                value = dpath.util.get(self._data, path)
+        except KeyError as e:
+            if self._parent is None:
+                if 'default' in kwargs:
+                    return kwargs['default']
+                raise e
+            elif self._parent is not None:
+                value = self._parent.get(path=path, raw=raw, **kwargs)
+ 
+        return value
+
+    def __getitem__(self, item):
+        return self.get(item)
+ 
     def _cut_subst(self, value):
         res = []
         while value!="":
@@ -192,56 +224,56 @@ class Dict(object):
                 res.append([0, value])
                 value = ""
         return res
-    
-    def _resolve_substs(self, path, stack):
-#         value = dpath.util.get(self._data, path)
-        if path.startswith('/')==False:
-            path = f"/{path}"
-        
-        value = self.get(path, raw=True, default="")
-#         print(f"{'  '*len(stack)}**", path, value)
-
-        # put path in stack to detect variable recursion
-        # when a recursion is found then we look for the path in parent dict
-        stack.append(path)
-            
-        chuncks = self._cut_subst(value)
-        res = ""
-        for t, v in chuncks:
-            if t==0:
-                res += v
-            else:
-                if v.startswith('/')==False:
-                    v = f"/{v}"
-
-                if v in stack and self._parent is not None:
-#                     content = self._parent.get(v, raw=True, default="")
-#                     print(f"{'  '*len(stack)}==", f"{content}--{v}--{stack}")
-                    res += self._parent._resolve_substs(v, stack=[])
-                else:
-#                     content = self.get(v, raw=True, default="")
-#                     print(f"{'  '*len(stack)}++", f"{content}--{v}--{stack}")
-                    res += self._resolve_substs(v, stack=stack)
-#         print(f"{'  '*len(stack)}**", f"{res}")
-        return res
-
-    def get(self, path, raw=False, **kwargs):
-        value = None
-        try:
-            if raw==True:
-                value = dpath.util.get(self._data, path)
-            else:
-                dpath.util.get(self._data, path)    # here only to check that path exists
-                value = self._resolve_substs(path, stack=[])
-        except KeyError as e:
-            if self._parent is None:
-                if 'default' in kwargs:
-                    return kwargs['default']
-                raise e
-            elif self._parent is not None:
-                value = self._parent.get(path=path, raw=raw, **kwargs)
-
-        return value
+#     
+#     def _resolve_substs(self, path, stack):
+# #         value = dpath.util.get(self._data, path)
+#         if path.startswith('/')==False:
+#             path = f"/{path}"
+#         
+#         value = self.get(path, raw=True, default="")
+# #         print(f"{'  '*len(stack)}**", path, value)
+# 
+#         # put path in stack to detect variable recursion
+#         # when a recursion is found then we look for the path in parent dict
+#         stack.append(path)
+#             
+#         chuncks = self._cut_subst(value)
+#         res = ""
+#         for t, v in chuncks:
+#             if t==0:
+#                 res += v
+#             else:
+#                 if v.startswith('/')==False:
+#                     v = f"/{v}"
+# 
+#                 if v in stack and self._parent is not None:
+# #                     content = self._parent.get(v, raw=True, default="")
+# #                     print(f"{'  '*len(stack)}==", f"{content}--{v}--{stack}")
+#                     res += self._parent._resolve_substs(v, stack=[])
+#                 else:
+# #                     content = self.get(v, raw=True, default="")
+# #                     print(f"{'  '*len(stack)}++", f"{content}--{v}--{stack}")
+#                     res += self._resolve_substs(v, stack=stack)
+# #         print(f"{'  '*len(stack)}**", f"{res}")
+#         return res
+# 
+#     def get(self, path, raw=False, **kwargs):
+#         value = None
+#         try:
+#             if raw==True:
+#                 value = dpath.util.get(self._data, path)
+#             else:
+#                 dpath.util.get(self._data, path)    # here only to check that path exists
+#                 value = self._resolve_substs(path, stack=[])
+#         except KeyError as e:
+#             if self._parent is None:
+#                 if 'default' in kwargs:
+#                     return kwargs['default']
+#                 raise e
+#             elif self._parent is not None:
+#                 value = self._parent.get(path=path, raw=raw, **kwargs)
+# 
+#         return value
 
     def to_dict(self):
         res = {}
@@ -303,11 +335,12 @@ class Dict(object):
             if isinstance(din, dict):
                 for key in din:
                     if isinstance(din[key], dict):
-                        if key not in dout:
+                        if key not in dout or isinstance(dout[key], dict)==False:
                             dout[key] = {}
                         copy(din[key], dout[key])
                     elif isinstance(din[key], list):
-                        dout[key] = []
+                        if key not in dout or isinstance(dout[key], list)==False:
+                            dout[key] = []
                         copy(din[key], dout[key])
                     else:
                         dout[key] = copy_value(din[key])
@@ -332,9 +365,7 @@ class Dict(object):
             parents.append(parent)
             parent = parent._parent
 
-        for profile in reversed(parents):
-            print("---", profile)
-            copy(profile._data, res)
-            print("+++", res)
+        for parent in reversed(parents):
+            copy(parent._raw_data, res)
         return res
     

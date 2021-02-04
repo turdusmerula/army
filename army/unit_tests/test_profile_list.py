@@ -38,7 +38,18 @@ class TestProfileList(unittest.TestCase):
 
     def test_list_no_param(self):
         res, stdout, stderr = run(["army", "profile", "list"])
+        assert stdout==['name            | path            | description | ', 
+                        'subst_c         | ~/.army/profile |             | ', 
+                        'subst_a         | ~/.army/profile |             | ', 
+                        'combined_value  | ~/.army/profile |             | ', 
+                        'combined_value2 | ~/.army/profile |             | ', 
+                        'value3          | ~/.army/profile |             | ', 
+                        'dict_value2     | ~/.army/profile |             | ', 
+                        'dict_value3     | ~/.army/profile |             | ', 
+                        'value2          | ~/.army/profile |             | ', 
+                        'subst_b         | ~/.army/profile |             | ', 
+                        'list_value2     | ~/.army/profile |             | ', 
+                        'list_value      | ~/.army/profile |             | ']
         assert res==0
-        assert len(stdout)==4
         assert len(stderr)==0
         

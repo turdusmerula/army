@@ -156,6 +156,7 @@ class TestDictObject(unittest.TestCase):
         assert self.dict2.get("e")=="0 1"
         
     def test_c(self):
+        print("---", self.dict2.get("c"))
         assert self.dict2.get("c")=="1"
         assert self.dict2.get("c")=="1"
 
@@ -179,10 +180,10 @@ class TestDictObject(unittest.TestCase):
 #         assert self.dict2._is_recursive_path("e")==True
 #         assert self.dict2._is_recursive_path("/e")==True
         
-    def test_resolve_substs(self):
-        assert self.dict2._resolve_substs("/a", stack=[])=="1"
-        assert self.dict2._resolve_substs("a", stack=[])=="1"
-        assert self.dict2._resolve_substs("/b", stack=[])=="1"
-        assert self.dict2._resolve_substs("b", stack=[])=="1"
-        assert self.dict2._resolve_substs("/c", stack=[])=="1"
-        assert self.dict2._resolve_substs("c", stack=[])=="1"
+#     def test_resolve_substs(self):
+#         assert self.dict2._resolve_substs("/a", stack=[])=="1"
+#         assert self.dict2._resolve_substs("a", stack=[])=="1"
+#         assert self.dict2._resolve_substs("/b", stack=[])=="1"
+#         assert self.dict2._resolve_substs("b", stack=[])=="1"
+#         assert self.dict2._resolve_substs("/c", stack=[])=="1"
+#         assert self.dict2._resolve_substs("c", stack=[])=="1"

@@ -12,6 +12,7 @@ from army.api.debugtools import print_stack
 from army.api.log import log, get_log_level
 from army.api.plugin import load_plugin
 from army.api.prefix import set_prefix_path
+from army.api.profile import load_current_profile
 from army.api.project import load_project
 
 version = "0.1.2"
@@ -134,7 +135,6 @@ def main():
     import army.plugin.profile
 # #     import army.plugin.build
 
-
     # load project
     project = None
     try:
@@ -149,7 +149,29 @@ def main():
     army_parser.context.project = project
 
     # load profile
+    profile = None
+    try:
+        profile = load_current_profile()
+    except Exception as e:
+        print_stack()
+        print(f"{e}", file=sys.stderr)
+        exit(1)
+    army_parser.context.profile = profile
 
+    # load plugins
+    try:
+        plugins = []
+        if profile is not None:
+            plugins = profile.data.get("/plugins", default=[])
+        
+        for plugin in plugins:
+            version = profile.data.get(f"/plugins/{plugin}/version", default="latest")
+            load_plugin(plugin, version, None)
+    except Exception as e:
+        print_stack()
+        print(f"{e}", file=sys.stderr)
+        exit(1)
+    
 #     # load default target if exists
 #     if project is not None:
 #         # get target config
