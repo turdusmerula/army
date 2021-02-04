@@ -1,0 +1,7 @@
+combined_value:
+    - item1: 1
+    - item2: 2
+    - item3:
+        - a
+        - b
+        - c

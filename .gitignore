@@ -1,7 +1,6 @@
 # This file is used to ignore files which are generated
 # ----------------------------------------------------------------------------
 
-*~
 *.autosave
 *.a
 *.core
@@ -72,12 +71,8 @@ Thumbs.db
 *.exe
 
 
-/db.sqlite3
-/octopart.json
-/snapeda.json
 /build/
 /dist/
-/kipartman.egg-info/
 /env/
 /army.egg-info/
 /env2/
