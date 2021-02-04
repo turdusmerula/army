@@ -27,7 +27,6 @@ def load_plugin(name, version_range, config):
         plugin = importlib.util.module_from_spec(spec)
         plugin.args = config
         spec.loader.exec_module(plugin)
-        plugin.load_plugin()
     except Exception as e:
         print_stack()
         log.debug(e)

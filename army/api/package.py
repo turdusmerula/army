@@ -46,6 +46,7 @@ def load_installed_packages(local=True, _global=True, prefix=None):
 # @local if True search in local project
 # @user if True search in user space
 def load_installed_package(name, version_range="latest", local=True, user=True):
+
     def search_package(path, version_range):
         package_path = os.path.join(os.path.expanduser(prefix_path(path)), name)
         
