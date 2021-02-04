@@ -11,8 +11,12 @@ import unittest
 from test_load_dict_file import *
 from test_argparse import *
 from test_command import *
+from test_version import *
+from test_version_range import *
+
 from test_dependency_repos import *
 from test_dependency_search import *
+
 from test_profile_list import *
 from test_profile_inspect import *
 

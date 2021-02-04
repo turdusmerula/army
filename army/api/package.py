@@ -1,18 +1,20 @@
-from army.api.version import Version, VersionRange
-from army.api.log import log
 from army.api.debugtools import print_stack
+from army.api.dict_file import load_dict_file
+from army.api.log import log
+from army.api.prefix import prefix_path
 from army.api.schema import Schema, String, VersionString, Optional, PackageString, Array, Dict, VariableDict, Variant, VersionRangeString
+from army.api.version import Version, VersionRange
 import os
 import toml
 import shutil
 
 def load_installed_packages(local=True, _global=True, prefix=None):
     res = []
-
+ 
     def _search_dir(path):
         if os.path.exists(os.path.expanduser(path))==False:
             return []
-        
+         
         res = []
         for package in os.listdir(os.path.expanduser(path)):
             try:
@@ -22,54 +24,76 @@ def load_installed_packages(local=True, _global=True, prefix=None):
                 print_stack()
                 log.debug(e)
                 log.error(f"{os.path.join(path, package)}: not a valid package")
-                
+                 
         return res
-    
+     
     # search package in local project
     if local:
         res += _search_dir('dist')
     if res is not None:
         return res
-
+ 
     # search package in user space
     if _global: 
         res += _search_dir(os.path.join(prefix or "", '~/.army/dist'))
-
+ 
     return res
 
-def load_installed_package(name, local=True, _global=True, version_range=None, prefix=None):
-    res = None
-    
-    def _search_dir(path, version_range):
-        if os.path.exists(os.path.expanduser(path))==False:
+# @description search for an installed package
+# search is done inside project first and then in user space
+# @param name package name to search, must be exact name
+# @version_range version to match, if a range is given then match the greatest version in range
+# @local if True search in local project
+# @user if True search in user space
+def load_installed_package(name, version_range="latest", local=True, user=True):
+    def search_package(path, version_range):
+        package_path = os.path.join(os.path.expanduser(prefix_path(path)), name)
+        
+        if os.path.exists(package_path)==False:
             return None
-         
-        for package in os.listdir(os.path.expanduser(path)):
-            if name==package:
-                try:
-                    pkg = _load_installed_package(os.path.join(path, package))
-                    if version_range is None:
-                        return pkg
-                    else:
-                        version_range = VersionRange(version_range, [pkg.version])
-                        if version_range.match(Version(pkg.version)):
-                            return pkg
-                except Exception as e:
-                    print_stack()
-                    log.debug(e)
-                    log.error(f"{os.path.join(path, package)}: not a valid package")
-                
-        return None
+        
+        versions = os.listdir(package_path)
+        if len(versions)==0:
+            return None
+
+        return VersionRange(versions)[version_range]
+#         except Exception as e:
+#             print_stack()
+#             log.debug(e)
+#             log.error(f"{os.path.join(path, package)}: not a valid package")
+    
+    version = None
+    path = ''
     
     # search package in local project
+    version_local = None
+    path_local = 'dist'
     if local:
-        res = _search_dir('dist', version_range)
+        version_local = search_package(path_local, version_range)
 
     # search package in user space
-    if res is None and _global: 
-        res = _search_dir(os.path.join(prefix or "", '~/.army/dist'), version_range)
+    version_user = None
+    path_user = '~/.army/dist'
+    if user: 
+        version_user = search_package(path_user, version_range)
+
+    version = version_local
+    path = path_local
+    if version_local is None:
+        version = version_user
+        path = path_user
+    if version_user is not None and version_local is not None:
+        if version_user>version_local:
+            version = version_user
+            path = path_user
+        else:
+            version = version_local
+            path = path_local
     
-    return res
+    if version_user is None and version_local is None:
+        return None
+
+    return _load_installed_package(os.path.join(path, name, str(version)))
 
 # TODO check version when loading package and in case of package installed both global and local use the best fit
 def load_project_packages(project, target):
@@ -99,22 +123,9 @@ def load_project_packages(project, target):
     return dependencies
 
 def _load_installed_package(path):
-    # TODO find a way to add line to error message
-    file = os.path.expanduser(os.path.join(path, 'army.toml'))
-    if os.path.exists(file)==False:
-        raise PackageException(f"{file}: file not found")
-
-    content = {}
-    try:
-        log.info(f"load installed package '{file}'")
-        content = toml.load(file)
-        log.debug(f"content: {content}")
-    except Exception as e:
-        print_stack()
-        log.debug(e)
-        raise PackageException(f"{format(e)}")
+    content = load_dict_file(path, "army")
     
-    project = InstalledPackage(data=content, path=path)
+    project = InstalledPackage(data=content, path=prefix_path(path))
     project.check()
 
     return project

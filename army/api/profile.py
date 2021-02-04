@@ -1,7 +1,10 @@
 from army.api.log import log
 from army.api.debugtools import print_stack
 from army.api.dict_file import load_dict_file, find_dict_files, Dict
+from army.api.prefix import prefix_path
 import copy
+import json
+import os
 
 # cache for available profiles
 profiles = None
@@ -66,6 +69,38 @@ def load_profile(name, parent=None):
         
     return res
 
+def load_current_profile():
+    path = ".army-profile"
+    
+    if os.path.exists(path)==False:
+        return None
+    
+    with open(".army-profile", "r") as f:
+        profiles = json.load(f)
+
+    profile = None
+    for name in profiles:
+        profile = load_profile(name, profile)
+    
+    return profile
+
+def load_current_profile_cache():
+    path = ".army-profile"
+    
+    if os.path.exists(path)==False:
+        return []
+    
+    with open(".army-profile", "r") as f:
+        return json.load(f)
+
+def save_current_profile_cache(profiles):
+    path = ".army-profile"
+        
+    with open(".army-profile", "w") as f:
+        json.dump(profiles, f)
+
+def get_current_profile_plugins():
+    pass
 
 class Profile(object):
     def __init__(self, name=None, path=None, parent=None):

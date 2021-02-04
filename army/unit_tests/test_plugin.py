@@ -1,12 +1,10 @@
 from army.api.log import log
-import army.api.project
 from army.api.version import Version
+from helper import raised, run
 import os
 import unittest
-from helper import raised, run
-import army
 
-prefix = 'test_local_repository'
+prefix = 'test_plugin'
 log.setLevel('CRITICAL')
 
 
