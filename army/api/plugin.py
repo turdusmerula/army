@@ -6,7 +6,7 @@ import importlib.util
 import os
 
 # cache for loaded plugins
-plugins = []
+plugins = {}
 
 class PluginException(Exception):
     def __init__(self, message):
@@ -14,18 +14,26 @@ class PluginException(Exception):
 
     
 def load_plugin(name, version_range, config):
+    global plugins
     log.info(f"load plugin '{name}'")
 #         
     package = load_installed_package(name, version_range=version_range)
- 
+    
+    if name in plugins:
+        if plugins[name].version==package.version:
+            log.info(f"{name}@{plugins[name].version}: plugin already loaded")
+        else:
+            raise PluginException(f"{name}: trying to load version {package.version} but plugin already loaded with version {plugins[name].version}")
+        
     if package is None:
         raise PluginException(f"{name}: plugin not installed")
-        return
+    
+    plugins[name] = package
 
     try:
         spec = importlib.util.spec_from_file_location("plugin", os.path.join(package.path, '__init__.py'))
         plugin = importlib.util.module_from_spec(spec)
-        plugin.args = config
+        plugin.config = config
         spec.loader.exec_module(plugin)
     except Exception as e:
         print_stack()

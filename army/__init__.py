@@ -165,7 +165,8 @@ def main():
         
         for plugin in plugins:
             version = profile.data.get(f"/plugins/{plugin}/version", default="latest")
-            load_plugin(plugin, version, None)
+            config = profile.data.get(f"/plugins/{plugin}", default=None)
+            load_plugin(plugin, version, config)
     except Exception as e:
         print_stack()
         log.error(f"{e}")

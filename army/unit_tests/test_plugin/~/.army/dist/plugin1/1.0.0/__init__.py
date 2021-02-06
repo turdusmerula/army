@@ -5,6 +5,6 @@ import os
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
 
-import plugin2.group
-import plugin2.command1
-import plugin2.command2
+import plugin1.group
+import plugin1.command1
+import plugin1.command2
