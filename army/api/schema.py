@@ -61,7 +61,8 @@ class VersionRangeString(Validator):
     def check(self, value):
         try:
             # provide at least one version to resolve 'latest'
-            version = VersionRange(value, versions=["0.0.0"])
+            version = VersionRange(versions=["0.0.0"])
+            version.select(value)
         except Exception as e:
             print_stack()
             log.debug(f"{type(e)} {e}")

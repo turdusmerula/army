@@ -1,7 +1,7 @@
 from army.api.log import log
 from army.api.package import Package, PackageException
 from army.api.debugtools import print_stack
-from army.api.prefix import prefix_path
+from army.api.path import prefix_path
 from army.api.version import Version, VersionRange
 import os
 import subprocess
@@ -125,7 +125,42 @@ class Repository(object):
     # search for a package inside the package list
     # @param fullname if True then package name must match exactly, if version is given then fullname is True
     def search(self, name, version=None, fullname=False):
-        return {}
+        res = {}
+        
+        packages = self.packages
+
+        if version is not None:
+            fullname = True
+        
+        name = name.lower()
+        # select packages matching name criteria in package list
+        for package in packages:
+            match_name = False
+            match_version = False
+            
+            if fullname==False and name in package.description.lower():
+                match_name = True
+                
+            if fullname==True and name==package.name:
+                match_name = True
+            elif fullname==False and name in package.name:
+                match_name = True
+            
+            if match_name:
+                if version is None:
+                    match_version = True
+                else:
+                    versions = VersionRange(versions=[package.version]).select(version)[0]
+                    if len(versions)>0:
+                        match_version = True
+
+            if match_name==True and match_version==True:
+                if package.name not in res:
+                    res[package.name] = [package]
+                else:
+                    res[package.name].append(package)
+
+        return res
 
     def publish(self, package, overwrite=False):
         pass

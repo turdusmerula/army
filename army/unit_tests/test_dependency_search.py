@@ -6,7 +6,7 @@ import unittest
 from helper import raised, run
 import army
 
-prefix = 'test_local_repository'
+prefix = 'test_local_repository_hierarchy'
 log.setLevel('CRITICAL')
 
 
@@ -42,6 +42,7 @@ class TestDependencySearch(unittest.TestCase):
         
     def test_search_package(self):
         res, stdout, stderr = run(["army", "search", "project"])
+        print(stdout)
         assert res==0
         assert len(stdout)==4
         assert len(stderr)==0

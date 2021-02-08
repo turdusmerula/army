@@ -1,14 +1,12 @@
 from army.api.debugtools import print_stack
 from army.api.log import log, get_log_level
-from army.api.prefix import prefix_path
 import copy
-import collections
 import dpath.util
 import importlib.util
 import json
 import os
-import sys
 import toml
+import sys
 #import oyaml as yaml
 import yaml
 
@@ -25,7 +23,7 @@ def dict_file_extensions():
     }
 
 def find_dict_files(path):
-    path = os.path.expanduser(prefix_path(path))
+    path = os.path.expanduser(path)
     
     files = []
     if os.path.exists(path) and os.path.isdir(path):
@@ -43,12 +41,12 @@ def load_dict_file(path, name, exist_ok=False):
     config = None
     
     if path is None:
-        path = prefix_path(os.path.dirname(name))
+        path = os.path.dirname(name)
         if path=="":
             path = os.getcwd()
         name = os.path.basename(name)
     else:
-        path = prefix_path(path)
+        path = path
 
     path = os.path.expanduser(path)
     if os.path.exists(path)==False:

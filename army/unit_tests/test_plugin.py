@@ -7,7 +7,10 @@ import unittest
 prefix = 'test_plugin'
 log.setLevel('CRITICAL')
 
-
+# TODO: implement incompatible profiles
+# plugin1 and plugin2 can not be loaded at the same time, it implies:
+# implement in argparse an error when two commands with the same name are loaded in two groups at the same time
+# load the profiles on set and refuse if there is an error
 class TestDependencyRepos(unittest.TestCase):
     
     def setUp(self):
@@ -32,7 +35,18 @@ class TestDependencyRepos(unittest.TestCase):
         os.chdir(cls.cwd)
         del os.environ["ARMY_PREFIX"]
 
-    def test_repos(self):
-        res, stdout = run(["army", "repos"], merge=True)
+    def test_plugin1(self):
+        res, stdout = run(["army", "profile", "set", "plugin1"], merge=True)
         assert res==0
-        assert len(stdout)==4
+
+        res, stdout = run(["army", "command1"], merge=True)
+        assert res==0
+        assert stdout==["plugin1_command1"]
+
+    def test_plugin2(self):
+        res, stdout = run(["army", "profile", "set", "plugin2"], merge=True)
+        assert res==0
+
+        res, stdout = run(["army", "command1"], merge=True)
+        assert res==0
+        assert stdout==["plugin2_command1"]

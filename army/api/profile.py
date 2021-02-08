@@ -1,7 +1,7 @@
 from army.api.log import log
 from army.api.debugtools import print_stack
 from army.api.dict_file import load_dict_file, find_dict_files, Dict
-from army.api.prefix import prefix_path
+from army.api.path import prefix_path
 import copy
 import json
 import os
@@ -30,16 +30,16 @@ def load_profile_list():
 # load profiles from /etc/army/profile
 def load_global_profile_list():
     # load main repositories
-    profiles = find_dict_files('/etc/army/profile')
+    profiles = find_dict_files(prefix_path('/etc/army/profile'))
     return profiles
 
 # load profiles from ~/.army/profile
 def load_user_profile_list():
     profiles = []
     # load main repositories
-    dicts = find_dict_files('~/.army/profile')
+    dicts = find_dict_files(prefix_path('~/.army/profile'))
     for name in dicts:
-        profile = Profile(name=name, path='~/.army/profile')
+        profile = Profile(name=name, path=prefix_path('~/.army/profile'))
         profiles.append(profile)
     return profiles
 
@@ -75,7 +75,7 @@ def load_current_profile():
     if os.path.exists(path)==False:
         return None
     
-    with open(".army-profile", "r") as f:
+    with open(path, "r") as f:
         profiles = json.load(f)
 
     profile = None
@@ -90,13 +90,13 @@ def load_current_profile_cache():
     if os.path.exists(path)==False:
         return []
     
-    with open(".army-profile", "r") as f:
+    with open(path, "r") as f:
         return json.load(f)
 
 def save_current_profile_cache(profiles):
     path = ".army-profile"
         
-    with open(".army-profile", "w") as f:
+    with open(path, "w") as f:
         json.dump(profiles, f)
 
 def get_current_profile_plugins():

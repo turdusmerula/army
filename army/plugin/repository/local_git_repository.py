@@ -54,41 +54,4 @@ class LocalGitRepository(Repository):
     # search for a package inside the package list
     # @param fullname if True then package name must match exactly, if version is given then fullname is True
     def search(self, name, version=None, fullname=False):
-        versions = {}
-        
-        packages = self.packages
-        
-        if version is not None:
-            fullname = True
-        
-        name = name.lower()
-        # select packages matching name criteria in package list
-        for package in packages:
-            match_name = False
-            
-            if fullname==False and name in package.description.lower():
-                match_name = True
-                
-            if fullname==True and name==package.name:
-                match_name = True
-            elif fullname==False and name in package.name:
-                match_name = True
-            
-            if match_name==True:
-                if package.name in versions:
-                    versions[package.name].version.add_version(package.version)
-                else:
-                    if version is None:
-                        # no version specified, give latest by default
-                        versions[package.name] = VersionRange('latest', versions=[package.version])
-                    else:
-                        versions[package.name] = VersionRange(version, versions=[package.version])
-
-        res = {}
-        # select packages matching version in found packages
-        for name in versions:
-            for package in packages:
-                if package.version in versions[name]:
-                    res[name] = package
-                    
-        return res
+        return super(LocalGitRepository, self).search(name, version, fullname)

@@ -1,6 +1,7 @@
 from army.api.debugtools import print_stack
 from army.api.dict_file import load_dict_file, find_dict_files
 from army.api.log import log
+from army.api.path import prefix_path
 from army.api.version import Version
 from schema import Schema, And, Use, Optional
 import toml
@@ -31,7 +32,7 @@ config_repository_file_schema = {
 # @param parent parent configuration
 def load_global_configuration(parent=None):
     # load main config file
-    config = load_configuration_file(path='/etc/army', name='army', parent=parent)
+    config = load_configuration_file(path=prefix_path('/etc/army'), name='army', parent=parent)
 #      
 #     # load user repositories
 #     path = os.path.join(prefix or "", '~/.army/repo.d')
@@ -45,9 +46,10 @@ def load_global_configuration(parent=None):
 def load_global_configuration_repositories(parent=None):
     config = parent
     # load main repositories
-    files = find_dict_files('/etc/army/repo.d')
+    path = prefix_path('/etc/army/repo.d')
+    files = find_dict_files(path)
     for file in files:
-        config = load_configuration_repository_file(path='/etc/army/repo.d', name=file, parent=config)
+        config = load_configuration_repository_file(path=path, name=file, parent=config)
 
     return config
 
@@ -55,15 +57,16 @@ def load_global_configuration_repositories(parent=None):
 # @param parent parent configuration
 def load_user_configuration(parent=None):
     # load user config file
-    config = load_configuration_file(path='~/.army', name='army', parent=parent)
+    config = load_configuration_file(path=prefix_path('~/.army'), name='army', parent=parent)
     return config
 
 def load_user_configuration_repositories(parent=None):
     config = parent
     # load main repositories
-    files = find_dict_files('~/.army/repo.d')
+    path = prefix_path('~/.army/repo.d')
+    files = find_dict_files(path)
     for file in files:
-        config = load_configuration_repository_file(path='~/.army/repo.d', name=file, parent=config)
+        config = load_configuration_repository_file(path=path, name=file, parent=config)
     return config
 
 def load_configuration_file(path, name, parent=None):

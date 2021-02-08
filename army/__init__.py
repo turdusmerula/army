@@ -10,8 +10,8 @@ from army.api.command import get_army_parser, create_parser, ArmyBaseParser
 from army.api.config import ArmyConfig, load_global_configuration, load_global_configuration_repositories, load_user_configuration, load_user_configuration_repositories
 from army.api.debugtools import print_stack
 from army.api.log import log, get_log_level
+from army.api.path import set_prefix_path
 from army.api.plugin import load_plugin
-from army.api.prefix import set_prefix_path
 from army.api.profile import load_current_profile
 from army.api.project import load_project
 
