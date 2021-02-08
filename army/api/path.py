@@ -7,6 +7,11 @@ def set_prefix_path(path):
     global prefix
     prefix = path
 
+def path(path):
+    if isinstance(path, PrefixPath):
+        return path.path
+    return path
+    
 # prefix a path with prefix dir
 def prefix_path(path):
     return PrefixPath(path)
@@ -39,4 +44,7 @@ class PrefixPath(os.PathLike):
         return os.path.join(prefix, path)
 
     def __fspath__(self):
+        return self.prefix_path
+
+    def __str__(self):
         return self.prefix_path

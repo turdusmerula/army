@@ -152,7 +152,7 @@ class Package(Schema):
                 # arch definition
                 'arch': Optional(VariableDict(String(), Dict({
                     'definition': Optional(String()),
-                    'cpu': Optional(String()),                    
+                    'cpu': Optional(String()),
                     }))),
 
                 # in case of a firmware

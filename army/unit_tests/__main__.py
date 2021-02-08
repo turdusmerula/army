@@ -7,7 +7,6 @@ import unittest
 # import unit_tests
 # from test_config2 import *
 # from test_project import *
-# from test_dependency_install import *
 from test_load_dict_file import *
 from test_argparse import *
 from test_command import *
@@ -16,9 +15,14 @@ from test_version_range import *
 
 from test_dependency_repos import *
 from test_dependency_search import *
+from test_dependency_install import *
 
 from test_profile_list import *
 from test_profile_inspect import *
+# TODO
+# from test_profile_current import *
+# from test_profile_search import *
+# from test_profile_set import *
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

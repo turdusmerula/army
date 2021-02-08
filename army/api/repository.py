@@ -150,8 +150,8 @@ class Repository(object):
                 if version is None:
                     match_version = True
                 else:
-                    versions = VersionRange(versions=[package.version]).select(version)[0]
-                    if len(versions)>0:
+                    versions = VersionRange(versions=[package.version]).select(version)
+                    if versions is not None:
                         match_version = True
 
             if match_name==True and match_version==True:

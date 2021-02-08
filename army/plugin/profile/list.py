@@ -1,9 +1,11 @@
 from army.api.command import parser, group, command, option, argument
 from army.api.debugtools import print_stack
 from army.api.log import log
+from army.api.path import path
 from army.api.profile import load_profile_list, load_profile
 import sys
 
+# TODO: implement profile description
 @parser
 @group(name="profile")
 @command(name="profile")
@@ -20,10 +22,10 @@ def profile_list(ctx, **kwargs):
     column_name = ['name']
     column_description = ['description']
     column_path = ['path']
-#
+
     for profile in profiles:
         column_name.append(profile.name)
-        column_path.append(profile.path)
+        column_path.append(path(profile.path))
         column_description.append(profile.description)
   
     max_name = len(max(column_name, key=len))

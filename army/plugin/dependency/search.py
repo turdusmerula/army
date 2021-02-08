@@ -29,8 +29,14 @@ def search(ctx, name, all, **kwargs):
     
     chunks = name.split('@')
     if len(chunks)==2:
-        s_name = chunks[0]
-        s_version = chunks[1]
+        try:
+            # check chunks[1] is a valid version range
+            VersionRange([])[chunks[1]]
+            s_name = chunks[0]
+            s_version = chunks[1]
+        except Exception as e:
+            s_repository = chunks[0]
+            s_name = chunks[1]
     elif len(chunks)==3:
         s_repository = chunks[0]
         s_name = chunks[1]
