@@ -1,6 +1,7 @@
+from army.api.debugtools import print_stack
+from army.api.dict_file import load_dict_file, find_dict_files, save_dict_file
 from army.api.log import log
 from army.api.package import Package, PackageException
-from army.api.debugtools import print_stack
 from army.api.path import prefix_path
 from army.api.version import Version, VersionRange
 import os
@@ -10,6 +11,8 @@ import toml
 import datetime
 
 repository_types = {}
+
+repository_cache = {}
 
 # register a repository type
 def register_repository(repository_class):
@@ -23,57 +26,50 @@ def register_repository(repository_class):
 # build repository list from configuration
 def load_repositories(config):
     global repository_types
-    res = []
+    global repository_cache
+    
+    repositories = []
     
     log.debug(f"load repositories")
 
     repos = {}
     try:
-        repos = config.repo
+        repos = config.repositories
     except Exception as e:
         print_stack()
         log.debug(f"{e}")
         log.warning("No repository found")
     
     for repo_name in repos:
-        try:
-            repo_type_name = repos[repo_name].type
-
-            if repo_type_name in repository_types:
+        if repo_name in repository_cache:
+            repositories.append(repository_cache[repo_name])
+        else:
+            try:
+                repo_type_name = repos[repo_name].type
+    
+                if repo_type_name in repository_types:
+                        
+                    repo_type = repository_types[repo_type_name]
                     
-                repo_type = repository_types[repo_type_name]
-                
-                # instanciate repository and load it
-                repo = repo_type(name=repo_name, path=repos[repo_name].uri)
-                repo.load()
-                res.append(repo)
-            else:
-                log.warning(f"{repo_type_name}: unhandheld repository type")
-        except Exception as e:
-            print_stack()
-            log.error(f"{e}")
-            log.error(f"{repo_name}: load repository failed")
-            
-    return res
+                    # instanciate repository and load it
+                    repo = repo_type(name=repo_name, path=prefix_path(repos[repo_name].uri))
+                    repo.load()
+                    repositories.append(repo)
+                    
+                    repository_cache[repo_name] = repo
+                else:
+                    log.warning(f"{repo_type_name}: unhandheld repository type")
+            except Exception as e:
+                print_stack()
+                log.error(f"{e}")
+                log.error(f"{repo_name}: load repository failed")
+    return repositories
 
 def load_repository_file(path, parent=None):
-    # TODO find a way to add line to error message
-    file = os.path.expanduser(path)
-    if os.path.exists(file)==False:
-        raise ConfigException(f"{file}: file not found")
-
-    config = {}
-    try:
-        log.info(f"Load config '{path}'")
-        config = toml.load(file)
-        log.debug(f"content: {config}")
-    except Exception as e:
-        print_stack()
-        log.debug(e)
-        raise ConfigException(f"{format(e)}")
+    content = load_dict_file(path=path, name="army")
     
     try:
-        res = ArmyConfigRepository(value=config, parent=parent)
+        res = ArmyConfigRepository(value=content, parent=parent)
     except Exception as e:
         print_stack()
         log.debug(e)
@@ -111,6 +107,10 @@ class Repository(object):
     def type(self):
         return self.TYPE
 
+    @property
+    def editable(self):
+        return self.DEV==True
+    
     def load_credentials(self):
         return True
     
@@ -181,14 +181,13 @@ class RepositoryPackage(Package):
     def repository(self):
         return self._repository
         
-    def install(self, path, link):
+    def install(self, path, edit=False):
         includes = self.packaging.include
         
         dest = path
 
         def rmtree_error(func, path, exc_info):
-            print(exc_info)
-            exit(1)
+            raise RepositoryException(exc_info)
 
         if os.path.exists(path):
             log.debug(f"rm {path}")
@@ -211,22 +210,20 @@ class RepositoryPackage(Package):
             
         for include in includes:
             source = os.path.join(self._source_path, include)
-            if link==True:
+            if edit==True:
                 self._link(source, dest)
             else:
                 self._copy(source, dest)
         
         # add repository informations to army.toml
         try:
-            self._copy(os.path.join(self._source_path, "army.toml"), dest)
-            filepath = os.path.join(dest, 'army.toml')
-            content = toml.load(filepath)
+            self._copy(os.path.join(self._source_path, "army.yaml"), dest)
+            content = load_dict_file(self._source_path, "army")
             content['repository'] = {
-                'uri': self._repository._uri,
+                'uri': str(self._repository._uri),
                 'name': self._repository._name
                 }
-            with open(filepath, "w") as file:
-                toml.dump(content, file)
+            save_dict_file(dest, "army", content)
         except Exception as e:
             print_stack()
             log.debug(e)

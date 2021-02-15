@@ -19,11 +19,11 @@ repo_dict_schema = {
 
 config_file_schema = {
     Optional('verbose'): And(lambda s: s in ["debug", "info", "warning", "error", "critical"], error="verbose: invalid log level"),
-    Optional('repo'): repo_dict_schema
+    Optional('repositories'): repo_dict_schema
 }
 
 config_repository_file_schema = {
-    Optional('repo'): {
+    Optional('repositories'): {
         str: repo_schema
     }
 }
@@ -212,8 +212,8 @@ class ArmyConfig(Config):
         return self.get('verbose', 'critical')
 
     @property
-    def repo(self):
-        return ConfigDict(self.recursive_get_dict('repo'), ConfigRepository, schema=repo_dict_schema)
+    def repositories(self):
+        return ConfigDict(self.recursive_get_dict('repositories'), ConfigRepository, schema=repo_dict_schema)
 
 class ArmyConfigRepository(Config):
     def __init__(self, value=None, parent=None):
@@ -224,8 +224,8 @@ class ArmyConfigRepository(Config):
         )
 
     @property
-    def repo(self):
-        return ConfigDict(self.recursive_get_dict('repo'), ConfigRepository, schema=repo_dict_schema)
+    def repositories(self):
+        return ConfigDict(self.recursive_get_dict('repositories'), ConfigRepository, schema=repo_dict_schema)
 
 
 

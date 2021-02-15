@@ -219,18 +219,18 @@ for item in c11b:
 print("c11b:", c11b.expand())
 # 
 c12 = ConfigRepositoryFile(file=os.path.join(path, "test_data/etc/army/repo.d/repo_test1-2.toml"))
-assert len(c12.repo)==2
+assert len(c12.repositories)==2
 assert str(c12.get("repo")["repo_test1"].get('type'))=='git-local'
 # 
 print(f"load test files from {path}")
 config=load_configuration(prefix=os.path.join(path, "test_data"))
 print("c12:", config.expand())
-assert len(config.repo)==6
-assert str(config.repo['main'].type)=='git-local'
-assert str(config.repo['repo_test2'].type)=='git'
+assert len(config.repositories)==6
+assert str(config.repositories['main'].type)=='git-local'
+assert str(config.repositories['repo_test2'].type)=='git'
 # check iterator
 repos={}
-for repo in config.repo:
+for repo in config.repositories:
     repos[repo] = repo
 print(repos)
 assert len(repos)==6

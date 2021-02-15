@@ -1,3 +1,4 @@
+import army.api
 from army.api.debugtools import print_stack
 from army.api.dict_file import load_dict_file
 from army.api.log import log
@@ -5,47 +6,17 @@ from army.api.path import prefix_path
 from army.api.schema import Schema, String, VersionString, Optional, PackageString, Array, Dict, VariableDict, Variant, VersionRangeString
 from army.api.version import Version, VersionRange
 import os
-import toml
 import shutil
 
-def load_installed_packages(local=True, _global=True, prefix=None):
-    res = []
- 
-    def _search_dir(path):
-        if os.path.exists(os.path.expanduser(path))==False:
-            return []
-         
-        res = []
-        for package in os.listdir(os.path.expanduser(path)):
-            try:
-                pkg = _load_installed_package(os.path.join(path, package))
-                res.append(pkg)
-            except Exception as e:
-                print_stack()
-                log.debug(e)
-                log.error(f"{os.path.join(path, package)}: not a valid package")
-                 
-        return res
-     
-    # search package in local project
-    if local:
-        res += _search_dir('dist')
-    if res is not None:
-        return res
- 
-    # search package in user space
-    if _global: 
-        res += _search_dir(os.path.join(prefix or "", '~/.army/dist'))
- 
-    return res
-
-# @description search for an installed package
-# search is done inside project first and then in user space
-# @param name package name to search, must be exact name
-# @version_range version to match, if a range is given then match the greatest version in range
-# @local if True search in local project
-# @user if True search in user space
 def load_installed_package(name, version_range="latest", local=True, user=True):
+    """ search for an installed package
+    search is done inside project first and then in user space
+    
+    :param name package name to search, must be exact name
+    :version_range version to match, if a range is given then match the greatest version in range
+    :local if True search in local project
+    :user if True search in user space
+    """
 
     def search_package(path, version_range):
         package_path = os.path.join(os.path.expanduser(path), name)
@@ -53,8 +24,13 @@ def load_installed_package(name, version_range="latest", local=True, user=True):
         if os.path.exists(package_path)==False:
             return None
         
+        versions = os.listdir(package_path)
+        if len(versions)==0:
+            return None
+        version = VersionRange(versions)[str(version_range)]
+
         try:
-            package = _load_installed_package(package_path)
+            package = _load_installed_package(os.path.join(str(package_path), str(version)))
         except Exception as e:
             print_stack()
             log.debug(e)
@@ -62,8 +38,8 @@ def load_installed_package(name, version_range="latest", local=True, user=True):
             return None
         
         # check if package match requested version
-        if VersionRange([package.version])[version_range] is not None:
-            return package
+        if VersionRange([package.version])[version] is None:
+            raise PackageException(f"{os.path.join(package_path, version)}: incorrect package version")
         return None
     
     package = None
@@ -129,6 +105,44 @@ def _load_installed_package(path):
 
     return project
 
+def find_repository_package(repositories, name, version_range="latest", repository=None, editable=None):
+    """ search for a package in repositories
+    package with the greatest version in version_range is returned
+    
+    :param repositories: list of repository to search in
+    :param name: name of the package to find
+    :param version_range: version range to match, if None then match 'latest'
+    :param repository: if not None the limit search to this repository
+    :param editable: if True try to find a suitable version with a local dev repository
+    """
+    
+    res_package = None
+    res_repo = None
+    
+    for r in repositories:
+        if repository is not None and repository!=r.name:
+            continue
+        
+        res = r.search(name=name, version=version_range, fullname=True)
+        if len(res)>0:
+            for pkg_name in res:
+                for pkg in res[pkg_name]:
+                    if editable==True and not r.editable==True:
+                        pass
+                    if editable==False and not r.editable==False:
+                        pass
+                    if res_package is None:
+                        res_package = pkg
+                        res_repo = r
+                    elif pkg.version>res_package.version:
+                        res_package = pkg
+                        res_repo = r
+                        
+ 
+    if res_package:
+        return res_package, res_repo
+ 
+    return None, None
     
 class PackageException(Exception):
     def __init__(self, message):

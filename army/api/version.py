@@ -92,7 +92,7 @@ class VersionRange(object):
         return self.select(range) is not None
 
     def __getitem__(self, range):
-        return self.select(range)
+        return self.select(str(range))
 
     def clear_versions(self, value):
         self._versions.clear()

@@ -1,5 +1,5 @@
 from army.api.debugtools import print_stack
-from army.api.dict_file import load_dict_file, find_dict_files
+from army.api.dict_file import load_dict_file, find_dict_files, dict_file_extensions
 from army.api.log import log
 from army.api.package import Package
 import os
@@ -15,7 +15,7 @@ def load_project(path='army', exist_ok=False):
     
     content = load_dict_file(path=None, name=path, exist_ok=exist_ok)
     if content is None:
-        content = {}
+        return None
         
     project = Project(data=content)
     project.check()
@@ -44,7 +44,11 @@ class Project(Package):
         files = []
         for include in self.packaging.include:
             files.append(include)
-        files.append('army.toml')
+        
+        # add project file
+        for ext in dict_file_extensions():
+            if os.path.exists(os.path.join(path, f"army.{ext}")):
+                files.append(f"army.{ext}")
         
         # copy files
         for include in files:

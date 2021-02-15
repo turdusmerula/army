@@ -1,0 +1,12 @@
+# verbosty level (default critical):
+# debug
+# info
+# warning
+# error
+# critical
+verbose: critical
+
+repositories:
+  main:
+    type: git-local
+    uri: ~/git/repo_main

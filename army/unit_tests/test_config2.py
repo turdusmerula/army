@@ -49,7 +49,7 @@ class TestConfig(unittest.TestCase):
 
         assert etc_config is not None
         
-        assert len(config.repo)==6
+        assert len(config.repositories)==6
          
         # check attributes
         assert config.verbose=="debug"

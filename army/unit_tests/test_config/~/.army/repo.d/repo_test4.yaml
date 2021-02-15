@@ -1,0 +1,4 @@
+repositories:
+  repo_test4:
+    type: git-local
+    uri: ~/git/repo_test4

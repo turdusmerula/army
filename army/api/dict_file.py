@@ -16,9 +16,9 @@ class DictFileException(Exception):
 
 def dict_file_extensions():
     return {
-        "py": _load_python_dict_file, 
+#         "py": _load_python_dict_file, 
         "yaml": _load_yaml_dict_file, 
-        "toml": _load_toml_dict_file, 
+#         "toml": _load_toml_dict_file, 
 #         "json": _load_json_dict_file
     }
 
@@ -38,7 +38,7 @@ def find_dict_files(path):
 
 # load a configuration file containing a dict
 def load_dict_file(path, name, exist_ok=False):
-    config = None
+    res = None
     
     if path is None:
         path = os.path.dirname(name)
@@ -55,34 +55,34 @@ def load_dict_file(path, name, exist_ok=False):
         else:
             raise DictFileException(f"{path}: path not found")
     
-    file = os.path.join(path, name)
+    file = os.path.join(str(path), name)
     if os.path.exists(file):
         # check if file matches one of known extensions
         for ext, loader in dict_file_extensions().items():
             if name.endswith(f".{ext}"):
-                config = loader(file)
-                log.debug(f"content: {config}")
-                return config
+                res = loader(file)
+                log.debug(f"content: {res}")
+                return res
         
         raise DictFileException(f"{file}: unkwnown file type")
         
     # search for a file 
-    config = None
+    res = None
     for ext, loader in dict_file_extensions().items():
         file = os.path.join(path, f"{name}.{ext}")
         if os.path.exists(file):
-            if config is None:
-                config = loader(file)
+            if res is None:
+                res = loader(file)
             else:
                 log.warning(f"{file}: {name} already loaded, skipped")
             
-    if config is None and exist_ok==False:
+    if res is None and exist_ok==False:
         raise DictFileException(f"{path}: no file corresponding to {name} found")
     
-    if config is not None:
-        log.debug(f"content: {config}")
+    if res is not None:
+        log.debug(f"content: {res}")
     
-    return config
+    return res
 
 def _load_python_dict_file(file):
     res = None
@@ -135,6 +135,20 @@ def _load_json_dict_file(file):
         try:
             log.info(f"load file '{file}'")    
             res = json.load(f)
+        except Exception as e:
+            print_stack()
+            log.debug(f"{e}")
+            raise DictFileException(f"{file}: {e}")
+    return res
+
+def save_dict_file(path, name, content):
+    res = None
+    file = os.path.join(str(path), f"{name}.yaml")
+    # try to load yaml file
+    with open(file, "w") as f:
+        try:
+            log.info(f"save file '{file}'")
+            res = yaml.dump(content, f)
         except Exception as e:
             print_stack()
             log.debug(f"{e}")

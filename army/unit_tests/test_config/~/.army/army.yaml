@@ -1,0 +1,6 @@
+verbose: debug
+
+repositories:
+  user:
+    type: git
+    uri: ~/git/repo_user

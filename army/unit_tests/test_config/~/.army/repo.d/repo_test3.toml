@@ -1,4 +1,0 @@
-
-[repo.repo_test3]
-	type = "git-local"
-	uri = "~/git/repo_test3"

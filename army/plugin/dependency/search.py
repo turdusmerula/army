@@ -23,12 +23,14 @@ def search(ctx, name, all, **kwargs):
     repositories = load_repositories(config)
     packages = {}
     
-    s_name = name
+    s_name = None
     s_version = None
     s_repository = None
     
     chunks = name.split('@')
-    if len(chunks)==2:
+    if len(chunks)==1:
+        s_name = name
+    elif len(chunks)==2:
         try:
             # check chunks[1] is a valid version range
             VersionRange([])[chunks[1]]
@@ -41,6 +43,9 @@ def search(ctx, name, all, **kwargs):
         s_repository = chunks[0]
         s_name = chunks[1]
         s_version = chunks[2]
+    else:
+        print(f"{name}: naming error", file=sys.stderr)
+        exit(1)
         
     for r in repositories:
         if s_repository is not None and s_repository!=r.name:

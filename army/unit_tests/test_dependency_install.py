@@ -45,84 +45,84 @@ class TestDependencyInstall(unittest.TestCase):
         assert len(stdout)==0
         assert len(stderr)>0
         
-    def test_install_package(self):
-        os.chdir('project4')
-        res, stdout, stderr = run(["army", "install", "project1"])
-        assert res==0
-        assert len(stdout)==1
-        assert stdout[0]=="install package project1@1.2.0"
-        assert len(stderr)==0
- 
-    def test_install_package_exact_version(self):
-        os.chdir('project4')
-        res, stdout, stderr = run(["army", "install", "project1@1.0.0"])
-        assert res==0
-        assert len(stdout)==1
-        assert stdout[0]=="install package project1@1.0.0"
-        assert len(stderr)==0
-  
-    def test_install_package_semantic_version(self):
-        os.chdir('project4')
-        res, stdout, stderr = run(["army", "install", "project2@~1.3.0"])
-        assert res==0
-        assert len(stdout)==2
-        assert stdout[1]=="install package project2@1.3.4"
-        assert len(stderr)==0
-  
-    def test_install_package_repository(self):
-        os.chdir('project4')
-        res, stdout, stderr = run(["army", "install", "project1-v1.0.0@project1"])
-        assert res==0
-        assert len(stdout)==1
-        assert stdout[0]=="install package project1@1.0.0"
-        assert len(stderr)==0
-  
-    def test_install_package_repository_version(self):
-        os.chdir('project4')
-        res, stdout, stderr = run(["army", "install", "project1-v1.0.0@project1@1.0.0"])
-        assert res==0
-        assert len(stdout)==1
-        assert stdout[0]=="install package project1@1.0.0"
-        assert len(stderr)==0
-
-    def test_install_already_installed(self):
-        os.chdir('project4')
-        res, stdout, stderr = run(["army", "install", "project1"])
-        res, stdout, stderr = run(["army", "install", "project1"])
-        assert res==0
-        assert len(stdout)==0
-        assert len(stderr)==1
-        assert stderr[0]=="package project1@1.2.0 already installed"
-    
-    def test_install_package_not_found(self):
-        os.chdir('project4')
-        res, stdout, stderr = run(["army", "install", "project10"])
-        assert res>0
-        assert len(stdout)==0
-        assert len(stderr)==1
-        assert stderr[0]=="project10: package not found"
-    
-    def test_install_incompatible_versions(self):
-        os.chdir('project4')
-        res, stdout, stderr = run(["army", "install", "project1@1.2.0"])
-        res, stdout, stderr = run(["army", "install", "project1@1.0.0"])
-        assert res>0
-        assert len(stdout)==0
-        assert len(stderr)==1
-        assert stderr[0]=="'project1@1.0.0' conflicts with installed package 'project1@1.2.0'"
-    
-    def test_install_project_dependencies(self):
-        os.chdir('project4')
-        res, stdout, stderr = run(["army", "install"])
-        assert res==0
-        assert len(stdout)==3
-        assert len(stderr)==0
-
-    def test_install_project_dependencies_incompatible_version(self):
-        os.chdir('project5')
-        res, stdout, stderr = run(["army", "install"])
-#         print(res, stdout, stderr)
-        assert res>0
-        assert len(stdout)==0
-        assert len(stderr)==1
-        assert stderr[0]=="'project2@1.3.4' from 'project3' conflicts with package 'project2@1.3.2' from project"
+#     def test_install_package(self):
+#         os.chdir('project4')
+#         res, stdout, stderr = run(["army", "install", "project1"])
+#         assert res==0
+#         assert len(stdout)==1
+#         assert stdout[0]=="install package project1@1.2.0"
+#         assert len(stderr)==0
+#  
+#     def test_install_package_exact_version(self):
+#         os.chdir('project4')
+#         res, stdout, stderr = run(["army", "install", "project1@1.0.0"])
+#         assert res==0
+#         assert len(stdout)==1
+#         assert stdout[0]=="install package project1@1.0.0"
+#         assert len(stderr)==0
+#   
+#     def test_install_package_semantic_version(self):
+#         os.chdir('project4')
+#         res, stdout, stderr = run(["army", "install", "project2@~1.3.0"])
+#         assert res==0
+#         assert len(stdout)==2
+#         assert stdout[1]=="install package project2@1.3.4"
+#         assert len(stderr)==0
+#   
+#     def test_install_package_repository(self):
+#         os.chdir('project4')
+#         res, stdout, stderr = run(["army", "install", "project1-v1.0.0@project1"])
+#         assert res==0
+#         assert len(stdout)==1
+#         assert stdout[0]=="install package project1@1.0.0"
+#         assert len(stderr)==0
+#   
+#     def test_install_package_repository_version(self):
+#         os.chdir('project4')
+#         res, stdout, stderr = run(["army", "install", "project1-v1.0.0@project1@1.0.0"])
+#         assert res==0
+#         assert len(stdout)==1
+#         assert stdout[0]=="install package project1@1.0.0"
+#         assert len(stderr)==0
+# 
+#     def test_install_already_installed(self):
+#         os.chdir('project4')
+#         res, stdout, stderr = run(["army", "install", "project1"])
+#         res, stdout, stderr = run(["army", "install", "project1"])
+#         assert res==0
+#         assert len(stdout)==0
+#         assert len(stderr)==1
+#         assert stderr[0]=="package project1@1.2.0 already installed"
+#     
+#     def test_install_package_not_found(self):
+#         os.chdir('project4')
+#         res, stdout, stderr = run(["army", "install", "project10"])
+#         assert res>0
+#         assert len(stdout)==0
+#         assert len(stderr)==1
+#         assert stderr[0]=="project10: package not found"
+#     
+#     def test_install_incompatible_versions(self):
+#         os.chdir('project4')
+#         res, stdout, stderr = run(["army", "install", "project1@1.2.0"])
+#         res, stdout, stderr = run(["army", "install", "project1@1.0.0"])
+#         assert res>0
+#         assert len(stdout)==0
+#         assert len(stderr)==1
+#         assert stderr[0]=="'project1@1.0.0' conflicts with installed package 'project1@1.2.0'"
+#     
+#     def test_install_project_dependencies(self):
+#         os.chdir('project4')
+#         res, stdout, stderr = run(["army", "install"])
+#         assert res==0
+#         assert len(stdout)==3
+#         assert len(stderr)==0
+# 
+#     def test_install_project_dependencies_incompatible_version(self):
+#         os.chdir('project5')
+#         res, stdout, stderr = run(["army", "install"])
+# #         print(res, stdout, stderr)
+#         assert res>0
+#         assert len(stdout)==0
+#         assert len(stderr)==1
+#         assert stderr[0]=="'project2@1.3.4' from 'project3' conflicts with package 'project2@1.3.2' from project"
