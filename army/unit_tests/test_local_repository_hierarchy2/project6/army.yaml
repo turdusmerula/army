@@ -1,0 +1,6 @@
+name: project6
+description: project with installed incorrect dependency installed
+version: 1.0.0 
+
+dependencies:
+  lib1: 1.0.1

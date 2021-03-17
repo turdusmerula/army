@@ -24,7 +24,7 @@ class Schema(object):
 class ValidatorException(Exception):
     def __init__(self, message):
         self.message = message
-                
+    
 class Validator(object):
     def __init__(self):
         pass
@@ -38,6 +38,14 @@ class Variant(Validator):
     
     def check(self, value):
         pass
+
+class Boolean(Validator):
+    def __init__(self):
+        super(Boolean, self).__init__()
+    
+    def check(self, value):
+        if not isinstance(value, bool):
+            raise ValidatorException(f"'{value}' is not a valid boolean")
 
 class Int(Validator):
     def __init__(self):
@@ -79,9 +87,10 @@ class VersionString(Validator):
             raise ValidatorException(f"'{value}' is not a valid version")
 
 class Optional(Validator):
-    def __init__(self, schema):
+    def __init__(self, schema, default=None):
         super(Optional, self).__init__()
         self._schema = schema
+        self._default = default
         
     def check(self, value):
         if value is not None:

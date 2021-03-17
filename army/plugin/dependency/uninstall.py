@@ -1,41 +1,75 @@
-from army.api.log import log
+from army.api.command import parser, group, command, option, argument
 from army.api.debugtools import print_stack
-from army.api.project import load_project
-from army.api.repository import load_repositories
-from army import prefix
-from army.api.click import verbose_option 
-from army.api.package import load_installed_packages, load_installed_package
-from army import cli, dependencies
-import click
+from army.api.dict_file import load_dict_file, save_dict_file
+from army.api.log import log
+from army.api.package import load_installed_package, find_repository_package
+from army.api.repository import load_repositories, RepositoryPackage
+from army.api.version import Version, VersionRange
 import os
 import sys
 
-@dependencies.command(name='uninstall', help='uninstall package')
-@verbose_option()
-# @click.option('--save', help='Update project package list', is_flag=True)    # TODO
-@click.argument('name', nargs=-1)
-@click.pass_context
+@parser
+@group(name="dependency")
+@command(name='uninstall', help='Uninstall package')
+@option(name='global', shortcut='g', default=False, help='Uninstall package from user space', flag=True)
+@argument(name='name', count='*')
 def uninstall(ctx, name, **kwargs):
     log.info(f"uninstall {name} {kwargs}")
-    
-    config = ctx.parent.config
+
+    if 'global' in kwargs and kwargs['global']==True:  # not in parameters due to conflict with global keyword
+        scope = 'user'
+    else:
+        scope = 'local'
+
+    # load configuration
+    config = ctx.config
 
     if len(name)==0:
         print("nothing to uninstall", file=sys.stderr)
         exit(1)
         
     # build repositories list
-    repositories = load_repositories(config, prefix)
+    repositories = load_repositories(config)
     
     packages = []
 
     for package in name:
-        pkg = load_installed_package(package, prefix=prefix)
-        if pkg is None:
-            print(f"{package}: package not installed", file=sys.stderr)
+        s_name = package
+        s_version = None
+        
+        chunks = package.split('@')
+        if len(chunks)==2:
+            try:
+                # check chunks[1] is a version range
+                Version(chunks[1])
+                s_name = chunks[0]
+                s_version = chunks[1]
+            except Exception as e:
+                print(f"{package}: naming error", file=sys.stderr)
+                exit(1)
+        else:
+            print(f"{package}: naming error", file=sys.stderr)
             exit(1)
+
+        pkg = _find_installed_package(repositories, s_name, version_range=s_version, repository=s_repository, editable=edit)
         packages.append(pkg)
-    
-    for package in packages:
-        package.uninstall()
-    
+
+#     for package in name:
+#         pkg = load_installed_package(package, prefix=prefix)
+#         if pkg is None:
+#             print(f"{package}: package not installed", file=sys.stderr)
+#             exit(1)
+#         packages.append(pkg)
+#     
+#     for package in packages:
+#         package.uninstall()
+
+def _find_installed_package(name, version_range="latest", repository=None, editable=None):
+    package, repo = find_repository_package(repositories, name, version_range, repository, editable)
+
+    if package is None:
+        print(f"{name}: package not found", file=sys.stderr)
+        exit(1)
+
+    return package, repo
+  

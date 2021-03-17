@@ -1,0 +1,10 @@
+description: lib1
+installed_user: true
+name: lib1
+repository:
+  name: lib1-1.0.1
+  uri: /tmp/test_local_repository_hierarchy2/lib1/1.0.1
+version: 1.0.1
+
+# will emit a parse error
+abc

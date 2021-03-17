@@ -1,14 +1,15 @@
+import army
 from army.api.log import log
+from army.api.package import load_installed_package
 import army.api.project
 from army.api.version import Version
+from helper import raised, run
 import os
 import unittest
-from helper import raised, run
-import army
 import tempfile
 import shutil
 
-prefix = 'test_local_repository_hierarchy'
+prefix = 'test_local_repository_hierarchy2'
 log.setLevel('CRITICAL')
 
 
@@ -39,90 +40,143 @@ class TestDependencyInstall(unittest.TestCase):
         os.chdir(cls.cwd)
         del os.environ["ARMY_PREFIX"]
 
-    def test_install_no_param(self):
+    def test_install_no_param_no_project(self):
         res, stdout, stderr = run(["army", "install"])
         assert res!=0
         assert len(stdout)==0
-        assert len(stderr)>0
+        assert stderr==["nothing to install"]
+
+    def test_install_project1_version_mismatch(self):
+        os.chdir('project1')
+        res, stdout, stderr = run(["army", "install"])
+        assert res!=0
+        assert len(stdout)==0
+        assert stderr==[
+            "version mismatch: lib1-1.0.1@lib1@1.0.1 conflicts with package lib1-1.0.0@lib1@1.0.0' from lib2-1.0.0@lib2@1.0.0",
+            "install failed"
+        ]
+
+    def test_install_project2_no_dependency(self):
+        os.chdir('project2')
+        res, stdout, stderr = run(["army", "install"])
+        assert res==0
+        assert stdout==[
+            "lib1-1.0.1@lib1@1.0.1 install",
+            "install finished ok"
+        ]
+        assert len(stderr)==0
         
-#     def test_install_package(self):
-#         os.chdir('project4')
-#         res, stdout, stderr = run(["army", "install", "project1"])
-#         assert res==0
-#         assert len(stdout)==1
-#         assert stdout[0]=="install package project1@1.2.0"
-#         assert len(stderr)==0
-#  
-#     def test_install_package_exact_version(self):
-#         os.chdir('project4')
-#         res, stdout, stderr = run(["army", "install", "project1@1.0.0"])
-#         assert res==0
-#         assert len(stdout)==1
-#         assert stdout[0]=="install package project1@1.0.0"
-#         assert len(stderr)==0
-#   
-#     def test_install_package_semantic_version(self):
-#         os.chdir('project4')
-#         res, stdout, stderr = run(["army", "install", "project2@~1.3.0"])
-#         assert res==0
-#         assert len(stdout)==2
-#         assert stdout[1]=="install package project2@1.3.4"
-#         assert len(stderr)==0
-#   
-#     def test_install_package_repository(self):
-#         os.chdir('project4')
-#         res, stdout, stderr = run(["army", "install", "project1-v1.0.0@project1"])
-#         assert res==0
-#         assert len(stdout)==1
-#         assert stdout[0]=="install package project1@1.0.0"
-#         assert len(stderr)==0
-#   
-#     def test_install_package_repository_version(self):
-#         os.chdir('project4')
-#         res, stdout, stderr = run(["army", "install", "project1-v1.0.0@project1@1.0.0"])
-#         assert res==0
-#         assert len(stdout)==1
-#         assert stdout[0]=="install package project1@1.0.0"
-#         assert len(stderr)==0
-# 
-#     def test_install_already_installed(self):
-#         os.chdir('project4')
-#         res, stdout, stderr = run(["army", "install", "project1"])
-#         res, stdout, stderr = run(["army", "install", "project1"])
-#         assert res==0
-#         assert len(stdout)==0
-#         assert len(stderr)==1
-#         assert stderr[0]=="package project1@1.2.0 already installed"
-#     
-#     def test_install_package_not_found(self):
-#         os.chdir('project4')
-#         res, stdout, stderr = run(["army", "install", "project10"])
-#         assert res>0
-#         assert len(stdout)==0
-#         assert len(stderr)==1
-#         assert stderr[0]=="project10: package not found"
-#     
-#     def test_install_incompatible_versions(self):
-#         os.chdir('project4')
-#         res, stdout, stderr = run(["army", "install", "project1@1.2.0"])
-#         res, stdout, stderr = run(["army", "install", "project1@1.0.0"])
-#         assert res>0
-#         assert len(stdout)==0
-#         assert len(stderr)==1
-#         assert stderr[0]=="'project1@1.0.0' conflicts with installed package 'project1@1.2.0'"
-#     
-#     def test_install_project_dependencies(self):
-#         os.chdir('project4')
-#         res, stdout, stderr = run(["army", "install"])
-#         assert res==0
-#         assert len(stdout)==3
-#         assert len(stderr)==0
-# 
-#     def test_install_project_dependencies_incompatible_version(self):
-#         os.chdir('project5')
-#         res, stdout, stderr = run(["army", "install"])
-# #         print(res, stdout, stderr)
-#         assert res>0
-#         assert len(stdout)==0
-#         assert len(stderr)==1
-#         assert stderr[0]=="'project2@1.3.4' from 'project3' conflicts with package 'project2@1.3.2' from project"
+    def test_install_project2_already_installed(self):
+        os.chdir('project2')
+        res, stdout, stderr = run(["army", "install"])
+        assert res==0
+        assert stdout==[
+            "lib1-1.0.1@lib1@1.0.1 install",
+            "install finished ok"
+        ]
+        assert len(stderr)==0
+        
+        res, stdout, stderr = run(["army", "install"])
+        assert res==0
+        assert stdout==[
+            "lib1-1.0.1@lib1@1.0.1 already installed, skip",
+            "install finished ok"
+        ]
+        assert len(stderr)==0
+
+    def test_install_project6_installed_package_nok(self):
+        os.chdir('project6')
+        res, stdout, stderr = run(["army", "install"])
+        assert res!=0
+        assert len(stdout)==0
+        assert stderr==[
+            "Error loading package lib1-1.0.1@lib1@1.0.1",
+            "install failed"
+        ]
+        
+
+    def test_install_package(self):
+        os.chdir('project4')
+        res, stdout, stderr = run(["army", "install", "lib1"])
+        assert res==0
+        assert stdout==[
+            "lib1-1.1.2@lib1@1.1.2 install",
+            "install finished ok"
+        ]
+        assert len(stderr)==0
+
+    def test_install_package_version(self):
+        os.chdir('project4')
+        res, stdout, stderr = run(["army", "install", "lib1@1.0.0"])
+        assert res==0
+        assert stdout==[
+            "lib1-1.0.0@lib1@1.0.0 install",
+            "install finished ok"
+        ]
+        assert len(stderr)==0
+
+    def test_install_package_repo(self):
+        os.chdir('project4')
+        res, stdout, stderr = run(["army", "install", "lib1-1.0.0@lib1"])
+        assert res==0
+        assert stdout==[
+            "lib1-1.0.0@lib1@1.0.0 install",
+            "install finished ok"
+        ]
+        assert len(stderr)==0
+
+    def test_install_package_repo_version(self):
+        os.chdir('project4')
+        res, stdout, stderr = run(["army", "install", "lib1-1.0.0@lib1@1.0.0"])
+        assert res==0
+        assert stdout==[
+            "lib1-1.0.0@lib1@1.0.0 install",
+            "install finished ok"
+        ]
+        assert len(stderr)==0
+
+    def test_install_package_semantic_version(self):
+        os.chdir('project4')
+        res, stdout, stderr = run(["army", "install", "lib1"])
+        assert res==0
+        assert stdout==[
+            "lib1-1.1.2@lib1@1.1.2 install",
+            "install finished ok"
+        ]
+        assert len(stderr)==0
+
+        res, stdout, stderr = run(["army", "install", "lib1"])
+        assert res==0
+        assert stdout==[
+            "lib1-1.1.2@lib1@1.1.2 already installed, skip",
+            "install finished ok"
+        ]
+        assert len(stderr)==0
+
+    def test_install_package_already_installed(self):
+        os.chdir('project4')
+        res, stdout, stderr = run(["army", "install", "lib1@~1.0.0"])
+        assert res==0
+        assert stdout==[
+            "lib1-1.0.1@lib1@1.0.1 install",
+            "install finished ok"
+        ]
+        assert len(stderr)==0
+
+    def test_install_package_not_found(self):
+        os.chdir('project4')
+        res, stdout, stderr = run(["army", "install", "lib10"])
+        assert res!=0
+        assert len(stdout)==0
+        assert stderr==[
+            "lib10: package not found"
+        ]
+
+    def test_install_package_version_not_found(self):
+        os.chdir('project4')
+        res, stdout, stderr = run(["army", "install", "lib1@1.4.0"])
+        assert res!=0
+        assert len(stdout)==0
+        assert stderr==[
+            "lib1: no version matching 1.4.0"
+        ]

@@ -3,7 +3,7 @@ from army.api.debugtools import print_stack
 from army.api.dict_file import load_dict_file
 from army.api.log import log
 from army.api.path import prefix_path
-from army.api.schema import Schema, String, VersionString, Optional, PackageString, Array, Dict, VariableDict, Variant, VersionRangeString
+from army.api.schema import Schema, String, VersionString, Optional, PackageString, Array, Dict, VariableDict, Variant, VersionRangeString, Boolean
 from army.api.version import Version, VersionRange
 import os
 import shutil
@@ -32,9 +32,10 @@ def load_installed_package(name, version_range="latest", scope='local', exist_ok
             package = _load_installed_package(os.path.join(str(package_path), str(version)))
         except Exception as e:
             print_stack()
-            log.debug(e)
-            log.error(f"{package_path}: not a valid package")
-            return None
+            log.error(e)
+            raise PackageException(e)
+#             log.error(f"{package_path}: not a valid package")
+#             return None
         
         # check if package match requested version
         if VersionRange([package.version])[version] is None:
@@ -366,7 +367,8 @@ class InstalledPackage(Package):
     def __init__(self, data, path):
         super(InstalledPackage, self).__init__(data, schema={
                 'repository': Variant(),
-                'installed_by': Optional(Array(PackageString())),
+                'installed_user': Optional(Boolean(), default=False),
+                'installed_by': Optional(Array(PackageString()), default=[]),
             })
 
         self._path = path
