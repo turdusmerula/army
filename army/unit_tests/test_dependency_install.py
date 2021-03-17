@@ -9,7 +9,7 @@ import unittest
 import tempfile
 import shutil
 
-prefix = 'test_local_repository_hierarchy2'
+prefix = 'test_local_repository'
 log.setLevel('CRITICAL')
 
 

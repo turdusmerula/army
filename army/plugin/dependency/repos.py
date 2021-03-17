@@ -26,7 +26,7 @@ def repos(ctx, **kwargs):
     for r in repositories:
         column_name.append(r.name)
         column_type.append(r.type)
-        column_uri.append(r.uri)
+        column_uri.append(str(r.uri))
 
     max_name = len(max(column_name, key=len))
     max_type = len(max(column_type, key=len))

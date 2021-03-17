@@ -1,6 +1,0 @@
-name: project3
-description: project3
-version: 2.0.0
-
-dependencies:
-  project2: ~1.3.0

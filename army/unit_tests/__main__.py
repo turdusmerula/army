@@ -17,6 +17,7 @@ from test_project import *
 from test_dependency_repos import *
 from test_dependency_search import *
 from test_dependency_install import *
+from test_dependency_uninstall import *
 
 from test_profile_list import *
 from test_profile_inspect import *
