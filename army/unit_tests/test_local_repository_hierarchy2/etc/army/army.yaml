@@ -1,0 +1,44 @@
+# verbosty level (default critical):
+# debug
+# info
+# warning
+# error
+# critical
+verbose: critical
+
+repositories:
+  lib1-1.0.0:
+    type: git-local
+    uri: /lib1/1.0.0
+
+  lib1-1.0.1:
+    type: git-local
+    uri: /lib1/1.0.1
+
+  lib1-1.1.0:
+    type: git-local
+    uri: /lib1/1.1.0
+
+  lib1-1.1.2:
+    type: git-local
+    uri: /lib1/1.1.2
+
+
+  lib2-1.0.0:
+    # lib2-1.0.0 requests specific 1.0.0 version of lib1
+    type: git-local
+    uri: /lib2/1.0.0
+
+  lib2-1.0.1:
+    # lib2-1.0.1 requests 1.0.x version of lib1
+    type: git-local
+    uri: /lib2/1.0.1
+
+
+  lib3:
+    type: git-local
+    uri: /lib3
+
+  lib4:
+    type: git-local
+    uri: /lib4

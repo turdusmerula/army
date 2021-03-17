@@ -180,58 +180,70 @@ class RepositoryPackage(Package):
     @property
     def repository(self):
         return self._repository
-        
-    def install(self, path, edit=False):
+    
+    
+    def _rmtree_error(self, func, path, exc_info):
+        raise RepositoryException(exc_info)
+
+    def _preinstall(self, path, edit=False):
         includes = self.packaging.include
-        
-        dest = path
+        # check that all files exists
+        for include in includes:
+            source = os.path.join(self._source_path, include)
+            if os.path.exists(os.path.expanduser(source))==False:
+                raise PackageException(f"{include}: file not found")
 
-        def rmtree_error(func, path, exc_info):
-            raise RepositoryException(exc_info)
-
-        if os.path.exists(path):
-            log.debug(f"rm {path}")
-            shutil.rmtree(path, onerror=rmtree_error)
+        # create detination tree
+        if os.path.exists(path)==False:
+            os.makedirs(path)
 
         # execute preinstall step
         if os.path.exists(os.path.expanduser(os.path.join(self._source_path, 'pkg', 'preinstall'))):
             log.info("execute preinstall script")
             subprocess.check_call([os.path.join(os.path.expanduser(self._source_path), 'pkg', 'preinstall')])
-
-        # check that all files exists
-        for include in includes:
-            source = os.path.join(self._source_path, include)
-            if os.path.exists(os.path.expanduser(source))==False:
-                raise PackageException(f"{include}: package include file not found")
-
-        # create detination tree
-        if os.path.exists(dest)==False:
-            os.makedirs(dest)
-            
+    
+    def _install(self, path, edit=False):
+        includes = self.packaging.include
         for include in includes:
             source = os.path.join(self._source_path, include)
             if edit==True:
-                self._link(source, dest)
+                self._link(source, path)
             else:
-                self._copy(source, dest)
+                self._copy(source, path)
         
-        # add repository informations to army.toml
         try:
-            self._copy(os.path.join(self._source_path, "army.yaml"), dest)
-            content = load_dict_file(self._source_path, "army")
-            content['repository'] = {
-                'uri': str(self._repository._uri),
-                'name': self._repository._name
-                }
-            save_dict_file(dest, "army", content)
+            # try to load installed package definition
+            content = load_dict_file(path, "army")
         except Exception as e:
-            print_stack()
-            log.debug(e)
+            # load source defintion
+            content = load_dict_file(self._source_path, "army")
 
+        # add package install source
+        content['repository'] = {
+            'uri': str(self._repository._uri),
+            'name': self._repository._name
+        }
+
+        save_dict_file(path, "army", content)
+        
+    def _postinstall(self, path, edit=False):
         #execute postinstall command
         if os.path.exists(os.path.expanduser(os.path.join(self._source_path, 'pkg', 'postinstall'))):
             log.info("execute postinstall script")
             subprocess.check_call([os.path.join(os.path.expanduser(self._source_path), 'pkg', 'postinstall')])
+        
+
+    def install(self, path, edit=False):
+        self._preinstall(path=path, edit=edit)
+        self._install(path=path, edit=edit)
+        self._postinstall(path=path, edit=edit)
+
+#         if os.path.exists(path):
+#             log.debug(f"rm {path}")
+#             shutil.rmtree(path, onerror=self.rmtree_error)
+
+
+            
         
     def _copy(self, source, dest):
         log.debug(f"copy {source} -> {dest}")

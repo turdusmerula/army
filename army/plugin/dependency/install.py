@@ -1,34 +1,56 @@
 from army.api.command import parser, group, command, option, argument
 from army.api.debugtools import print_stack
+from army.api.dict_file import load_dict_file, save_dict_file
 from army.api.log import log
 from army.api.package import load_installed_package, find_repository_package
 from army.api.path import prefix_path
 from army.api.project import load_project
-from army.api.repository import load_repositories
+from army.api.repository import load_repositories, RepositoryPackage
 from army.api.version import Version, VersionRange
 import os
 import sys
 
-class PackageDependency(object):
-    def __init__(self, package, repository, from_package=None):
-        self._package = package
-        self._from_package = from_package
-        self._repository = repository
+class PackageDependency(RepositoryPackage):
+    def __init__(self, package, installed_by=None):
+        super(PackageDependency, self).__init__(data=package._data, repository=package.repository)
+        self._installed_by = installed_by
         
-    @property 
-    def package(self):
-        return self._package
-    
     @property
-    def from_package(self):
-        return self._from_package
+    def installed_by(self):
+        return self._installed_by
 
-    @property
-    def repository(self):
-        return self._repository
+#     def _install_edit_project_file(self, path, content):
+#         super(PackageDependency, self)._install_edit_project_file(path, content)
+#         
+#         # add package owners
+#         if str(self._installed_by) not in content['installed_by']:
+#             content['installed_by'].append(str(self._installed_by))
+ 
+#     def install(self, path, edit=False):
+#         super(PackageDependency, self)._preinstall(path=path, edit=edit)
+#         super(PackageDependency, self)._install(path=path, edit=edit)
+# 
+#         # add repository informations installed package
+#         try:
+#             self._copy(os.path.join(self._source_path, "army.yaml"), dest)
+#             content = load_dict_file(self._source_path, "army")
+#             # add packseldage install source
+#             content['repository'] = {
+#                 'uri': str(self._repository._uri),
+#                 'name': self._repository._name
+#                 }
+#             # add package owners
+#             content['parents'] = self._parents
+#             
+#             save_dict_file(dest, "army", content)
+#         except Exception as e:
+#             print_stack()
+#             log.debug(e)
+# 
+#         super(PackageDependency, self)._postinstall(path=path, edit=edit)
 
     def __repr__(self):
-        return f"{self._repository.name}@{self._package.name}@{self._package.version}"
+        return f"{self.repository.name}@{self.name}@{self.version}"
 
 @parser
 @group(name="dependency")
@@ -41,8 +63,11 @@ class PackageDependency(object):
 def install(ctx, name, edit, reinstall, **kwargs):
     log.info(f"install {name}")
     
-    _global = kwargs['global']  # not in parameters due to conflict with global keyword
-    
+    if 'global' in kwargs and kwargs['global']==True:  # not in parameters due to conflict with global keyword
+        scope = 'user'
+    else:
+        scope = 'local'
+        
     # load configuration
     config = ctx.config
     
@@ -59,8 +84,11 @@ def install(ctx, name, edit, reinstall, **kwargs):
     repositories = load_repositories(config)
      
     for repository in repositories:
-        if repository.load_credentials()==False:
-            print(f"{repository.name}: warning: load credentials failed, update may fail due to rate limitation", file=sys.stderr)
+        try:
+            repository.load_credentials()
+        except Exception as e:
+            print_stack()
+            log.error(f"{e}")
          
     packages = []
  
@@ -73,21 +101,8 @@ def install(ctx, name, edit, reinstall, **kwargs):
 
         for package, version in project.dependencies.items():
             pkg, repo = _find_repository_package(repositories, package, version_range=version, editable=edit)
-            packages.append(PackageDependency(package=pkg, repository=repo))
+            packages.append(PackageDependency(package=pkg))
 
-#         if target is not None:
-#             for package in target.dependencies:
-#                 pkg, repo = _find_package(package, target.dependencies[package], repositories, priority_dev=link)
-#                 packages.append(PackageDependency(package=pkg, repository=repo))
-#             
-#         for plugin in project.plugins:
-#             pkg, repo = _find_package(plugin, project.plugins[plugin], repositories, plugin=True, priority_dev=link)
-#             packages.append(PackageDependency(package=pkg, repository=repo))
-#         
-#         if target is not None:
-#             for plugin in target.plugins:
-#                 pkg, repo = _find_package(plugin, target.plugins[plugin], repositories, plugin=True, priority_dev=link)
-#                 packages.append(PackageDependency(package=pkg, repository=repo))
     else:
         for package in name:
             s_name = package
@@ -113,79 +128,81 @@ def install(ctx, name, edit, reinstall, **kwargs):
                 exit(1)
 
             pkg, repo = _find_repository_package(repositories, s_name, version_range=s_version, repository=s_repository, editable=edit)
-            packages.append(PackageDependency(package=pkg, repository=repo))
-
-    # locate install folder
-    if _global:
-        path = os.path.expanduser(prefix_path("~/.army/dist/"))
-    else:
-        path = "dist"
+            packages.append(PackageDependency(package=pkg))
      
-    force = False
-    if reinstall:
-        force = True
- 
-    dependencies = []
-    while(len(packages)>0):
-        # get dependencies from top level package to end level
-        package_dep = packages.pop(0)
-        package = package_dep.package
- 
-        # dependency treated ok, append to list
-        dependencies.append(package_dep)
-         
-        # append dependencies to list
-        for dependency in package.dependencies:
-            pkg, repo = _find_repository_package(repositories, dependency, version_range=package.dependencies[dependency], editable=edit)
-            packages.append(PackageDependency(package=pkg, repository=repo, from_package=package))
-# 
-#         # append plugins to list
-#         for plugin in package.plugins:
-#             pkg, repo = _find_package(plugin, package.plugins[plugin], repositories, plugin=True, priority_dev=link)
-#             dep_pkg = PackageDependency(package=pkg, repository=repo, from_package=package)
-#             packages.append(dep_pkg)
-# 
-    # treat dependencies first
-    dependencies.reverse()
- 
-    log.debug(f"packages: {dependencies}")
-
+    # build dependencies tree
+    dependency_tree = _build_dependency_tree(repositories, packages, editable=edit)
+    
     # checks
-    _check_dependency_version_conflict(dependencies)
-#     _check_installed_version_conflict(dependencies)
-     
-    # clean dependency duplicates to avoid installing several times same package
-    dependencies = _remove_duplicates(dependencies)
- 
-    # install
-    for dependency in dependencies:
-        install = False
-        installed_package = load_installed_package(dependency.package.name, version_range=dependency.package.version)
-        if installed_package:
-            if force==True:
-                print(f"reinstall {dependency.package}")
-                install = True
-            else:
-                print(f"package {dependency.package} already installed", file=sys.stderr)
-                install = False
-        else:
-            install = True
-            print(f"install package {dependency.package}")
-        
-        try:
-            if install==True:
-                if edit==True and dependency.repository.editable==False:
-                    print(f"{dependency.package.name}: repository is not editable", file=sys.stderr)
-                install_path = os.path.join(path, dependency.package.name, str(dependency.package.version))
-                if dependency.repository.editable==True:
-                    dependency.package.install(path=install_path, edit=edit)
-                else:
-                    # link mode is only possible with editable repository
-                    dependency.package.install(path=install_path, edit=False)
-        except Exception as e:
-            print_stack()
-            print(f"{e}")
+    result = True
+    if _check_dependency_version_conflict(dependency_tree)==False:
+        result = False
+#     if _check_installed_version_conflict(dependency_tree)==False:
+#         result = False
+    
+    if result==False:
+        exit(1)
+    
+    _install_packages(repositories, dependency_tree, edit=edit, scope=scope, reinstall=reinstall)
+    
+#     dependencies = []
+#     while(len(packages)>0):
+#         # get dependencies from top level package to end level
+#         package_dep = packages.pop(0)
+#         package = package_dep.package
+#  
+#         # dependency treated ok, append to list
+#         dependencies.append(package_dep)
+#          
+#         # append dependencies to list
+#         for dependency in package.dependencies:
+#             pkg, repo = _find_repository_package(repositories, dependency, version_range=package.dependencies[dependency], editable=edit)
+#             packages.append(PackageDependency(package=pkg, repository=repo, from_package=package))
+# # 
+# #         # append plugins to list
+# #         for plugin in package.plugins:
+# #             pkg, repo = _find_package(plugin, package.plugins[plugin], repositories, plugin=True, priority_dev=link)
+# #             dep_pkg = PackageDependency(package=pkg, repository=repo, from_package=package)
+# #             packages.append(dep_pkg)
+# # 
+#     # treat dependencies first
+#     dependencies.reverse()
+#  
+#     log.debug(f"packages: {dependencies}")
+# 
+#     # checks
+#     _check_dependency_version_conflict(dependencies)
+# #     _check_installed_version_conflict(dependencies)
+#      
+#     # clean dependency duplicates to avoid installing several times same package
+#     dependencies = _remove_duplicates(dependencies)
+#  
+#     # install
+#     for dependency in dependencies:
+#         _install_package(dependency)
+
+def _build_dependency_tree(repositories, packages, editable=False):
+    tree = {}
+    
+    for package in packages:
+        dependencies = _find_dependencies(repositories, package, editable=editable)
+        tree[package.name] = {
+            'package': package,
+            'dependencies': _build_dependency_tree(repositories, dependencies, editable=False)
+        }
+
+    return tree
+
+def _find_dependencies(repositories, package, editable=False):
+    dependencies = []
+    for name, version in package.dependencies.items():
+        pkg, repo = find_repository_package(repositories, name, version_range=version, editable=editable)
+        if pkg is None:
+            print(f"{name}: dependency from {package} not found", file=sys.stderr)
             exit(1)
+        
+        dependencies.append(PackageDependency(package=pkg, installed_by=package))
+    return dependencies
 
 def _find_repository_package(repositories, name, version_range="latest", repository=None, editable=None):
     package, repo = find_repository_package(repositories, name, version_range, repository, editable)
@@ -196,25 +213,58 @@ def _find_repository_package(repositories, name, version_range="latest", reposit
 
     return package, repo
 
-def _check_dependency_version_conflict(dependencies):
+
+def _check_dependency_version_conflict(dependency_tree):
     """ Check if dependencies contains same package with version mismatch
     """
-    # TODO: use VersionRange to true comparaison
-    for dependency in dependencies:
-        for dep in dependencies:
-            if dep.package.name==dependency.package.name and dep.package.version!=dependency.package.version:
-                msg = f"'{dependency.package.name}@{dependency.package.version}'"
-                if dependency.from_package is None:
-                    msg += f" from project"
+    
+    packages = {}
+    return _recursive_check_dependency_version_conflict(dependency_tree, packages)
+    
+
+def _recursive_check_dependency_version_conflict(dependency_tree, packages):
+    
+    result = True
+    
+    for dependency in dependency_tree:
+        package = dependency_tree[dependency]['package']
+        dependencies = dependency_tree[dependency]['dependencies']
+        
+        if package.name in packages:
+            if package.version!=packages[package.name].version:
+                uppkg = packages[package.name]
+                downpkg = package
+                
+                print("version mismatch: ", end='', file=sys.stderr)
+                print(f"{uppkg}", end='', file=sys.stderr)
+                if uppkg.installed_by is not None:
+                    print(f" from {uppkg.installed_by}", end='', file=sys.stderr)
+                print(" conflicts with package", end='', file=sys.stderr)
+                if downpkg.installed_by is None:
+                    print(f" {downpkg}", end='', file=sys.stderr)
                 else:
-                    msg += f" from '{dependency.from_package.name}'"
-                msg += " conflicts with package "
-                if dep.from_package is None:
-                    msg += f"'{dep.package.name}@{dep.package.version}' from project"
-                else:
-                    msg += f"'{dep.package.name}@{dep.package.version}' from '{dep.from_package.name}'"
-                print(msg, file=sys.stderr)
-                exit(1)
+                    print(f" {downpkg}' from {downpkg.installed_by}", end='', file=sys.stderr)
+                print("", file=sys.stderr)
+                result = False
+
+        packages[package.name] = package
+        
+        if _recursive_check_dependency_version_conflict(dependencies, packages)==False:
+            result = False
+    
+    return result
+
+# def _check_installed_version_conflict(dependency_tree):
+#     """ Check if dependencies contains same package with version mismatch
+#     """
+#     
+#     packages = {}
+#     return _recursive_check_dependency_version_conflict(dependency_tree, packages)
+# 
+# def _recursive_check_installed_version_conflict(dependency_tree, packages):
+#     result = True
+#     return result
+
  
 # def _check_installed_version_conflict(dependencies):
 #     """ Check if dependencies contains a package already installed with a version mismatch
@@ -229,22 +279,68 @@ def _check_dependency_version_conflict(dependencies):
 #                 msg += f" conflicts with installed package '{inst}'"
 #                 print(msg, file=sys.stderr)
 #                 exit(1)
-             
+
+def _install_packages(repositories, dependency_tree, edit=False, scope='local', reinstall=False):
+    _resursive_install_packages(repositories, dependency_tree, level=0, edit=edit, scope=scope, reinstall=reinstall)
+
+def _resursive_install_packages(repositories, dependency_tree, level, edit, scope, reinstall):
+    for dependency in dependency_tree:
+        package = dependency_tree[dependency]['package']
+        dependencies = dependency_tree[dependency]['dependencies']
+        
+        _resursive_install_packages(repositories, dependencies, level=level+1, edit=edit, scope=scope, reinstall=reinstall)
+
+        _install_package(package, level=level, edit=edit, scope=scope, reinstall=reinstall)
+
+def _install_package(package, level, edit, scope, reinstall):
+    tab = ""
+    for l in range(0, level):
+        tab += "  "
+
+    # locate install folder
+    if scope=='local':
+        path = "dist"
+    else:
+        path = os.path.expanduser(prefix_path("~/.army/dist/"))
+
+    # search package in installed packages
+    installed_package = load_installed_package(package.name, version_range=package.version, scope=scope)
+
+    install = False
      
+    print(f'{tab}{package}', end='')
+    if installed_package is None:
+        install = True
+        print(f' install')
+    else:
+        if reinstall==True:
+            print(f' reinstall')
+            install = True
+        else:
+            print(f' installed, skip')
  
-def _remove_duplicates(dependencies):
-    """ remove install duplicates inside dependencies
-    """
-    res = []
-     
-    for dependency in dependencies:
-        found = False
-        for search_dep in res:
-            if dependency.package==search_dep.package:
-                found = True
-                break
-         
-        if found==False:
-            res.append(dependency)
-         
-    return res
+    try:
+        install_path = os.path.join(path, package.name, str(package.version))
+
+        if install==True:
+            if edit==True and package.repository.editable==False:
+                # edit mode is only possible with editable repository
+                print(f"{package}: repository is not editable", file=sys.stderr)
+                edit = False
+                
+            package.install(path=install_path, edit=edit)
+
+        if package.installed_by is not None:
+            content = load_dict_file(install_path, "army")
+            name = f"{package.installed_by.name}@{package.installed_by.version}"
+            if 'installed_by' not in content:
+                content['installed_by'] = [name]
+            elif name not in content['installed_by']:
+                content['installed_by'].append(name)
+            save_dict_file(install_path, "army", content)
+
+    except Exception as e:
+        print_stack()
+        print(f"{e}")
+        exit(1)
+

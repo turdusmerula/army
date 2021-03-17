@@ -1,0 +1,6 @@
+name: lib2
+description: lib2
+version: 1.0.1
+
+dependencies:
+  lib1: ~1.0.0

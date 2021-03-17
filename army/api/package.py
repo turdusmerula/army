@@ -8,14 +8,13 @@ from army.api.version import Version, VersionRange
 import os
 import shutil
 
-def load_installed_package(name, version_range="latest", local=True, user=True):
+def load_installed_package(name, version_range="latest", scope='local', exist_ok=False):
     """ search for an installed package
     search is done inside project first and then in user space
     
     :param name package name to search, must be exact name
     :version_range version to match, if a range is given then match the greatest version in range
-    :local if True search in local project
-    :user if True search in user space
+    :scope local or user
     """
 
     def search_package(path, version_range):
@@ -40,20 +39,20 @@ def load_installed_package(name, version_range="latest", local=True, user=True):
         # check if package match requested version
         if VersionRange([package.version])[version] is None:
             raise PackageException(f"{os.path.join(package_path, version)}: incorrect package version")
-        return None
+        return package
     
     package = None
     
     # search package in local project
     package_local = None
     path_local = 'dist'
-    if local:
+    if scope=='local':
         package_local = search_package(path_local, version_range)
 
     # search package in user space
     package_user = None
     path_user = prefix_path('~/.army/dist')
-    if user: 
+    if scope=='user': 
         package_user = search_package(path_user, version_range)
 
     package = package_local
@@ -97,8 +96,8 @@ def load_project_packages(project, target):
             log.info(f"{dependency} already loaded, skip")
     return dependencies
 
-def _load_installed_package(path):
-    content = load_dict_file(path, "army")
+def _load_installed_package(path, exist_ok=False):
+    content = load_dict_file(path, "army", exist_ok=exist_ok)
     
     project = InstalledPackage(data=content, path=path)
     project.check()
@@ -139,7 +138,7 @@ def find_repository_package(repositories, name, version_range="latest", reposito
                         res_repo = r
                         
  
-    if res_package:
+    if res_package is not None:
         return res_package, res_repo
  
     return None, None
@@ -156,33 +155,33 @@ class Package(Schema):
                 'description': String(),
                 'version': VersionString(),
                 'dependencies': Optional(VariableDict(PackageString(), VersionRangeString())),
-                'plugins': Optional(VariableDict(PackageString(), VersionRangeString())),
-                'plugin': Optional(VariableDict(PackageString(), Variant())),
+#                 'plugins': Optional(VariableDict(PackageString(), VersionRangeString())),
+#                 'plugin': Optional(VariableDict(PackageString(), Variant())),
                 'packaging': Optional(Dict({
                     'include': Optional(Array(String())),
                     'exclude': Optional(Array(String()))
                     })),
                 
-                # arch definition
-                'arch': Optional(VariableDict(String(), Dict({
-                    'definition': Optional(String()),
-                    'cpu': Optional(String()),
-                    }))),
+#                 # arch definition
+#                 'arch': Optional(VariableDict(String(), Dict({
+#                     'definition': Optional(String()),
+#                     'cpu': Optional(String()),
+#                     }))),
 
-                # in case of a firmware
-                'default-target': Optional(String()),
-                'target': Optional(VariableDict(String(), Dict({
-                    'arch': String(),
-                    'definition': Optional(String()),
-                    'dependencies': Optional(VariableDict(PackageString(), VersionRangeString())),
-                    'plugins': Optional(VariableDict(PackageString(), VersionRangeString())),
-                    'plugin': Optional(VariableDict(PackageString(), Variant())),
-                    }))),
-                
-                # in case of a library
-                'cmake': Optional(Dict({
-                    'include': Optional(String()),
-                    })),
+#                 # in case of a firmware
+#                 'default-target': Optional(String()),
+#                 'target': Optional(VariableDict(String(), Dict({
+#                     'arch': String(),
+#                     'definition': Optional(String()),
+#                     'dependencies': Optional(VariableDict(PackageString(), VersionRangeString())),
+#                     'plugins': Optional(VariableDict(PackageString(), VersionRangeString())),
+#                     'plugin': Optional(VariableDict(PackageString(), Variant())),
+#                     }))),
+#                 
+#                 # in case of a library
+#                 'cmake': Optional(Dict({
+#                     'include': Optional(String()),
+#                     })),
 
            })
     
@@ -198,63 +197,63 @@ class Package(Schema):
     def version(self):
         return Version(self._data['version'])
     # 
-    @property
-    def arch(self):
-        class ArchDictIterator(object):
-            def __init__(self, values):
-                self._list = values
-                self._iter = iter(self._list)
-             
-            def __next__(self):
-                return next(self._iter)
-
-        class ArchDict(object):
-            def __init__(self, data):
-                self._data = data
-                
-            def __iter__(self):
-                return ArchDictIterator(self._data)
-            
-            def __getitem__(self, item):
-                return Arch(self._data[item])
-            
-        class Arch(object):
-            def __init__(self, data):
-                self._data = data
-            
-            @property
-            def definition(self):
-                if 'definition' in self._data:
-                    return self._data['definition']
-                return None
-            
-            @property
-            def cpu(self):
-                if 'cpu' in self._data:
-                    return self._data['cpu']
-                return None
-            
-        if 'arch' in self._data:
-            return ArchDict(self._data['arch'])
-        return ArchDict({})
+#     @property
+#     def arch(self):
+#         class ArchDictIterator(object):
+#             def __init__(self, values):
+#                 self._list = values
+#                 self._iter = iter(self._list)
+#              
+#             def __next__(self):
+#                 return next(self._iter)
+# 
+#         class ArchDict(object):
+#             def __init__(self, data):
+#                 self._data = data
+#                 
+#             def __iter__(self):
+#                 return ArchDictIterator(self._data)
+#             
+#             def __getitem__(self, item):
+#                 return Arch(self._data[item])
+#             
+#         class Arch(object):
+#             def __init__(self, data):
+#                 self._data = data
+#             
+#             @property
+#             def definition(self):
+#                 if 'definition' in self._data:
+#                     return self._data['definition']
+#                 return None
+#             
+#             @property
+#             def cpu(self):
+#                 if 'cpu' in self._data:
+#                     return self._data['cpu']
+#                 return None
+#             
+#         if 'arch' in self._data:
+#             return ArchDict(self._data['arch'])
+#         return ArchDict({})
 
     @property
     def dependencies(self):
         if 'dependencies' in self._data:
             return self._data['dependencies']
-        return []
+        return {}
     
-    @property
-    def plugins(self):
-        if 'plugins' in self._data:
-            return self._data['plugins']
-        return []
-    
-    @property
-    def plugin(self):
-        if 'plugin' in self._data:
-            return self._data['plugin']
-        return []
+#     @property
+#     def plugins(self):
+#         if 'plugins' in self._data:
+#             return self._data['plugins']
+#         return []
+#     
+#     @property
+#     def plugin(self):
+#         if 'plugin' in self._data:
+#             return self._data['plugin']
+#         return []
 
     @property
     def packaging(self):
@@ -278,82 +277,82 @@ class Package(Schema):
             return Packaging(self._data['packaging'])
         return Packaging({})
         
-    @property
-    def default_target(self):
-        if 'default-target' in self._data:
-            return self._data['default-target']
-        return None
-        
-    @property
-    def target(self):
-        class TargetDictIterator(object):
-            def __init__(self, values):
-                self._list = values
-                self._iter = iter(self._list)
-             
-            def __next__(self):
-                return next(self._iter)
-
-        class TargetDict(object):
-            def __init__(self, data):
-                self._data = data
-                
-            def __iter__(self):
-                return TargetDictIterator(self._data)
-            
-            def __getitem__(self, item):
-                return Target(self._data[item])
-            
-        class Target(object):
-            def __init__(self, data):
-                self._data = data
-            
-            @property
-            def arch(self):
-                return self._data['arch']
-            
-            @property
-            def definition(self):
-                if 'definition' in self._data:
-                    return self._data['definition']
-                return None
-
-            @property
-            def dependencies(self):
-                if 'dependencies' in self._data:
-                    return self._data['dependencies']
-                return []
-        
-            @property
-            def plugins(self):
-                if 'plugins' in self._data:
-                    return self._data['plugins']
-                return []
-            
-            @property
-            def plugin(self):
-                if 'plugin' in self._data:
-                    return self._data['plugin']
-                return []
-
-        if 'target' in self._data:
-            return TargetDict(self._data['target'])
-        return TargetDict({})
-
-    @property
-    def cmake(self):
-        class CMake(object):
-            def __init__(self, data):
-                self._data = data
-            
-            @property
-            def include(self):
-                if 'include' in self._data:
-                    return self._data['include']
-                return None
-        if 'cmake' in self._data:
-            return CMake(self._data['cmake'])
-        return CMake({})
+#     @property
+#     def default_target(self):
+#         if 'default-target' in self._data:
+#             return self._data['default-target']
+#         return None
+#         
+#     @property
+#     def target(self):
+#         class TargetDictIterator(object):
+#             def __init__(self, values):
+#                 self._list = values
+#                 self._iter = iter(self._list)
+#              
+#             def __next__(self):
+#                 return next(self._iter)
+# 
+#         class TargetDict(object):
+#             def __init__(self, data):
+#                 self._data = data
+#                 
+#             def __iter__(self):
+#                 return TargetDictIterator(self._data)
+#             
+#             def __getitem__(self, item):
+#                 return Target(self._data[item])
+#             
+#         class Target(object):
+#             def __init__(self, data):
+#                 self._data = data
+#             
+#             @property
+#             def arch(self):
+#                 return self._data['arch']
+#             
+#             @property
+#             def definition(self):
+#                 if 'definition' in self._data:
+#                     return self._data['definition']
+#                 return None
+# 
+#             @property
+#             def dependencies(self):
+#                 if 'dependencies' in self._data:
+#                     return self._data['dependencies']
+#                 return []
+#         
+#             @property
+#             def plugins(self):
+#                 if 'plugins' in self._data:
+#                     return self._data['plugins']
+#                 return []
+#             
+#             @property
+#             def plugin(self):
+#                 if 'plugin' in self._data:
+#                     return self._data['plugin']
+#                 return []
+# 
+#         if 'target' in self._data:
+#             return TargetDict(self._data['target'])
+#         return TargetDict({})
+# 
+#     @property
+#     def cmake(self):
+#         class CMake(object):
+#             def __init__(self, data):
+#                 self._data = data
+#             
+#             @property
+#             def include(self):
+#                 if 'include' in self._data:
+#                     return self._data['include']
+#                 return None
+#         if 'cmake' in self._data:
+#             return CMake(self._data['cmake'])
+#         return CMake({})
     
     def package(self, output_path):
         """ Packaging command, to be overloaded by package behavior
@@ -366,7 +365,8 @@ class Package(Schema):
 class InstalledPackage(Package):
     def __init__(self, data, path):
         super(InstalledPackage, self).__init__(data, schema={
-                'repository': Variant()
+                'repository': Variant(),
+                'installed_by': Optional(Array(PackageString())),
             })
 
         self._path = path
