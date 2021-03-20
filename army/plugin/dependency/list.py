@@ -1,25 +1,34 @@
-from army.api.log import log
+from army.api.command import parser, group, command, option, argument
 from army.api.debugtools import print_stack
-from army.api.project import load_project
-from army import prefix
-from army.api.click import verbose_option 
+from army.api.dict_file import load_dict_file, save_dict_file
+from army.api.log import log
 from army.api.package import load_installed_packages
-from army import cli, dependencies
-import click
-import sys
+from army.api.path import prefix_path
+from army.api.project import load_project
+from army.api.repository import load_repositories, RepositoryPackage
+from army.api.version import Version, VersionRange
 import os
+import sys
 
-@dependencies.command(name='list', help='List installed packages')
-@verbose_option()
-@click.pass_context
-def list(ctx, **kwargs):
+@parser
+@group(name="dependency")
+@command(name='list', help='List installed packages')
+@option(name='global', shortcut='g', default=False, help='Install package in user space', flag=True)
+@option(name='all', shortcut='a', default=False, help='List all installed versions', flag=True)
+def list(ctx, all, **kwargs):
     log.info(f"list")
     
+    if 'global' in kwargs and kwargs['global']==True:  # not in parameters due to conflict with global keyword
+        scope = 'user'
+    else:
+        scope = 'local'
+
     # load configuration
-    config = ctx.parent.config
+    config = ctx.config
 
-    packages = load_installed_packages(prefix=prefix)
-
+    packages = load_installed_packages(scope=scope, all=all)
+    packages = sorted(packages, key=_compare_name_version)
+    
     if len(packages)==0:
         print('no package found', file=sys.stderr)
         return
@@ -46,3 +55,6 @@ def list(ctx, **kwargs):
         print(f"{column_description[i].ljust(max_description)} | ", end='')
         print(f"{column_repo[i].ljust(max_repo, ' ')}", end='')
         print()
+
+def _compare_name_version(package):
+    return ( package.name, package.version )

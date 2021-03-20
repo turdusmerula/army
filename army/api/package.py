@@ -28,6 +28,9 @@ def load_installed_package(name, version_range="latest", scope='local', exist_ok
             return None
         version = VersionRange(versions)[str(version_range)]
 
+        if version is None:
+            return None
+    
         try:
             package = _load_installed_package(os.path.join(str(package_path), str(version)))
         except Exception as e:
@@ -69,6 +72,37 @@ def load_installed_package(name, version_range="latest", scope='local', exist_ok
         return None
 
     return package
+
+def load_installed_packages(scope='local', all=False):
+    packages = []
+
+    if scope=='local':
+        # search package in local project
+        path = 'dist'
+    else:
+        # search package in user space
+        path = prefix_path('~/.army/dist')
+
+    if os.path.exists(path)==False:
+        return packages
+
+    for package_name in os.listdir(path):
+        versions = []
+        for version in os.listdir(os.path.join(path, package_name)):
+            versions.append(version)
+        if all==False:
+            # only return latest version
+            versions = [VersionRange(versions).max()]
+        for version in versions:
+            try:
+                package = _load_installed_package(os.path.join(str(path), package_name, str(version)))
+                packages.append(package)
+            except Exception as e:
+                print_stack()
+                log.error(e)
+                raise PackageException(e)
+            
+    return packages
 
 # TODO check version when loading package and in case of package installed both global and local use the best fit
 def load_project_packages(project, target):

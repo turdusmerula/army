@@ -16,27 +16,26 @@ log.setLevel('CRITICAL')
 class TestDependencyUninstall(unittest.TestCase):
     
     def setUp(self):
-        "Hook method for setting up the test fixture before exercising it."
         self.tmpdir = tempfile.mkdtemp()
         shutil.copytree(self.path, self.tmpdir, dirs_exist_ok=True)
         os.chdir(self.tmpdir)
         os.environ["ARMY_PREFIX"] = self.tmpdir
         
+        os.chdir('project4')
+        res, stdout, stderr = run(["army", "install"])
+        
     def tearDown(self):
-        "Hook method for deconstructing the test fixture after testing it."
         os.chdir(self.path)
         shutil.rmtree(self.tmpdir)
 
     @classmethod
     def setUpClass(cls):
-        "Hook method for setting up class fixture before running tests in the class."
         # get current file path to find ressource files
         cls.cwd = os.getcwd()
         cls.path = os.path.join(os.path.dirname(os.path.abspath(__file__)), prefix)
         
     @classmethod
     def tearDownClass(cls):
-        "Hook method for deconstructing the class fixture after running all tests in the class."
         os.chdir(cls.cwd)
         del os.environ["ARMY_PREFIX"]
 
@@ -44,7 +43,7 @@ class TestDependencyUninstall(unittest.TestCase):
         res, stdout, stderr = run(["army", "uinstall"])
         assert res!=0
         assert len(stdout)==0
-        assert stderr==["nothing to install"]
+        assert stderr==["nothing to uninstall"]
 
     def test_uinstall_project1_version_mismatch(self):
         os.chdir('project1')

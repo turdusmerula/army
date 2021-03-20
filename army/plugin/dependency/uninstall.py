@@ -27,10 +27,7 @@ def uninstall(ctx, name, **kwargs):
     if len(name)==0:
         print("nothing to uninstall", file=sys.stderr)
         exit(1)
-        
-    # build repositories list
-    repositories = load_repositories(config)
-    
+
     packages = []
 
     for package in name:
@@ -47,13 +44,14 @@ def uninstall(ctx, name, **kwargs):
             except Exception as e:
                 print(f"{package}: naming error", file=sys.stderr)
                 exit(1)
-        else:
+        elif len(chunks)!=1:
             print(f"{package}: naming error", file=sys.stderr)
             exit(1)
 
-        pkg = _find_installed_package(repositories, s_name, version_range=s_version, repository=s_repository, editable=edit)
+        pkg = _find_installed_package(s_name, version=s_version, scope=scope)
         packages.append(pkg)
 
+    pass
 #     for package in name:
 #         pkg = load_installed_package(package, prefix=prefix)
 #         if pkg is None:
@@ -64,8 +62,8 @@ def uninstall(ctx, name, **kwargs):
 #     for package in packages:
 #         package.uninstall()
 
-def _find_installed_package(name, version_range="latest", repository=None, editable=None):
-    package, repo = find_repository_package(repositories, name, version_range, repository, editable)
+def _find_installed_package(name, version, scope='user'):
+    package, repo = load_installed_package(name, version, scope)
 
     if package is None:
         print(f"{name}: package not found", file=sys.stderr)

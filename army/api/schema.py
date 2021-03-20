@@ -14,6 +14,7 @@ class Schema(object):
         self._schema = schema
         
     def check(self):
+        log.debug(f"validate: {self._data} with {self._schema}")
         for item in self._data:
             
             if item not in self._schema:

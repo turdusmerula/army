@@ -109,7 +109,7 @@ def main():
     # set prefix path
     prefix = os.getenv('ARMY_PREFIX', None)
     if prefix is not None:
-        log.debug(f"using {prefix} as path prefix")
+        log.debug(f"ARMY_PREFIX={prefix}")
         set_prefix_path(prefix)
 
     # load army configuration files

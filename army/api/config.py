@@ -80,6 +80,7 @@ def load_configuration_file(path, name, parent=None):
     
     try:
         res = ArmyConfig(parent=parent, value=config, path=path)
+        res.check()
     except Exception as e:
         print_stack()
         log.debug(e)
@@ -116,10 +117,6 @@ class Config(object):
         self._value = value
         self._parent = parent
         self._schema = Schema(schema)
-
-        if value is not None:
-            log.debug(f"validate: {self.value} with {self.schema}")
-            self.schema.validate(self.value)
         
     @property
     def value(self):
@@ -133,6 +130,11 @@ class Config(object):
     def schema(self):
         return self._schema
 
+    def check(self):
+        if len(self._value)>0:
+            log.debug(f"validate: {self._value} with {self._schema}")        
+        self._schema.validate(self._value)
+        
     def __getattr__(self, name):
         if self.parent is not None:
             return getattr(self.parent, name)
