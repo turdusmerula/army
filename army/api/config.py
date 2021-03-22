@@ -70,9 +70,10 @@ def load_user_configuration_repositories(parent=None):
     return config
 
 def load_configuration_file(path, name, parent=None):
-    config = {}
     try:
         config = load_dict_file(path, name, exist_ok=True)
+        if config is None:
+            return None
     except Exception as e:
         print_stack()
         log.debug(e)

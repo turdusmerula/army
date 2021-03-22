@@ -40,18 +40,8 @@ class TestDependencyUninstall(unittest.TestCase):
         del os.environ["ARMY_PREFIX"]
 
     def test_uninstall_no_param(self):
-        res, stdout, stderr = run(["army", "uinstall"])
+        res, stdout, stderr = run(["army", "uninstall"])
         assert res!=0
         assert len(stdout)==0
         assert stderr==["nothing to uninstall"]
-
-    def test_uinstall_project1_version_mismatch(self):
-        os.chdir('project1')
-        res, stdout, stderr = run(["army", "install"])
-        assert res!=0
-        assert len(stdout)==0
-        assert stderr==[
-            "version mismatch: lib1-1.0.1@lib1@1.0.1 conflicts with package lib1-1.0.0@lib1@1.0.0' from lib2-1.0.0@lib2@1.0.0",
-            "install failed"
-        ]
 

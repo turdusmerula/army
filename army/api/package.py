@@ -44,7 +44,10 @@ def load_installed_package(name, version_range="latest", scope='local', exist_ok
         if VersionRange([package.version])[version] is None:
             raise PackageException(f"{os.path.join(package_path, version)}: incorrect package version")
         return package
-    
+
+    if version_range is None:
+        version_range = 'latest'
+            
     package = None
     
     # search package in local project
@@ -177,7 +180,39 @@ def find_repository_package(repositories, name, version_range="latest", reposito
         return res_package, res_repo
  
     return None, None
+
+def parse_package_name(package_name):
+    res = {
+        'repository': None,
+        'name': package_name,
+        'version': None
+    }
     
+    chunks = package_name.split('@')
+    if len(chunks)==2:
+        try:
+            # check chunks[1] is a valid version range
+            VersionRange([])[chunks[1]]
+            
+            res['name'] = chunks[0]
+            res['version'] = chunks[1]
+        except Exception as e:
+            res['repository'] = chunks[0]
+            res['name'] = chunks[1]
+
+    elif len(chunks)==3:
+        res['repository'] = chunks[0]
+        res['name'] = chunks[1]
+        res['version'] = chunks[2]
+
+        # check chunks[1] is a valid version range
+        VersionRange([])[chunks[1]]
+
+    elif len(chunks)!=1:
+        raise PackageException(f"{package_name}: incorrect package name")
+    
+    return res
+
 class PackageException(Exception):
     def __init__(self, message):
         self.message = message
@@ -401,8 +436,8 @@ class InstalledPackage(Package):
     def __init__(self, data, path):
         super(InstalledPackage, self).__init__(data, schema={
                 'repository': Variant(),
-                'installed_user': Optional(Boolean(), default=False),
-                'installed_by': Optional(Array(PackageString()), default=[]),
+                'installed_user': Optional(Boolean()),
+                'installed_by': Optional(Array(PackageString())),
             })
 
         self._path = path
@@ -435,3 +470,18 @@ class InstalledPackage(Package):
             log.debug(f"rm {self._path}")
             shutil.rmtree(self._path, onerror=rmtree_error)
     
+    @property
+    def installed_user(self):
+        if 'installed_user' in self._data:
+            return self._data['installed_user']
+        return False
+
+    @property
+    def installed_by(self):
+        if 'installed_by' in self._data:
+            return self._data['installed_by']
+        return []
+
+    def remove_installed_by(self, package_ref):
+        self._data['installed_by'].remove(package_ref)
+        

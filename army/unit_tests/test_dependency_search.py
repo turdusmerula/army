@@ -6,7 +6,7 @@ import unittest
 from helper import raised, run
 import army
 
-prefix = 'test_local_repository_hierarchy'
+prefix = 'test_local_repository'
 log.setLevel('CRITICAL')
 
 
@@ -41,35 +41,35 @@ class TestDependencySearch(unittest.TestCase):
         assert len(stderr)>0
         
     def test_search_package(self):
-        res, stdout, stderr = run(["army", "search", "project"])
+        res, stdout, stderr = run(["army", "search", "lib"])
         assert res==0
-        assert len(stdout)==4
+        assert len(stdout)==5
         assert len(stderr)==0
 
     def test_search_package_version(self):
-        res, stdout, stderr = run(["army", "search", "project1@1.0.0"])
+        res, stdout, stderr = run(["army", "search", "lib1@1.0.0"])
         assert res==0
-        assert "\n".join(stdout)=="""package  | version | repository      | description
-project1 | 1.0.0   | project1-v1.0.0 | project1"""
+        assert "\n".join(stdout)=="""package | version | repository | description
+lib1    | 1.0.0   | lib1-1.0.0 | lib1   """
         assert len(stderr)==0
 
     def test_search_package_version_range(self):
-        res, stdout, stderr = run(["army", "search", "project1@~1.0.0"])
+        res, stdout, stderr = run(["army", "search", "lib1@~1.0.0"])
         assert res==0
-        assert "\n".join(stdout)=="""package  | version | repository      | description
-project1 | 1.0.0   | project1-v1.0.0 | project1"""
+        assert "\n".join(stdout)=="""package | version | repository | description
+lib1    | 1.0.1   | lib1-1.0.1 | lib1   """
         assert len(stderr)==0
 
     def test_search_package_repository(self):
-        res, stdout, stderr = run(["army", "search", "project1-v1.0.0@project1"])
+        res, stdout, stderr = run(["army", "search", "lib1-1.0.0@lib1"])
         assert res==0
-        assert "\n".join(stdout)=="""package  | version | repository      | description
-project1 | 1.0.0   | project1-v1.0.0 | project1"""
+        assert "\n".join(stdout)=="""package | version | repository | description
+lib1    | 1.0.0   | lib1-1.0.0 | lib1   """
         assert len(stderr)==0
 
     def test_search_package_repository_version(self):
-        res, stdout, stderr = run(["army", "search", "project1-v1.0.0@project1@1.0.0"])
+        res, stdout, stderr = run(["army", "search", "lib1-1.0.0@lib1@1.0.0"])
         assert res==0
-        assert "\n".join(stdout)=="""package  | version | repository      | description
-project1 | 1.0.0   | project1-v1.0.0 | project1"""
+        assert "\n".join(stdout)=="""package | version | repository | description
+lib1    | 1.0.0   | lib1-1.0.0 | lib1   """
         assert len(stderr)==0

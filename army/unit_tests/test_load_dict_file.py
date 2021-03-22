@@ -72,17 +72,17 @@ class TestLoadDictFile(unittest.TestCase):
 #         assert raised(load_dict_file, os.path.join(self.path, "toml_error"), "none", exist_ok=False)==DictFileException
 
 
-    def test_load_python(self):
-        res = load_dict_file(os.path.join(self.path, "python"), "config")
-        assert res['item']=="value"
-
-    def test_load_python_error(self):
-        assert raised(load_dict_file, os.path.join(self.path, "python_error"), "config")[0]==DictFileException
-
-    def test_load_python_not_found(self):
-        res = load_dict_file(os.path.join(self.path, "python"), "none", exist_ok=True)
-        assert res is None
-        assert raised(load_dict_file, os.path.join(self.path, "python_error"), "none", exist_ok=False)[0]==DictFileException
+#     def test_load_python(self):
+#         res = load_dict_file(os.path.join(self.path, "python"), "config")
+#         assert res['item']=="value"
+# 
+#     def test_load_python_error(self):
+#         assert raised(load_dict_file, os.path.join(self.path, "python_error"), "config")[0]==DictFileException
+# 
+#     def test_load_python_not_found(self):
+#         res = load_dict_file(os.path.join(self.path, "python"), "none", exist_ok=True)
+#         assert res is None
+#         assert raised(load_dict_file, os.path.join(self.path, "python_error"), "none", exist_ok=False)[0]==DictFileException
 
 
 class TestDictObject(unittest.TestCase):
