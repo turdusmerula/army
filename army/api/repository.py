@@ -194,27 +194,60 @@ class RepositoryPackage(Package):
             if os.path.exists(os.path.expanduser(source))==False:
                 raise PackageException(f"{include}: file not found")
 
-        # create detination tree
-        if os.path.exists(path)==False:
-            os.makedirs(path)
+        # create destination tree
+        package_path = os.path.join(path, 'dist', self.name, str(self.version))
+        if os.path.exists(package_path)==False:
+            os.makedirs(package_path)
 
         # execute preinstall step
         if os.path.exists(os.path.expanduser(os.path.join(self._source_path, 'pkg', 'preinstall'))):
             log.info("execute preinstall script")
             subprocess.check_call([os.path.join(os.path.expanduser(self._source_path), 'pkg', 'preinstall')])
     
-    def _install(self, path, edit=False):
+    def _install_packages_files(self, path, edit=False):
+        package_path = os.path.join(path, 'dist', self.name, str(self.version))
+        
+        # TODO manage excludes
         includes = self.packaging.include
         for include in includes:
             source = os.path.join(self._source_path, include)
             if edit==True:
-                self._link(source, path)
+                self._link(source, package_path)
             else:
-                self._copy(source, path)
+                self._copy(source, package_path)
         
+    def _install_profiles(self, path, edit):
+        package_path = os.path.join(path, 'dist', self.name, str(self.version))
+        profile_path = os.path.join(path, 'profile')
+        
+        # copy profiles
+        source = os.path.join(self._source_path, 'profile')
+        if os.path.exists(source):
+            if edit==True:
+                self._link(source, package_path)
+            else:
+                self._copy(source, package_path)
+        
+        if len(self.profiles)>0 and os.path.exists(profile_path)==False:
+            os.makedirs(profile_path)
+            
+        for profile in self.profiles:
+            profile_name = f"{profile}@{self.version}"
+            profile_path = os.path.join(profile_path, f"{profile_name}.yaml")
+            if os.path.exists(profile_path):
+                raise RepositoryException(f"{profile_path}: profile already installed")
+            self._link_file(os.path.join(self._source_path, 'profile', f"{profile}.yaml"), profile_path)
+            
+    
+    def _install(self, path, edit=False):
+        self._install_packages_files(path, edit)
+        self._install_profiles(path, edit)
+        
+        package_path = os.path.join(path, 'dist', self.name, str(self.version))
         try:
             # try to load installed package definition
-            content = load_dict_file(path, "army")
+            # if package is already installed then it will be modified
+            content = load_dict_file(package_path, "army")
         except Exception as e:
             # load source defintion
             content = load_dict_file(self._source_path, "army")
@@ -225,7 +258,7 @@ class RepositoryPackage(Package):
             'name': self._repository._name
         }
 
-        save_dict_file(path, "army", content)
+        save_dict_file(package_path, "army", content)
         
     def _postinstall(self, path, edit=False):
         #execute postinstall command
@@ -236,7 +269,10 @@ class RepositoryPackage(Package):
 
     def install(self, path, edit=False):
         self._preinstall(path=path, edit=edit)
+        
+        # TODO: if install
         self._install(path=path, edit=edit)
+        
         self._postinstall(path=path, edit=edit)
 
 #         if os.path.exists(path):
@@ -259,6 +295,10 @@ class RepositoryPackage(Package):
         source = os.path.expanduser(source)
         os.symlink(os.path.abspath(source), os.path.join(dest, os.path.basename(source)))
 
+    def _link_file(self, source, dest):
+        log.debug(f"link {source} -> {dest}")
+        source = os.path.expanduser(source)
+        os.symlink(os.path.abspath(source), dest)
 
 class IndexedRepositoryPackage(RepositoryPackage):
     def __init__(self, data, repository):

@@ -1,0 +1,9 @@
+name: project7
+description: project with profile
+version: 1.0.0 
+
+dependencies:
+  lib4: 2.0.0
+
+profiles:
+  - profile

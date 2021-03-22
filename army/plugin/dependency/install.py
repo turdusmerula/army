@@ -226,9 +226,9 @@ def _install_package(package, level, edit, scope, reinstall):
 
     # locate install folder
     if scope=='local':
-        path = "dist"
+        path = ""
     else:
-        path = os.path.expanduser(prefix_path("~/.army/dist/"))
+        path = os.path.expanduser(prefix_path("~/.army/"))
 
     try:
         # search package in installed packages
@@ -252,7 +252,7 @@ def _install_package(package, level, edit, scope, reinstall):
             print(f' already installed, skip')
  
     try:
-        install_path = os.path.join(path, package.name, str(package.version))
+        install_path = os.path.join(path, 'dist', package.name, str(package.version))
 
         if install==True:
             if edit==True and package.repository.editable==False:
@@ -260,7 +260,7 @@ def _install_package(package, level, edit, scope, reinstall):
                 print(f"{package}: repository is not editable", file=sys.stderr)
                 edit = False
                 
-            package.install(path=install_path, edit=edit)
+            package.install(path=path, edit=edit)
 
         content = load_dict_file(install_path, "army")
         if package.installed_by is not None:

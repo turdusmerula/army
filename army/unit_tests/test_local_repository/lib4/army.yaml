@@ -6,3 +6,6 @@ dependencies:
   lib1: ~1.0.0
   lib2: ~1.0.0
   lib3: 2.0.0
+
+profiles:
+  - profile3

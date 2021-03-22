@@ -2,6 +2,8 @@ from army.api.log import log
 from army.api.debugtools import print_stack
 from army.api.dict_file import load_dict_file, find_dict_files, Dict
 from army.api.path import prefix_path
+# from army.api.schema import Schema, String, VersionString, Optional, PackageString, Array, Dict, VariableDict, Variant, VersionRangeString, Boolean
+from army.api.version import Version, VersionRange
 import copy
 import json
 import os
@@ -21,16 +23,21 @@ def load_profile_list():
     
     profiles = []
     
-#     profiles += load_global_profile_list()
+    profiles += load_global_profile_list()
     profiles += load_user_profile_list()
-#     profiles += load_project_profile_list()
+    profiles += load_project_profile_list()
     
     return profiles
 
 # load profiles from /etc/army/profile
 def load_global_profile_list():
+    profiles = []
     # load main repositories
-    profiles = find_dict_files(prefix_path('/etc/army/profile'))
+    dicts = find_dict_files(prefix_path('/etc/army/profile'))
+    for name in dicts:
+        chunks = parse_profile_name(name)
+        profile = Profile(name=chunks['name'], version=chunks['version'], path=prefix_path('/etc/army/profile'))
+        profiles.append(profile)
     return profiles
 
 # load profiles from ~/.army/profile
@@ -39,7 +46,8 @@ def load_user_profile_list():
     # load main repositories
     dicts = find_dict_files(prefix_path('~/.army/profile'))
     for name in dicts:
-        profile = Profile(name=name, path=prefix_path('~/.army/profile'))
+        chunks = parse_profile_name(name)
+        profile = Profile(name=chunks['name'], version=chunks['version'], path=prefix_path('~/.army/profile'))
         profiles.append(profile)
     return profiles
 
@@ -47,22 +55,28 @@ def load_user_profile_list():
 def load_project_profile_list():
     # load main repositories
     profiles = []
-    # TODO
+    dicts = find_dict_files('profile')
+    for name in dicts:
+        chunks = parse_profile_name(name)
+        profile = Profile(name=chunks['name'], version=chunks['version'], path='profile')
+        profiles.append(profile)
     return profiles
-
 
 def load_profile(name, parent=None):
     res = None
     
     profiles = load_profile_list()
     
+    chunks = parse_profile_name(name)
+
     # search profile in profiles list
     for profile in profiles:
-        if profile.name==name:
-            res = copy.copy(profile)
-            res._parent = parent
-            res.load()
-            return res
+        if profile.name==chunks['name']:
+            if chunks['version'] is None or ( chunks['version'] is not None and profile.version==chunks['version'] ):
+                res = copy.copy(profile)
+                res._parent = parent
+                res.load()
+                return res
     
     if res is None:
         raise ProfileException(f"{name}: profile not found")
@@ -102,18 +116,43 @@ def save_current_profile_cache(profiles):
 def get_current_profile_plugins():
     pass
 
+
+def parse_profile_name(profile_name):
+    res = {
+        'name': profile_name,
+        'version': None
+    }
+    
+    chunks = profile_name.split('@')
+    if len(chunks)==2:
+        res['name'] = chunks[0]
+        res['version'] = chunks[1]
+
+        # check chunks[1] is a valid version range
+        VersionRange([])[chunks[1]]
+    elif len(chunks)!=1:
+        raise ProfileException(f"{profile_name}: incorrect profile name")
+    
+    return res
+
 class Profile(object):
-    def __init__(self, name=None, path=None, parent=None):
+    def __init__(self, name=None, version=None, path=None, parent=None):
+                
         self._name = name
+        self._version = version
         self._path = path
         self._parent = parent
-        self._description = ""
+        self._description = None
         self._data = None
         
     @property
     def name(self):
         return self._name
     
+    @property
+    def version(self):
+        return self._version
+
     @property
     def path(self):
         return self._path
@@ -134,4 +173,12 @@ class Profile(object):
         if self._parent is not None:
             parent = self._parent._data
         
-        self._data = Dict(load_dict_file(self.path, self.name), parent=parent)
+        if self.version is None:
+            name = f"{self.name}"
+        else:
+            name = f"{self.name}@{self.version}"
+            
+        self._data = Dict(data=load_dict_file(self.path, name), parent=parent)
+        
+        self._description = self._data.get("/description", raw=True, default="")
+    

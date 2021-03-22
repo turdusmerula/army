@@ -2,7 +2,5 @@ name: project1
 description: checks dependency mismatch
 version: 1.0.0 
 
-dependencies:
-  lib1: 1.0.1
-  lib2: 1.0.0
-  
+profiles:
+  - project-profile

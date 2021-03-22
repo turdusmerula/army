@@ -1,6 +1,0 @@
-name: lib3
-description: lib3
-version: 2.0.0
-
-dependencies:
-  lib2: ~1.0.0
