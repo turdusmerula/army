@@ -1,0 +1,21 @@
+# verbosty level (default critical):
+# debug
+# info
+# warning
+# error
+# critical
+verbose: critical
+
+repositories:
+  lib1:
+    type: git-local
+    uri: /lib1
+
+  lib2:
+    type: git-local
+    uri: /lib2
+
+  lib3:
+    # profile collision with lib2
+    type: git-local
+    uri: /lib3

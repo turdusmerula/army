@@ -150,7 +150,7 @@ def _find_repository_package(repositories, name, version_range="latest", reposit
 
     if package is None:
         package, repo = find_repository_package(repositories, name, version_range=None, repository=repository, editable=editable)
-        if package is None and version_range is None:
+        if package is None or version_range is None:
             print(f"{name}: package not found", file=sys.stderr)
         else:
             print(f"{name}: no version matching {version_range}", file=sys.stderr)

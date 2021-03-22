@@ -36,41 +36,52 @@ def uninstall(ctx, name, yes, **kwargs):
     # load configuration
     config = ctx.config
 
-    if len(name)==0:
+    # load project
+    project = ctx.project
+    if project is None:
+        log.info(f"no project loaded")
+
+    if len(name)==0 and project is None:
         print("nothing to uninstall", file=sys.stderr)
         exit(1)
 
     tree = {}
     
-    for package in name:
-        s_name = package
-        s_version = None
-        
-        chunks = package.split('@')
-        if len(chunks)==2:
-            try:
-                # check chunks[1] is a version range
-                Version(chunks[1])
-                s_name = chunks[0]
-                s_version = chunks[1]
-            except Exception as e:
+    packages = []
+    
+    if len(name)==0:
+        for package, version in project.dependencies.items():
+            packages.append(_find_installed_package(package, version=version, scope=scope))
+
+    else:
+        for package in name:
+            s_name = package
+            s_version = None
+            
+            chunks = package.split('@')
+            if len(chunks)==2:
+                try:
+                    # check chunks[1] is a version range
+                    Version(chunks[1])
+                    s_name = chunks[0]
+                    s_version = chunks[1]
+                except Exception as e:
+                    print(f"{package}: naming error", file=sys.stderr)
+                    exit(1)
+            elif len(chunks)!=1:
                 print(f"{package}: naming error", file=sys.stderr)
                 exit(1)
-        elif len(chunks)!=1:
-            print(f"{package}: naming error", file=sys.stderr)
-            exit(1)
-
-        pkg = _find_installed_package(s_name, version=s_version, scope=scope)
-        if pkg is None:
-            print(f"{name}: package not found", file=sys.stderr)
-            exit(1)
+            
+            packages.append(_find_installed_package(s_name, version=s_version, scope=scope))
+    
+    for pkg in packages:
         pkg['package']._direct_uninstall = True
-        
+    
         parents = _get_top_level_parents(pkg['package'], scope)
         for parent in parents:
             tree[parent] = parents[parent]
             tree[parent]['package']._direct_uninstall = True
-
+    
         if len(parents)==0:
             package_ref = f"{scope}@{pkg['package'].name}@{pkg['package'].version}"
             tree[package_ref] = pkg
@@ -81,14 +92,14 @@ def uninstall(ctx, name, yes, **kwargs):
             print(f"{tab}{item} [installed_user={package.installed_user}, installed_by={package.installed_by}, uninstall={package._uninstall}, direct_uninstall={package._direct_uninstall}]")
             print_tree(tree[item]['dependencies'], f"{tab}  ")
     
-    print("++++")
-    print_tree(tree)
+#     print("++++")
+#     print_tree(tree)
 
     _update_tree(tree)
     
-    print("++++")
-    print_tree(tree)
-    print("++++")
+#     print("++++")
+#     print_tree(tree)
+#     print("++++")
     
     to_uninstall = _get_remove_list(tree)
     
@@ -107,8 +118,15 @@ def uninstall(ctx, name, yes, **kwargs):
         if res!='y' and res!='Y':
             exit(0)
     
-    print("---")
+    for package_id in to_uninstall:
+        print(f"uninstall {package_id}")
+        package = to_uninstall[package_id]['package']
+        package.uninstall()
+        if len(os.listdir(os.path.dirname(package.path)))==0:
+            os.rmdir(os.path.dirname(package.path))
     
+    print("uninstalled ok")
+
 def _get_top_level_parents(package, scope):
     parents = {}
     
@@ -127,9 +145,25 @@ def _recursive_get_top_level_parents(package, scope, parents):
             parents[parent_id] = _find_installed_package(parent_name, parent_version, scope)
             _recursive_get_top_level_parents(parents[parent_id]['package'], scope, parents)
 
-def _find_installed_package(name, version, scope='user'):
+def _find_installed_package(name, version, scope='user', from_package=None):
     global loaded_packages
-    package = UninstalledPackage(load_installed_package(name, version, scope))
+    
+    package = load_installed_package(name, version, scope)
+    if package is None:
+        package = load_installed_package(name, version_range=None, scope=scope)
+        if from_package is None:
+            if package is None or version is None:
+                print(f"{name}: package not installed", file=sys.stderr)
+            else:
+                print(f"{name}: no version matching '{version}' installed", file=sys.stderr)
+        else:
+            if package is None or version is None:
+                print(f"{name}: dependency from {from_package} not installed", file=sys.stderr)
+            else:
+                print(f"{name}: dependency matching '{version}' from {from_package} not installed", file=sys.stderr)
+        exit(1)
+    
+    package = UninstalledPackage(package)
 
     pakage_id = f"{scope}@{package.name}@{package.version}"
     
@@ -152,7 +186,7 @@ def _load_package_dependency_tree(package, scope):
         dependency_name = dependency_ref['name']
         dependency_version = dependency_ref['version']
         
-        pkg = _find_installed_package(dependency_name, version=dependency_version, scope=scope)
+        pkg = _find_installed_package(dependency_name, version=dependency_version, scope=scope, from_package=package)
         if pkg is None:
             print(f"{dependency}: package not found, dependency tree may be corrupt", file=sys.stderr)
             exit(1)

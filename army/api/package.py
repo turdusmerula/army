@@ -232,6 +232,8 @@ class Package(Schema):
                     'exclude': Optional(Array(String()))
                     })),
                 
+                'profiles': Optional(Array(String())),
+                
 #                 # arch definition
 #                 'arch': Optional(VariableDict(String(), Dict({
 #                     'definition': Optional(String()),
@@ -266,7 +268,41 @@ class Package(Schema):
     @property
     def version(self):
         return Version(self._data['version'])
-    # 
+
+    @property
+    def dependencies(self):
+        if 'dependencies' in self._data:
+            return self._data['dependencies']
+        return {}
+    
+    @property
+    def packaging(self):
+        class Packaging(object):
+            def __init__(self, data):
+                self._data = data
+        
+            @property
+            def include(self):
+                if 'include' in self._data:
+                    return self._data['include']
+                return []
+        
+            @property
+            def exclude(self):
+                if 'exclude' in self._data:
+                    return self._data['exclude']
+                return []
+
+        if 'packaging' in self._data:
+            return Packaging(self._data['packaging'])
+        return Packaging({})
+        
+    @property
+    def profiles(self):
+        if 'profiles' in self._data:
+            return self._data['profiles']
+        return []
+
 #     @property
 #     def arch(self):
 #         class ArchDictIterator(object):
@@ -307,12 +343,6 @@ class Package(Schema):
 #             return ArchDict(self._data['arch'])
 #         return ArchDict({})
 
-    @property
-    def dependencies(self):
-        if 'dependencies' in self._data:
-            return self._data['dependencies']
-        return {}
-    
 #     @property
 #     def plugins(self):
 #         if 'plugins' in self._data:
@@ -325,28 +355,6 @@ class Package(Schema):
 #             return self._data['plugin']
 #         return []
 
-    @property
-    def packaging(self):
-        class Packaging(object):
-            def __init__(self, data):
-                self._data = data
-        
-            @property
-            def include(self):
-                if 'include' in self._data:
-                    return self._data['include']
-                return []
-        
-            @property
-            def exclude(self):
-                if 'exclude' in self._data:
-                    return self._data['exclude']
-                return []
-
-        if 'packaging' in self._data:
-            return Packaging(self._data['packaging'])
-        return Packaging({})
-        
 #     @property
 #     def default_target(self):
 #         if 'default-target' in self._data:
