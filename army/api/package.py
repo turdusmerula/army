@@ -477,7 +477,14 @@ class InstalledPackage(Package):
         if os.path.exists(self._path):
             log.debug(f"rm {self._path}")
             shutil.rmtree(self._path, onerror=rmtree_error)
-    
+        
+        profiles_path = os.path.normpath(os.path.join(self._path, '..', '..', '..', 'profile')) 
+        # remove profiles
+        for profile in self.profiles:
+            profile_path = os.path.join(profiles_path, f"{profile}@{self.version}.yaml")
+            if os.path.exists(profile_path):
+                os.remove(profile_path)
+
     @property
     def installed_user(self):
         if 'installed_user' in self._data:
