@@ -23,11 +23,13 @@ def load_plugin(name, version_range, config):
         if plugins[name].version==package.version:
             log.info(f"{name}@{plugins[name].version}: plugin already loaded")
         else:
-            raise PluginException(f"{name}: trying to load version {package.version} but plugin already loaded with version {plugins[name].version}")
+            log.error(f"{name}: trying to load version {package.version} but plugin already loaded with version {plugins[name].version}")
+            return 
         
     if package is None:
-        raise PluginException(f"{name}: plugin not installed")
-    
+        log.error(f"{name}: plugin not installed")
+        return 
+
     plugins[name] = package
 
     try:
@@ -37,8 +39,7 @@ def load_plugin(name, version_range, config):
         spec.loader.exec_module(plugin)
     except Exception as e:
         print_stack()
-        log.debug(e)
-        raise PluginException(f"{name}: failed to load plugin")
+        log.error(e)
 
 
 class Plugin(object):

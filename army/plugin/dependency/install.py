@@ -260,7 +260,7 @@ def _install_package(package, level, edit, scope, reinstall):
                 print(f"{package}: repository is not editable", file=sys.stderr)
                 edit = False
                 
-            package.install(path=path, edit=edit)
+            package.install(path=path, force=reinstall, edit=edit)
 
         content = load_dict_file(install_path, "army")
         if package.installed_by is not None:

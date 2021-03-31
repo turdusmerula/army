@@ -303,6 +303,11 @@ class Package(Schema):
             return self._data['profiles']
         return []
 
+    @property
+    def plugins(self):
+        if 'plugins' in self._data:
+            return self._data['plugins']
+        return []
 #     @property
 #     def arch(self):
 #         class ArchDictIterator(object):

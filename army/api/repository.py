@@ -186,7 +186,7 @@ class RepositoryPackage(Package):
     def _rmtree_error(self, func, path, exc_info):
         raise RepositoryException(exc_info)
 
-    def _preinstall(self, path, edit=False):
+    def _preinstall(self, path, edit):
         includes = self.packaging.include
         # check that all files exists
         for include in includes:
@@ -204,7 +204,7 @@ class RepositoryPackage(Package):
             log.info("execute preinstall script")
             subprocess.check_call([os.path.join(os.path.expanduser(self._source_path), 'pkg', 'preinstall')])
     
-    def _install_packages_files(self, path, edit=False):
+    def _install_packages_files(self, path, force, edit):
         package_path = os.path.join(path, 'dist', self.name, str(self.version))
         
         # TODO manage excludes
@@ -212,11 +212,22 @@ class RepositoryPackage(Package):
         for include in includes:
             source = os.path.join(self._source_path, include)
             if edit==True:
-                self._link(source, package_path)
+                self._link(source, package_path, force=force)
             else:
-                self._copy(source, package_path)
+                self._copy(source, package_path, force=force)
+
+    def _install_plugins_files(self, path, force, edit):
+        package_path = os.path.join(path, 'dist', self.name, str(self.version))
         
-    def _install_profiles(self, path, edit):
+        plugins = self.plugins
+        for plugin in plugins:
+            source = os.path.join(self._source_path, plugin)
+            if edit==True:
+                self._link(source, package_path, force=force)
+            else:
+                self._copy(source, package_path, force=force)
+        
+    def _install_profiles(self, path, force, edit):
         package_path = os.path.join(path, 'dist', self.name, str(self.version))
         profile_path = os.path.join(path, 'profile')
         
@@ -224,9 +235,9 @@ class RepositoryPackage(Package):
         source = os.path.join(self._source_path, 'profile')
         if os.path.exists(source):
             if edit==True:
-                self._link(source, package_path)
+                self._link(source, package_path, force=force)
             else:
-                self._copy(source, package_path)
+                self._copy(source, package_path, force=force)
         
         if len(self.profiles)>0 and os.path.exists(profile_path)==False:
             os.makedirs(profile_path)
@@ -239,9 +250,10 @@ class RepositoryPackage(Package):
             self._link_file(os.path.join(self._source_path, 'profile', f"{profile}.yaml"), profile_path)
             
     
-    def _install(self, path, edit=False):
-        self._install_packages_files(path, edit)
-        self._install_profiles(path, edit)
+    def _install(self, path, force, edit):
+        self._install_packages_files(path, force=force, edit=edit)
+        self._install_profiles(path, force=force, edit=edit)
+        self._install_plugins_files(path, force=force, edit=edit)
         
         package_path = os.path.join(path, 'dist', self.name, str(self.version))
         try:
@@ -260,18 +272,17 @@ class RepositoryPackage(Package):
 
         save_dict_file(package_path, "army", content)
         
-    def _postinstall(self, path, edit=False):
+    def _postinstall(self, path, edit):
         #execute postinstall command
         if os.path.exists(os.path.expanduser(os.path.join(self._source_path, 'pkg', 'postinstall'))):
             log.info("execute postinstall script")
             subprocess.check_call([os.path.join(os.path.expanduser(self._source_path), 'pkg', 'postinstall')])
         
 
-    def install(self, path, edit=False):
+    def install(self, path, force=False, edit=False):
         self._preinstall(path=path, edit=edit)
         
-        # TODO: if install
-        self._install(path=path, edit=edit)
+        self._install(path=path, force=force, edit=edit)
         
         self._postinstall(path=path, edit=edit)
 
@@ -282,24 +293,47 @@ class RepositoryPackage(Package):
 
             
         
-    def _copy(self, source, dest):
+    def _copy(self, source, dest, force=False):
         log.debug(f"copy {source} -> {dest}")
         source = os.path.expanduser(source)
+        dest = os.path.join(dest, os.path.basename(source))
+        
+        if force==True and os.path.exists(dest):
+            self._rm(dest)
+            
         if os.path.isfile(source):
-            shutil.copy(source, os.path.join(dest, os.path.basename(source)))
+            shutil.copy(source, dest)
         else:
-            shutil.copytree(source, os.path.join(dest, os.path.basename(source)))
+            shutil.copytree(source, dest)
 
-    def _link(self, source, dest):
+    def _link(self, source, dest, force=False):
         log.debug(f"link {source} -> {dest}")
         source = os.path.expanduser(source)
-        os.symlink(os.path.abspath(source), os.path.join(dest, os.path.basename(source)))
-
-    def _link_file(self, source, dest):
-        log.debug(f"link {source} -> {dest}")
-        source = os.path.expanduser(source)
+        dest = os.path.join(dest, os.path.basename(source))
+        
+        if force==True and os.path.exists(dest):
+            self._rm(dest)
+        
         os.symlink(os.path.abspath(source), dest)
 
+    def _link_file(self, source, dest, force=False):
+        log.debug(f"link {source} -> {dest}")
+        source = os.path.expanduser(source)
+        
+        if force==True and os.path.exists(dest):
+            self._rm(dest)
+
+        os.symlink(os.path.abspath(source), dest)
+
+    def _rm(self, path):
+        log.debug(f"rm {path}")
+        if os.path.islink(path):
+            os.unlink(path)
+        elif os.path.isfile(path):
+            os.remove(path)
+        else:
+            shutil.rmtree(path, onerror=self._rmtree_error)
+            
 class IndexedRepositoryPackage(RepositoryPackage):
     def __init__(self, data, repository):
         super(IndexedRepositoryPackage, self).__init__(data, repository)
