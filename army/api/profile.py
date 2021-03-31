@@ -1,8 +1,8 @@
 from army.api.log import log
 from army.api.debugtools import print_stack
-from army.api.dict_file import load_dict_file, find_dict_files, Dict
+from army.api.dict_file import load_dict_file, find_dict_files, DictFile
 from army.api.path import prefix_path
-# from army.api.schema import Schema, String, VersionString, Optional, PackageString, Array, Dict, VariableDict, Variant, VersionRangeString, Boolean
+from army.api.schema import Schema, String, VersionString, Optional, PackageString, Array, Dict, VariableDict, Variant, VersionRangeString, Boolean
 from army.api.version import Version, VersionRange
 import copy
 import json
@@ -145,6 +145,17 @@ class Profile(object):
         self._description = None
         self._data = None
         
+        self._schema = Schema(self._data, {
+            'plugins': Optional(Array(
+                Dict({
+                    'name': String(),
+                    'version': VersionRangeString(),
+                    'config': VariableDict(String(), Variant())
+                    })
+                )),
+            'tools': Optional(VariableDict(String(), Variant()))
+        })
+        
     @property
     def name(self):
         return self._name
@@ -178,7 +189,9 @@ class Profile(object):
         else:
             name = f"{self.name}@{self.version}"
             
-        self._data = Dict(data=load_dict_file(self.path, name), parent=parent)
+        self._data = DictFile(data=load_dict_file(self.path, name), parent=parent)
         
         self._description = self._data.get("/description", raw=True, default="")
     
+        self._schema._data = self._data 
+        self._schema.check()

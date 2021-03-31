@@ -40,6 +40,9 @@ class Variant(Validator):
     def check(self, value):
         pass
 
+    def __repr__(self):
+        return "Variant"
+
 class Boolean(Validator):
     def __init__(self):
         super(Boolean, self).__init__()
@@ -48,12 +51,18 @@ class Boolean(Validator):
         if not isinstance(value, bool):
             raise ValidatorException(f"'{value}' is not a valid boolean")
 
+    def __repr__(self):
+        return "Bool"
+
 class Int(Validator):
     def __init__(self):
         super(Int, self).__init__()
     
     def check(self, value):
         raise "not implemented"
+
+    def __repr__(self):
+        return "Int"
 
 class String(Validator):
     def __init__(self):
@@ -62,6 +71,9 @@ class String(Validator):
     def check(self, value):
         if not isinstance(value, str):
             raise ValidatorException(f"'{value}' is not a valid string")
+
+    def __repr__(self):
+        return "String"
 
 class VersionRangeString(Validator):
     def __init__(self):
@@ -77,6 +89,9 @@ class VersionRangeString(Validator):
             log.debug(f"{type(e)} {e}")
             raise ValidatorException(f"'{value}' is not a valid version range")
 
+    def __repr__(self):
+        return "VersionRange"
+
 class VersionString(Validator):
     def __init__(self):
         super(VersionString, self).__init__()
@@ -87,16 +102,21 @@ class VersionString(Validator):
         except Exception as e:
             raise ValidatorException(f"'{value}' is not a valid version")
 
+    def __repr__(self):
+        return "Version"
+
 class Optional(Validator):
-    def __init__(self, schema, default=None):
+    def __init__(self, schema):
         super(Optional, self).__init__()
         self._schema = schema
-        self._default = default
         
     def check(self, value):
         if value is not None:
             self._schema.check(value)
 
+    def __repr__(self):
+        return f"{self._schema}*"
+    
 class PackageString(Validator):
     def __init__(self):
         super(PackageString, self).__init__()
@@ -105,6 +125,9 @@ class PackageString(Validator):
         if not isinstance(value, str):
             raise ValidatorException(f"'{value}' is not a valid package name")
         # TODO: validate name
+
+    def __repr__(self):
+        return "Package"
         
 class Array(Validator):
     def __init__(self, schema):
@@ -116,6 +139,9 @@ class Array(Validator):
             raise ValidatorException(f"'{values}' is not a valid array list")
         for value in values:
             self._schema.check(value)
+
+    def __repr__(self):
+        return f"[{self._schema}]"
 
 class Dict(Validator):
     def __init__(self, schema):
@@ -130,7 +156,10 @@ class Dict(Validator):
                 raise SchemaException(f"{value}: unknown item")
             else:
                 self._schema[value].check(values[value])
-
+    
+    def __repr__(self):
+        return f"{self._schema}"
+    
 class VariableDict(Validator):
     def __init__(self, schemakey, schemavalue):
         super(VariableDict, self).__init__()
@@ -143,3 +172,6 @@ class VariableDict(Validator):
         for value in values:
             self._schemakey.check(value)
             self._schemavalue.check(values[value])
+
+    def __repr__(self):
+        return "{"f"{self._schemakey}: {self._schemavalue}""}"

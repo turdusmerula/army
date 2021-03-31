@@ -1,4 +1,4 @@
-from army.api.dict_file import load_dict_file, DictFileException, Dict
+from army.api.dict_file import load_dict_file, DictFileException, DictFile
 from army.api.log import log
 import unittest
 from helper import raised, run
@@ -88,7 +88,7 @@ class TestLoadDictFile(unittest.TestCase):
 class TestDictObject(unittest.TestCase):
     
     def setUp(self):
-        self.dict1 = Dict(data={
+        self.dict1 = DictFile(data={
             "a": "1",
             "e": "0",
             "f": "0",
@@ -96,7 +96,7 @@ class TestDictObject(unittest.TestCase):
             "array": [1, 2, 3, 4]
         })
         
-        self.dict2 = Dict(data={
+        self.dict2 = DictFile(data={
             "b": "{{a}}",
             "c": "{{b}}",
             "d": "{{nonexists}}",
@@ -120,7 +120,7 @@ class TestDictObject(unittest.TestCase):
             
         }, parent=self.dict1)
 
-        self.dict3 = Dict(data={
+        self.dict3 = DictFile(data={
 
         }, parent=self.dict2)
         

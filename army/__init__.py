@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(pkg_resources.resource_filename(__name__, "__mai
 from army.api.command import get_army_parser, create_parser, ArmyBaseParser
 from army.api.config import ArmyConfig, load_global_configuration, load_global_configuration_repositories, load_user_configuration, load_user_configuration_repositories
 from army.api.debugtools import print_stack
+from army.api.dict_file import DictFile
 from army.api.log import log, get_log_level
 from army.api.path import set_prefix_path
 from army.api.plugin import load_plugin
@@ -162,14 +163,21 @@ def main():
         plugins = []
         if profile is not None:
             plugins = profile.data.get("/plugins", default=[])
-        
+         
         for plugin in plugins:
-            version = profile.data.get(f"/plugins/{plugin}/version", default="latest")
-            config = profile.data.get(f"/plugins/{plugin}", default=None)
-            load_plugin(plugin, version, config)
+            data = DictFile(plugin)
+            name = data.get(f"name")
+            version = data.get(f"version", default="latest")
+            config = data.get(f"config", default={})
+            load_plugin(name, version, config)
     except Exception as e:
         print_stack()
-        log.error(f"{e}")
+        print(f"{e}")
+        exit(1)
+        
+#     except Exception as e:
+#         print_stack()
+#         log.error(f"{e}")
     
 #     # load default target if exists
 #     if project is not None:

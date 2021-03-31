@@ -100,6 +100,7 @@ def load_configuration_repository_file(path, name, parent=None):
     
     try:
         res = ArmyConfigRepository(value=config, parent=parent)
+        res.check()
     except Exception as e:
         print_stack()
         log.debug(e)

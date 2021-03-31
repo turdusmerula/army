@@ -174,11 +174,11 @@ def save_dict_file(path, name, content):
 # Loader.add_constructor('!include', Loader.include)
 
 
-class Dict(object):
+class DictFile(object):
     reserved = ["_data", "_parent"]
     
     def __init__(self, data=None, parent=None):
-        if parent is not None and isinstance(parent, Dict)==False:
+        if parent is not None and isinstance(parent, DictFile)==False:
             raise DictFileException(f"{type(parent)}: parent type mismatch")
         
         self._raw_data = data
@@ -196,7 +196,6 @@ class Dict(object):
         if self._data is None:
             self._data = self.to_dict()
     
-    # get an 
     def get(self, path, raw=False, **kwargs):
         self._load_data()
 
@@ -381,3 +380,5 @@ class Dict(object):
             copy(parent._raw_data, res)
         return res
     
+    def __repr__(self):
+        return str(self.to_dict())

@@ -225,7 +225,7 @@ class Package(Schema):
                 'description': String(),
                 'version': VersionString(),
                 'dependencies': Optional(VariableDict(PackageString(), VersionRangeString())),
-#                 'plugins': Optional(VariableDict(PackageString(), VersionRangeString())),
+                'plugins': Optional(Array(String())),
 #                 'plugin': Optional(VariableDict(PackageString(), Variant())),
                 'packaging': Optional(Dict({
                     'include': Optional(Array(String())),
