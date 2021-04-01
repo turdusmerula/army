@@ -3,9 +3,7 @@ from army.api.log import log, get_log_level
 import copy
 import dpath.util
 import importlib.util
-import json
 import os
-import toml
 import sys
 #import oyaml as yaml
 import yaml
@@ -55,29 +53,35 @@ def load_dict_file(path, name, exist_ok=False):
         else:
             raise DictFileException(f"{path}: path not found")
     
-    file = os.path.join(str(path), name)
-    if os.path.exists(file):
-        # check if file matches one of known extensions
-        for ext, loader in dict_file_extensions().items():
-            if name.endswith(f".{ext}"):
-                res = loader(file)
-                log.debug(f"content: {res}")
-                return res
-        
-        raise DictFileException(f"{file}: unkwnown file type")
-        
-    # search for a file 
-    res = None
-    for ext, loader in dict_file_extensions().items():
-        file = os.path.join(path, f"{name}.{ext}")
-        if os.path.exists(file):
-            if res is None:
-                res = loader(file)
-            else:
-                log.warning(f"{file}: {name} already loaded, skipped")
-            
+    file = os.path.join(str(path), f"{name}.yaml")
+    if os.path.exists(file)==False:
+        raise DictFileException(f"{path}: {name}.yaml not found")
+
+    res = _load_yaml_dict_file(file)
     if res is None and exist_ok==False:
-        raise DictFileException(f"{path}: no file corresponding to {name} found")
+        raise DictFileException(f"{path}: {name}.yaml not found")
+    
+#         # check if file matches one of known extensions
+#         for ext, loader in dict_file_extensions().items():
+#             if name.endswith(f".{ext}"):
+#                 res = loader(file)
+#                 log.debug(f"content: {res}")
+#                 return res
+#         
+#         raise DictFileException(f"{file}: unkwnown file type")
+#         
+#     # search for a file 
+#     res = None
+#     for ext, loader in dict_file_extensions().items():
+#         file = os.path.join(path, f"{name}.{ext}")
+#         if os.path.exists(file):
+#             if res is None:
+#                 res = loader(file)
+#             else:
+#                 log.warning(f"{file}: {name} already loaded, skipped")
+#             
+#     if res is None and exist_ok==False:
+#         raise DictFileException(f"{path}: {name}.yaml not found")
     
     if res is not None:
         log.debug(f"content: {res}")
@@ -329,10 +333,24 @@ class DictFile(object):
             res = ""
             for t, v in chuncks:
                 if t==0:
+                    # chunk type is simple text
                     res += v
                 else:
-                    value = get_value(din, v)
-                    res += expand_value(din, value)
+                    # chunk type is a substitution
+                    if ':' in v:
+                        kind, content = v.split(':')
+                        kind = kind.strip()
+                        content = content.strip()
+                        if kind=='package':
+                            from army.api.package import find_installed_package, parse_package_name
+                            chunks = parse_package_name(content)
+                            path = find_installed_package(name=chunks['name'], version_range=chunks['version'], exist_ok=False)
+                            res = path
+                        else:
+                            raise DictFileException(f"unknown substitution kind '{kind}'")
+                    else:
+                        value = get_value(din, v)
+                        res += expand_value(din, value)
             return res
         
         def copy(din, dout):

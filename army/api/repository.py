@@ -246,14 +246,21 @@ class RepositoryPackage(Package):
             profile_name = f"{profile}@{self.version}"
             profile_path = os.path.join(profile_path, f"{profile_name}.yaml")
             if os.path.exists(profile_path):
-                raise RepositoryException(f"{profile_path}: profile already installed")
+                if force==True:
+                    self._rm(profile_path)
+                else:
+                    raise RepositoryException(f"{profile_path}: profile already installed")
             self._link_file(os.path.join(self._source_path, 'profile', f"{profile}.yaml"), profile_path)
             
     
     def _install(self, path, force, edit):
-        self._install_packages_files(path, force=force, edit=edit)
-        self._install_profiles(path, force=force, edit=edit)
-        self._install_plugins_files(path, force=force, edit=edit)
+        error = None
+        try:
+            self._install_packages_files(path, force=force, edit=edit)
+            self._install_profiles(path, force=force, edit=edit)
+            self._install_plugins_files(path, force=force, edit=edit)
+        except Exception as e:
+            error = e
         
         package_path = os.path.join(path, 'dist', self.name, str(self.version))
         try:
@@ -272,6 +279,9 @@ class RepositoryPackage(Package):
 
         save_dict_file(package_path, "army", content)
         
+        if error is not None:
+            raise error
+
     def _postinstall(self, path, edit):
         #execute postinstall command
         if os.path.exists(os.path.expanduser(os.path.join(self._source_path, 'pkg', 'postinstall'))):

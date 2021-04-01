@@ -66,11 +66,11 @@ def _print_option_list(options, indent=0):
         if option_list[option].flag:
             column_value.append("")
         else:
-            column_value.append(option_list[option].value)
+            column_value.append(str(option_list[option].value))
         
         help = option_list[option].help or ""
         if option_list[option].has_default and option_list[option].default is not None:
-            help += f" ({option_list[option].default})"
+            help += f" (default {option_list[option].default})"
         column_help.append(help) 
             
     if len(column_name)>0:
@@ -340,7 +340,7 @@ class Parser(object):
                 # store value
                 if option not in options:
                     options[option] = []
-                options[option].append(value)
+                options[option].append(option.type(value))
                 self._check_option_name(option, options[option])
 
             elif stop_options==False and arg.startswith("-"):
@@ -360,7 +360,7 @@ class Parser(object):
                 # store value
                 if option not in options:
                     options[option] = []
-                options[option].append(value)
+                options[option].append(option.type(value))
                 self._check_option_shortcut(option, options[option])
             
             else:
@@ -731,8 +731,14 @@ class Option(object):
     # @param value value description, should be None if option is a flag
     # @param flag if True indicates that option does not take any value
     # @param count if None indicates that option should appear only once, '*' or >=1 indicates that option is a list
-    # @param callback callback to call when option is found 
+    # @param callback callback to call when option is found
+    # @param default indicate default value in case param is missing
     def __init__(self, parent, name=None, shortcut=None, help=None, value=None, flag=False, count=None, callback=None, **kwargs):
+        for item in kwargs:
+            if item not in ['default', 'type']:
+                raise ArgparseException(f"{name}: invalid parameter '{item}' for option")
+        if flag==False and value is None:
+            raise ArgparseException(f"{name}: missing value description for option")
         self._parent = parent
         self._name = name
         self._shortcut = shortcut
@@ -741,13 +747,20 @@ class Option(object):
         self._flag = flag
         self._count = count
         self._callbacks = []
-        
+
         self._default = None
         self._has_default = False
         if "default" in kwargs:
             self._default = kwargs["default"]
             self._has_default = True
         
+        if flag==True:
+            self._type = bool
+        else:
+            self._type = str        
+        if 'type' in kwargs:
+            self._type = kwargs['type']
+
         if callback is not None:
             self._callbacks.append(callback)
 
@@ -798,6 +811,11 @@ class Option(object):
     def callbacks(self):
         return self._callbacks
 
+    @property
+    def type(self):
+        return self._type
+    
+    
     def add_callback(self, callback):
         self.callbacks.append(callback)
 

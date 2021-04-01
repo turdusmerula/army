@@ -183,7 +183,7 @@ class Profile(object):
         parent = None
         if self._parent is not None:
             parent = self._parent._data
-        
+
         if self.version is None:
             name = f"{self.name}"
         else:

@@ -145,7 +145,8 @@ def main():
             project = load_project(exist_ok=True)
     except Exception as e:
         print_stack()
-        print(f"{e}", file=sys.stderr)
+        log.fatal(f"{e}")        
+        print(f"Error loading project", file=sys.stderr)
         exit(1)
     army_parser.context.project = project
 
@@ -156,24 +157,26 @@ def main():
     except Exception as e:
         print_stack()
         log.error(f"{e}")
+        print(f"Error loading profile", file=sys.stderr)
     army_parser.context.profile = profile
 
     # load plugins
-    try:
-        plugins = []
-        if profile is not None:
-            plugins = profile.data.get("/plugins", default=[])
-         
+    plugins = []
+    if profile is not None:
+        plugins = profile.data.get("/plugins", default=[])
+        
+        # TODO improve error handling
         for plugin in plugins:
-            data = DictFile(plugin)
-            name = data.get(f"name")
-            version = data.get(f"version", default="latest")
-            config = data.get(f"config", default={})
-            load_plugin(name, version, config)
-    except Exception as e:
-        print_stack()
-        print(f"{e}")
-        exit(1)
+            try:
+                data = DictFile(plugin)
+                name = data.get(f"name")
+                version = data.get(f"version", default="latest")
+                config = data.get(f"config", default={})
+                load_plugin(name, version, config)
+            except Exception as e:
+                print_stack()
+                log.error(f"{e}")
+                print(f"Error loading plugin {plugin['name']}@{plugin['version']}", file=sys.stderr)
         
 #     except Exception as e:
 #         print_stack()
@@ -230,6 +233,7 @@ def main():
 # 
     # parse command line
     try:
+        army_parser.log_level = "fatal"
         army_parser.parse(sys.argv)
     except Exception as e:
         print_stack()

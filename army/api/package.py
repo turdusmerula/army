@@ -8,6 +8,67 @@ from army.api.version import Version, VersionRange
 import os
 import shutil
 
+def find_installed_package(name, version_range="latest", scope=None, exist_ok=False):
+    """ search for an installed package
+    search is done inside project first and then in user space
+    
+    :param name package name to search, must be exact name
+    :version_range version to match, if a range is given then match the greatest version in range
+    :scope local or user, if None if will search in local then in user
+    :exist_ok if True then no error is raised when package is not found
+    """
+
+    def search_package(path, version_range):
+        package_path = os.path.join(os.path.expanduser(path), name)
+         
+        if os.path.exists(package_path)==False:
+            return None
+        
+        versions = os.listdir(package_path)
+        if len(versions)==0:
+            return None
+                
+        version = VersionRange(versions)[str(version_range)]
+
+        if version is None:
+            return None
+
+        return os.path.join(package_path, str(version))
+
+    if version_range is None:
+        version_range = 'latest'
+            
+    package = None
+    
+    # search package in local project
+    package_local = None
+    path_local = 'dist'
+    if scope=='local' or scope is None:
+        package_local = search_package(path_local, version_range)
+
+    # search package in user space
+    package_user = None
+    path_user = prefix_path('~/.army/dist')
+    if scope=='user' or scope is None: 
+        package_user = search_package(path_user, version_range)
+
+    package = package_local
+    if package_local is None:
+        package = package_user
+    if package_user is not None and package_local is not None:
+        if package_user.version>package_local.version:
+            package = package_user
+        else:
+            package = package_local
+    
+    if package_user is None and package_local is None:
+        if exist_ok==True:
+            return None
+        else:
+            raise PackageException(f"{name}@{version_range}: package not installed")
+
+    return package
+
 def load_installed_package(name, version_range="latest", scope='local', exist_ok=False):
     """ search for an installed package
     search is done inside project first and then in user space

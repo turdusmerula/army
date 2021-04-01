@@ -65,6 +65,15 @@ class ArmyParser(ArmyBaseParser):
         self.show_help() 
         exit(0)
 
+    @property
+    def log_level(self):
+        return self._log_level
+    
+    @log_level.setter
+    def log_level(self, value):
+        self._log_level = value
+        set_log_level(self._log_level)
+        
 
 ###################################
 ### decorators

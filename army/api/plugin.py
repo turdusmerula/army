@@ -4,6 +4,7 @@ from army.api.debugtools import print_stack
 from army.api.version import Version
 import importlib.util
 import os
+import sys
 
 # cache for loaded plugins
 plugins = {}
@@ -33,13 +34,21 @@ def load_plugin(name, version_range, config):
     plugins[name] = package
 
     try:
-        spec = importlib.util.spec_from_file_location("plugin", os.path.join(package.path, '__init__.py'))
-        plugin = importlib.util.module_from_spec(spec)
-        plugin.config = config
-        spec.loader.exec_module(plugin)
+        for plugin in package.plugins:
+            location = os.path.join(package.path, plugin, '__init__.py')
+            sys.path.insert(0, os.path.dirname(location))
+
+            print("---", location)
+            spec = importlib.util.spec_from_file_location(name=plugin, location=location)
+            module = importlib.util.module_from_spec(spec)
+            module.config = config
+            spec.loader.exec_module(module)
+            
+            sys.path.pop(0)
     except Exception as e:
         print_stack()
-        log.error(e)
+        log.error(f"loading plugin '{name}' failed: {e}")
+        sys.path.pop(0)
 
 
 class Plugin(object):
