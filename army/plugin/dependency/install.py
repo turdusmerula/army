@@ -232,7 +232,7 @@ def _install_package(package, level, edit, scope, reinstall):
 
     try:
         # search package in installed packages
-        installed_package = load_installed_package(package.name, version_range=package.version, scope=scope)
+        installed_package = load_installed_package(package.name, version_range=package.version, scope=scope, exist_ok=True)
     except Exception as e:
         print(f"Error loading package {package}", file=sys.stderr)
         print("install failed", file=sys.stderr)

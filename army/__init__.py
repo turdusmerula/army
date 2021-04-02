@@ -13,7 +13,7 @@ from army.api.dict_file import DictFile
 from army.api.log import log, get_log_level
 from army.api.path import set_prefix_path
 from army.api.plugin import load_plugin
-from army.api.profile import load_current_profile
+from army.api.profile import load_current_profile, profiles
 from army.api.project import load_project
 
 version = "0.1.2"
@@ -153,7 +153,9 @@ def main():
     # load profile
     profile = None
     try:
-        profile = load_current_profile()
+        # plugins are not yet loaded so validate of profiles may fail 
+        # we will validate the content later after plugins are loaded
+        profile = load_current_profile(validate=False)
     except Exception as e:
         print_stack()
         log.error(f"{e}")
@@ -177,7 +179,19 @@ def main():
                 print_stack()
                 log.error(f"{e}")
                 print(f"Error loading plugin {plugin['name']}@{plugin['version']}", file=sys.stderr)
-        
+
+    # load profile
+    profile = None
+    try:
+        for profile in profiles:
+            profile.check()
+#         profile = load_current_profile()
+    except Exception as e:
+        print_stack()
+        log.error(f"{e}")
+        print(f"Error loading profile", file=sys.stderr)
+    army_parser.context.profile = profile
+
 #     except Exception as e:
 #         print_stack()
 #         log.error(f"{e}")

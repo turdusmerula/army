@@ -69,7 +69,7 @@ def find_installed_package(name, version_range="latest", scope=None, exist_ok=Fa
 
     return package
 
-def load_installed_package(name, version_range="latest", scope='local', exist_ok=False):
+def load_installed_package(name, version_range="latest", scope=None, exist_ok=False):
     """ search for an installed package
     search is done inside project first and then in user space
     
@@ -114,13 +114,13 @@ def load_installed_package(name, version_range="latest", scope='local', exist_ok
     # search package in local project
     package_local = None
     path_local = 'dist'
-    if scope=='local':
+    if scope=='local' or scope is None:
         package_local = search_package(path_local, version_range)
 
     # search package in user space
     package_user = None
     path_user = prefix_path('~/.army/dist')
-    if scope=='user': 
+    if scope=='user' or scope is None: 
         package_user = search_package(path_user, version_range)
 
     package = package_local
@@ -133,7 +133,10 @@ def load_installed_package(name, version_range="latest", scope='local', exist_ok
             package = package_local
     
     if package_user is None and package_local is None:
-        return None
+        if exist_ok==True:
+            return None
+        else:
+            raise PackageException(f"{name}@{version_range}: package not installed")
 
     return package
 

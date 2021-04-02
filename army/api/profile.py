@@ -62,7 +62,7 @@ def load_project_profile_list():
         profiles.append(profile)
     return profiles
 
-def load_profile(name, parent=None):
+def load_profile(name, parent=None, validate=True):
     res = None
     
     profiles = load_profile_list()
@@ -76,6 +76,8 @@ def load_profile(name, parent=None):
                 res = copy.copy(profile)
                 res._parent = parent
                 res.load()
+                if validate:
+                    res.check()
                 return res
     
     if res is None:
@@ -83,7 +85,7 @@ def load_profile(name, parent=None):
         
     return res
 
-def load_current_profile():
+def load_current_profile(validate=True):
     path = ".army-profile"
     
     if os.path.exists(path)==False:
@@ -94,7 +96,7 @@ def load_current_profile():
 
     profile = None
     for name in profiles:
-        profile = load_profile(name, profile)
+        profile = load_profile(name, profile, validate=validate)
     
     return profile
 
@@ -136,6 +138,17 @@ def parse_profile_name(profile_name):
     return res
 
 class Profile(object):
+    _schema = {
+        'plugins': Optional(Array(
+            Dict({
+                'name': String(),
+                'version': VersionRangeString(),
+                'config': VariableDict(String(), Variant())
+                })
+            )),
+        'tools': Optional(VariableDict(String(), Variant()))
+    }
+    
     def __init__(self, name=None, version=None, path=None, parent=None):
                 
         self._name = name
@@ -145,16 +158,7 @@ class Profile(object):
         self._description = None
         self._data = None
         
-        self._schema = Schema(self._data, {
-            'plugins': Optional(Array(
-                Dict({
-                    'name': String(),
-                    'version': VersionRangeString(),
-                    'config': VariableDict(String(), Variant())
-                    })
-                )),
-            'tools': Optional(VariableDict(String(), Variant()))
-        })
+        self._schema = Schema(self._data, Profile._schema)
         
     @property
     def name(self):
@@ -192,6 +196,8 @@ class Profile(object):
         self._data = DictFile(data=load_dict_file(self.path, name), parent=parent)
         
         self._description = self._data.get("/description", raw=True, default="")
-    
+
+    def check(self):
         self._schema._data = self._data 
         self._schema.check()
+        

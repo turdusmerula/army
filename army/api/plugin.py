@@ -16,9 +16,9 @@ class PluginException(Exception):
     
 def load_plugin(name, version_range, config):
     global plugins
-    log.info(f"load plugin '{name}'")
+    log.info(f"load plugin '{name}@{version_range}'")
 #         
-    package = load_installed_package(name, version_range=version_range)
+    package = load_installed_package(name, version_range=version_range, exist_ok=True)
     
     if name in plugins:
         if plugins[name].version==package.version:
@@ -28,7 +28,7 @@ def load_plugin(name, version_range, config):
             return 
         
     if package is None:
-        log.error(f"{name}: plugin not installed")
+        log.error(f"{name}@{version_range}: plugin not installed")
         return 
 
     plugins[name] = package
@@ -38,7 +38,6 @@ def load_plugin(name, version_range, config):
             location = os.path.join(package.path, plugin, '__init__.py')
             sys.path.insert(0, os.path.dirname(location))
 
-            print("---", location)
             spec = importlib.util.spec_from_file_location(name=plugin, location=location)
             module = importlib.util.module_from_spec(spec)
             module.config = config
