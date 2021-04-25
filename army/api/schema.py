@@ -16,7 +16,6 @@ class Schema(object):
     def check(self):
         log.debug(f"validate: {self._data} with {self._schema}")
         for item in self._data:
-            
             if item not in self._schema:
                 raise SchemaException(f"{item}: unknown item")
             else:

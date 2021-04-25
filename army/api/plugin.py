@@ -49,7 +49,7 @@ def load_plugin(name, version_range, config):
         log.error(f"loading plugin '{name}' failed: {e}")
         sys.path.pop(0)
 
-
+    
 class Plugin(object):
     def __init__(self, name, version, config):
         self._name = name

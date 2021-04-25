@@ -63,27 +63,44 @@ def load_project_profile_list():
     return profiles
 
 def load_profile(name, parent=None, validate=True):
-    res = None
-    
     profiles = load_profile_list()
     
     chunks = parse_profile_name(name)
-
-    # search profile in profiles list
-    for profile in profiles:
-        if profile.name==chunks['name']:
-            if chunks['version'] is None or ( chunks['version'] is not None and profile.version==chunks['version'] ):
-                res = copy.copy(profile)
-                res._parent = parent
-                res.load()
-                if validate:
-                    res.check()
-                return res
+    sname = chunks['name']
+    sversion = chunks['version']
+    if sversion is None:
+        sversion = 'latest'
     
-    if res is None:
+    found = None
+
+    # search in profiles without a version first
+    if sversion=='latest':
+        for profile in profiles:
+            if profile.name==chunks['name'] and profile.version is None:
+                found = profile
+    
+    if found is None:
+        # search in versioned profiles
+        versions = []
+        for profile in profiles:
+            if profile.name==chunks['name'] and profile.version is not None:
+                versions.append(profile.version)
+        if len(versions)>0:
+            version = VersionRange(versions)[sversion]
+            if version is not None:
+                for profile in profiles:
+                    if profile.name==chunks['name'] and Version(profile.version)==version:
+                        found = profile
+    if found is None:
         raise ProfileException(f"{name}: profile not found")
-        
+
+    res = copy.copy(found)
+    res._parent = parent
+    res.load()
+    if validate:
+        res.check()
     return res
+    
 
 def load_current_profile(validate=True):
     path = ".army-profile"
@@ -131,7 +148,7 @@ def parse_profile_name(profile_name):
         res['version'] = chunks[1]
 
         # check chunks[1] is a valid version range
-        VersionRange([])[chunks[1]]
+        VersionRange(['1.0.0'])[chunks[1]]
     elif len(chunks)!=1:
         raise ProfileException(f"{profile_name}: incorrect profile name")
     
@@ -139,6 +156,12 @@ def parse_profile_name(profile_name):
 
 class Profile(object):
     _schema = {
+        'profiles': Optional(Array(
+            Dict({
+                'name': String(),
+                'version': VersionRangeString(),
+                })
+            )),
         'plugins': Optional(Array(
             Dict({
                 'name': String(),
@@ -196,7 +219,17 @@ class Profile(object):
         self._data = DictFile(data=load_dict_file(self.path, name), parent=parent)
         
         self._description = self._data.get("/description", raw=True, default="")
-
+        
+        # load subprofiles
+        for profile in self.data.get("profiles", default={}):
+            name = profile.get("name")
+            version = profile.get("version")
+            profile_data = load_profile(f"{name}@{version}")
+            if self._data._parent is not None:
+                profile_data._data._parent = self._data._parent
+            self._data._parent = profile_data._data
+        self._data.delete("profiles")
+        
     def check(self):
         self._schema._data = self._data 
         self._schema.check()

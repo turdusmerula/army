@@ -35,7 +35,7 @@ class VersionRange(object):
         for version in self._versions:
             if version>max:
                 max = version
-        return max
+        return Version(max)
 
     def filter(self, range):
         if range=="latest":
@@ -44,7 +44,7 @@ class VersionRange(object):
         s = semantic_version.SimpleSpec(range)
         versions = []
         for version in s.filter(self._versions):
-            versions.append(version)
+            versions.append(Version(version))
         return versions
 
     def select(self, range):

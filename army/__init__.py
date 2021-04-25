@@ -142,7 +142,7 @@ def main():
         if project_file is not None:
             project = load_project(path=project_file, exist_ok=False)
         else:
-            project = load_project(exist_ok=True)
+            project = load_project(exist_ok=True)                
     except Exception as e:
         print_stack()
         log.fatal(f"{e}")        
@@ -183,14 +183,14 @@ def main():
     # load profile
     profile = None
     try:
-        for profile in profiles:
-            profile.check()
+        if profiles is not None:
+            for profile in profiles:
+                profile.check()
 #         profile = load_current_profile()
     except Exception as e:
         print_stack()
         log.error(f"{e}")
         print(f"Error loading profile", file=sys.stderr)
-    army_parser.context.profile = profile
 
 #     except Exception as e:
 #         print_stack()

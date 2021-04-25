@@ -88,22 +88,22 @@ def load_dict_file(path, name, exist_ok=False):
     
     return res
 
-def _load_python_dict_file(file):
-    res = None
-    # try to load python file
-    with open(file) as f:
-        try:
-            log.info(f"load file '{file}'")
-            pkg = os.path.basename(os.path.dirname(file))
-            spec = importlib.util.spec_from_file_location(pkg, file)
-            config = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(config)
-            res = config.content
-        except Exception as e:
-            print_stack()
-            log.debug(f"{e}")
-            raise DictFileException(f"{file}: {e}")
-    return res
+# def _load_python_dict_file(file):
+#     res = None
+#     # try to load python file
+#     with open(file) as f:
+#         try:
+#             log.info(f"load file '{file}'")
+#             pkg = os.path.basename(os.path.dirname(file))
+#             spec = importlib.util.spec_from_file_location(pkg, file)
+#             config = importlib.util.module_from_spec(spec)
+#             spec.loader.exec_module(config)
+#             res = config.content
+#         except Exception as e:
+#             print_stack()
+#             log.debug(f"{e}")
+#             raise DictFileException(f"{file}: {e}")
+#     return res
 
 def _load_yaml_dict_file(file):
     res = None
@@ -111,7 +111,7 @@ def _load_yaml_dict_file(file):
     with open(file) as f:
         try:
             log.info(f"load file '{file}'")
-            res = yaml.load(f, Loader=yaml.FullLoader)
+            res = yaml.load(f, Loader=Loader)
             if res is None:
                 res = {}
         except Exception as e:
@@ -120,30 +120,30 @@ def _load_yaml_dict_file(file):
             raise DictFileException(f"{file}: {e}")
     return res
 
-def _load_toml_dict_file(file):
-    res = None
-    # try to load toml file
-    try:
-        log.info(f"load file '{file}'")
-        res = toml.load(file)
-    except Exception as e:
-        print_stack()
-        log.debug(f"{e}")
-        raise DictFileException(f"{file}: {e}")
-    return res
-
-def _load_json_dict_file(file):
-    res = None
-    # try to load json file
-    with open(file) as f:
-        try:
-            log.info(f"load file '{file}'")    
-            res = json.load(f)
-        except Exception as e:
-            print_stack()
-            log.debug(f"{e}")
-            raise DictFileException(f"{file}: {e}")
-    return res
+# def _load_toml_dict_file(file):
+#     res = None
+#     # try to load toml file
+#     try:
+#         log.info(f"load file '{file}'")
+#         res = toml.load(file)
+#     except Exception as e:
+#         print_stack()
+#         log.debug(f"{e}")
+#         raise DictFileException(f"{file}: {e}")
+#     return res
+# 
+# def _load_json_dict_file(file):
+#     res = None
+#     # try to load json file
+#     with open(file) as f:
+#         try:
+#             log.info(f"load file '{file}'")    
+#             res = json.load(f)
+#         except Exception as e:
+#             print_stack()
+#             log.debug(f"{e}")
+#             raise DictFileException(f"{file}: {e}")
+#     return res
 
 def save_dict_file(path, name, content):
     res = None
@@ -160,23 +160,19 @@ def save_dict_file(path, name, content):
     return res
 
 # TODO https://stackoverflow.com/questions/528281/how-can-i-include-a-yaml-file-inside-another
-# class Loader(yaml.SafeLoader):
-# 
-#     def __init__(self, stream):
-# 
+class Loader(yaml.FullLoader):
+    def __init__(self, stream):
 #         self._root = os.path.split(stream.name)[0]
-# 
-#         super(Loader, self).__init__(stream)
-# 
-#     def include(self, node):
-# 
-#         filename = os.path.join(self._root, self.construct_scalar(node))
-# 
-#         with open(filename, 'r') as f:
-#             return yaml.load(f, Loader)
-# 
-# Loader.add_constructor('!include', Loader.include)
+        super(Loader, self).__init__(stream)
 
+#     def profile(self, node):
+#         from army.api.profile import load_profile
+#         chunks = self.construct_scalar(node).split('\n')
+#         print("---", chunks)
+# #         return load_profile(self.construct_scalar(node)).data.to_dict(), ""
+#         return {'a': 1}
+#     
+# Loader.add_constructor('!profile', Loader.profile)
 
 class DictFile(object):
     reserved = ["_data", "_parent"]
@@ -239,7 +235,11 @@ class DictFile(object):
                 res.append([0, value])
                 value = ""
         return res
-#     
+
+    def delete(self, item):
+        if item in self._raw_data:
+            del self._raw_data[item]
+
 #     def _resolve_substs(self, path, stack):
 # #         value = dpath.util.get(self._data, path)
 #         if path.startswith('/')==False:

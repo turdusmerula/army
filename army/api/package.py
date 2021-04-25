@@ -172,14 +172,11 @@ def load_installed_packages(scope='local', all=False):
     return packages
 
 # TODO check version when loading package and in case of package installed both global and local use the best fit
-def load_project_packages(project, target):
+def load_project_packages(project):
     loaded = []
     to_load = []
     for dependency in project.dependencies:
         to_load.append((dependency, project.dependencies[dependency]))
-
-    for dependency in project.target[target].dependencies:
-        to_load.append((dependency, project.target[target].dependencies[dependency]))
 
     dependencies = []
     while len(to_load)>0:
