@@ -193,6 +193,7 @@ def load_project_packages(project):
             loaded.append(dependency)
         else:
             log.info(f"{dependency} already loaded, skip")
+    dependencies.reverse()
     return dependencies
 
 def _load_installed_package(path, exist_ok=False):
@@ -295,11 +296,15 @@ class Package(Schema):
                 
                 'profiles': Optional(Array(String())),
                 
-#                 # arch definition
-#                 'arch': Optional(VariableDict(String(), Dict({
-#                     'definition': Optional(String()),
-#                     'cpu': Optional(String()),
-#                     }))),
+                'definition': Optional(VariableDict(String(), String())),
+
+                'archs': Optional(Array(Dict({
+                    'name': String(),
+                    'cpu': String(),
+                    'cpu_definition': Optional(String()),
+                    'mpu': Optional(String()),
+                    'mpu_definition': Optional(String()),
+                    }))),
 
 #                 # in case of a firmware
 #                 'default-target': Optional(String()),
@@ -369,45 +374,66 @@ class Package(Schema):
         if 'plugins' in self._data:
             return self._data['plugins']
         return []
-#     @property
-#     def arch(self):
-#         class ArchDictIterator(object):
-#             def __init__(self, values):
-#                 self._list = values
-#                 self._iter = iter(self._list)
-#              
-#             def __next__(self):
-#                 return next(self._iter)
-# 
-#         class ArchDict(object):
-#             def __init__(self, data):
-#                 self._data = data
-#                 
-#             def __iter__(self):
-#                 return ArchDictIterator(self._data)
-#             
+    
+    @property
+    def definition(self):
+        if 'definition' in self._data:
+            return self._data['definition']
+        return {}
+        
+    @property
+    def archs(self):
+        class ArchDictIterator(object):
+            def __init__(self, values):
+                self._list = values
+                self._iter = iter(self._list)
+              
+            def __next__(self):
+                return Arch(next(self._iter))
+ 
+        class ArchDict(object):
+            def __init__(self, data):
+                self._data = data
+                 
+            def __iter__(self):
+                return ArchDictIterator(self._data)
+             
 #             def __getitem__(self, item):
 #                 return Arch(self._data[item])
-#             
-#         class Arch(object):
-#             def __init__(self, data):
-#                 self._data = data
-#             
-#             @property
-#             def definition(self):
-#                 if 'definition' in self._data:
-#                     return self._data['definition']
-#                 return None
-#             
-#             @property
-#             def cpu(self):
-#                 if 'cpu' in self._data:
-#                     return self._data['cpu']
-#                 return None
-#             
-#         if 'arch' in self._data:
-#             return ArchDict(self._data['arch'])
-#         return ArchDict({})
+             
+        class Arch(object):
+            def __init__(self, data):
+                self._data = data
+             
+            @property
+            def name(self):
+                return self._data['name']
+
+            @property
+            def cpu(self):
+                return self._data['cpu']
+
+            @property
+            def mpu(self):
+                if 'mpu' in self._data:
+                    return self._data['mpu']
+                return None 
+
+            @property
+            def mpu_definition(self):
+                if 'mpu_definition' in self._data:
+                    return self._data['mpu_definition']
+                return None 
+
+            @property
+            def cpu_definition(self):
+                if 'cpu_definition' in self._data:
+                    return self._data['cpu_definition']
+                return None 
+             
+        if 'archs' in self._data:
+            return ArchDict(self._data['archs'])
+        return ArchDict({})
 
 #     @property
 #     def plugins(self):
