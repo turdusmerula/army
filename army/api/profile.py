@@ -96,7 +96,7 @@ def load_profile(name, parent=None, validate=True):
 
     res = copy.copy(found)
     res._parent = parent
-    res.load()
+    res.load(validate=validate)
     if validate:
         res.check()
     return res
@@ -203,7 +203,7 @@ class Profile(object):
     def data(self):
         return self._data
 
-    def load(self):
+    def load(self, validate=True):
         if self._data is not None:
             return
         
@@ -224,10 +224,12 @@ class Profile(object):
         for profile in self.data.get("profiles", default={}):
             name = profile.get("name")
             version = profile.get("version")
-            profile_data = load_profile(f"{name}@{version}")
+            profile_data = load_profile(f"{name}@{version}", validate=validate)
             if self._data._parent is not None:
                 profile_data._data._parent = self._data._parent
+                profile_data._data._reload_data()
             self._data._parent = profile_data._data
+            self._data._reload_data()
         self._data.delete("profiles")
         
     def check(self):

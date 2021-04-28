@@ -305,22 +305,6 @@ class Package(Schema):
                     'mpu': Optional(String()),
                     'mpu_definition': Optional(String()),
                     }))),
-
-#                 # in case of a firmware
-#                 'default-target': Optional(String()),
-#                 'target': Optional(VariableDict(String(), Dict({
-#                     'arch': String(),
-#                     'definition': Optional(String()),
-#                     'dependencies': Optional(VariableDict(PackageString(), VersionRangeString())),
-#                     'plugins': Optional(VariableDict(PackageString(), VersionRangeString())),
-#                     'plugin': Optional(VariableDict(PackageString(), Variant())),
-#                     }))),
-#                 
-#                 # in case of a library
-#                 'cmake': Optional(Dict({
-#                     'include': Optional(String()),
-#                     })),
-
            })
     
     @property

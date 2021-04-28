@@ -139,6 +139,9 @@ class Parser(object):
         if callback is not None:
             self._callbacks.append(callback)
 
+    def __repr__(self):
+        return f"Parser(name={self._name}, command={self._command})"
+    
     @property
     def name(self):
         return self._name
@@ -297,9 +300,35 @@ class Parser(object):
             if isinstance(child, Argument) and child.count is not None and child.count=='*':
                 if child not in arguments:
                     arguments[child] = []
-
+    
     def parse(self, argv):
-        command = argv.pop(0)
+        callbacks_to_call = []
+        pre_callbacks_to_call = []
+        
+        try:
+            # first pass to grab the pre_callbacks and execute them even if there is errors
+            self._recursive_parse(copy.copy(argv), pre_callbacks_to_call, callbacks_to_call)
+        except:
+            pass
+
+        for callback in pre_callbacks_to_call:
+            obj, func, ctx, args, kwargs = callback
+#             print("---", obj, func, ctx, args, kwargs)
+            func(ctx, *args, **kwargs)
+
+        callbacks_to_call = []
+        pre_callbacks_to_call = []
+        # second pass check for errors and if ok then apply callcks
+        argv = self._recursive_parse(argv, pre_callbacks_to_call, callbacks_to_call)
+        
+#         print("+++")
+        for callback in callbacks_to_call:
+            obj, func, ctx, args, kwargs = callback
+#             print("---", obj, func, ctx, args, kwargs)
+            func(ctx, *args, **kwargs)
+    
+    def _recursive_parse(self, argv, pre_callbacks_to_call, callbacks_to_call):
+        argv.pop(0)
 
         # list of found options
         options = {}
@@ -316,7 +345,7 @@ class Parser(object):
         command_list = self._build_command_list()
         current_arg = None
         
-        while len(argv)>0:
+        while len(argv)>0 and command is None:
             
             arg = argv.pop(0)
             
@@ -335,7 +364,9 @@ class Parser(object):
                     value, argv = self._parse_name_option(option, argv)
                 # callbacks
                 self.context.item = option
-                option.call_callbacks(self.context, value)
+#                 option.call_callbacks(self.context, value)
+                pre_callbacks_to_call.append((option, option.call_callbacks, self.context, [value], {}))
+                callbacks_to_call.append((option, option.call_callbacks, self.context, [value], {}))
                 
                 # store value
                 if option not in options:
@@ -355,7 +386,9 @@ class Parser(object):
                     value, argv = self._parse_shortcut_option(option, arg, argv)
                 # callbacks
                 self.context.item = option
-                option.call_callbacks(self.context, value)
+#                 option.call_callbacks(self.context, value)
+                pre_callbacks_to_call.append((option, option.call_callbacks, self.context, [value], {}))
+                callbacks_to_call.append((option, option.call_callbacks, self.context, [value], {}))
                 
                 # store value
                 if option not in options:
@@ -400,20 +433,6 @@ class Parser(object):
                             if len(arguments[current_arg])>=current_arg.count:
                                 current_arg = None
                 
-                if command is not None:
-                    # open a sub parser to treat the command
-                    # if the command has sub commands then set the parser to check for command
-                    parser = self.command_parser(command=f"{self.command} {command.name}", need_command=command.has_sub_command())
-                    parser._callbacks = command._callbacks
-                    parser.childs += copy.deepcopy(command.childs)
-                    parser._context = self._context
-                    if command.parent is not None and isinstance(command.parent, Group) and command.parent.chain==True:
-                        # when command is inside a chain then add the command from the chain to the parser
-                        # these commands are then optional if the parent command does not contain any command
-                        parser.childs.append(command.parent)
-                    argv = parser.parse([command.name, *argv])
-                    
-
         self._set_arguments_defaults(arguments)
         self._check_arguments(arguments)
         self._set_options_defaults(options)
@@ -439,11 +458,26 @@ class Parser(object):
                 callback_dict_args[argument.name] = arguments[argument]
 
         self.context.item = command
-        self.call_callbacks(self.context, **callback_dict_args)
+#         self.call_callbacks(self.context, **callback_dict_args)
+        callbacks_to_call.append((self, self.call_callbacks, self.context, [], callback_dict_args))
         
         if self.need_command==True and command is None:
             raise ArgparseException(f"{self.command}: command missing")
-        
+
+        if command is not None:
+            # open a sub parser to treat the command
+            # if the command has sub commands then set the parser to check for command
+            parser = self.command_parser(command=f"{self.command} {command.name}", need_command=command.has_sub_command())
+            parser._callbacks = command._callbacks
+            parser.childs += copy.deepcopy(command.childs)
+            parser._context = self._context
+            if command.parent is not None and isinstance(command.parent, Group) and command.parent.chain==True:
+                # when command is inside a chain then add the command from the chain to the parser
+                # these commands are then optional if the parent command does not contain any command
+                parser.childs.append(command.parent)
+            argv = parser._recursive_parse([command.name, *argv], pre_callbacks_to_call, callbacks_to_call)
+                    
+
         return argv
     
     def _show_usage(self):
@@ -503,9 +537,10 @@ class Parser(object):
                     if isinstance(child, Command):
                         commands.append(child)
             else:
-                print("", file=sys.stderr)
-                print(f"{group.help}:", file=sys.stderr)
-                group._show_help(indent=1)
+                if len(group.childs)>0:
+                    print("", file=sys.stderr)
+                    print(f"{group.help}:", file=sys.stderr)
+                    group._show_help(indent=1)
 
         if len(commands)>0:
             print("", file=sys.stderr)
@@ -554,6 +589,9 @@ class Group(object):
         self._help = help
         self._chain = chain
         self.childs = []
+
+    def __repr__(self):
+        return f"Group(name={self._name})"
 
     @property
     def parent(self):
@@ -641,6 +679,9 @@ class Command(object):
         # TODO check that last varg is not a wildcard size array
         # TODO check that last varg is not optional
         # TODO check that last varg is not a command
+
+    def __repr__(self):
+        return f"Command(name={self._name})"
 
     @property
     def parent(self):
@@ -731,9 +772,10 @@ class Option(object):
     # @param value value description, should be None if option is a flag
     # @param flag if True indicates that option does not take any value
     # @param count if None indicates that option should appear only once, '*' or >=1 indicates that option is a list
-    # @param callback callback to call when option is found
+    # @param callback callback to call when option is interpreted before sending to command
+    # @param callback callback to call when option is found, this callback is executed before the first command is launched
     # @param default indicate default value in case param is missing
-    def __init__(self, parent, name=None, shortcut=None, help=None, value=None, flag=False, count=None, callback=None, **kwargs):
+    def __init__(self, parent, name=None, shortcut=None, help=None, value=None, flag=False, count=None, callback=None, pre_callback=None, **kwargs):
         for item in kwargs:
             if item not in ['default', 'type']:
                 raise ArgparseException(f"{name}: invalid parameter '{item}' for option")
@@ -747,6 +789,7 @@ class Option(object):
         self._flag = flag
         self._count = count
         self._callbacks = []
+        self._pre_callbacks = []
 
         self._default = None
         self._has_default = False
@@ -763,6 +806,8 @@ class Option(object):
 
         if callback is not None:
             self._callbacks.append(callback)
+        if pre_callback is not None:
+            self._callbacks.append(pre_callback)
 
         if shortcut is not None and len(shortcut)!=1:
             raise ArgparseException(f"{shortcut}: shortcut can only be one letter length")
@@ -770,6 +815,9 @@ class Option(object):
 #         last_varg = parent.childs[-1:][0]
         
         # TODO check that last varg is not a command
+
+    def __repr__(self):
+        return f"Option(name={self._name}, shortcut={self._shortcut})"
 
     @property
     def parent(self):
@@ -811,11 +859,6 @@ class Option(object):
     def callbacks(self):
         return self._callbacks
 
-    @property
-    def type(self):
-        return self._type
-    
-    
     def add_callback(self, callback):
         self.callbacks.append(callback)
 
@@ -823,6 +866,22 @@ class Option(object):
         for callback in self.callbacks:
             callback(ctx, value)
 
+    @property
+    def pre_callbacks(self):
+        return self._pre_callbacks
+
+    def add_pre_callback(self, callback):
+        self.pre_callbacks.append(callback)
+
+    def call_pre_callbacks(self, ctx, value):
+        for callback in self.pre_callbacks:
+            callback(ctx, value)
+
+    @property
+    def type(self):
+        return self._type
+    
+    
 class Argument(object):
     # @param name optional, used to identify argument
     # @param help shown command help string
@@ -839,6 +898,9 @@ class Argument(object):
         # TODO check that last argument is not a wildcard size array
         # TODO check that last argument is not optional
         # TODO check that last argument is not a command
+
+    def __repr__(self):
+        return f"Argument(name={self._name})"
 
     @property
     def parent(self):

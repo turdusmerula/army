@@ -175,8 +175,6 @@ class Loader(yaml.FullLoader):
 # Loader.add_constructor('!profile', Loader.profile)
 
 class DictFile(object):
-    reserved = ["_data", "_parent"]
-    
     def __init__(self, data=None, parent=None):
         if parent is not None and isinstance(parent, DictFile)==False:
             raise DictFileException(f"{type(parent)}: parent type mismatch")
@@ -191,6 +189,9 @@ class DictFile(object):
 
     def __getitem__(self, item):
         return self.get(item)
+
+    def _reload_data(self):
+        self._data = self.to_dict()
 
     def _load_data(self):
         if self._data is None:
@@ -214,9 +215,6 @@ class DictFile(object):
                 value = self._parent.get(path=path, raw=raw, **kwargs)
  
         return value
-
-    def __getitem__(self, item):
-        return self.get(item)
  
     def _cut_subst(self, value):
         res = []

@@ -84,16 +84,16 @@ class TestArgparseOption(unittest.TestCase):
         assert output.getvalue()=="""Usage: army [OPTIONS] COMMAND [ARGS]
 
 Options:
-    -v                   Activate verbose/debug    
-    -a                   A (True)                  
-    -b                   B (False)                 
-    -c                   C                         
-    --target, -t TEXT    Select target             
-    --name       TEXT    Show name                 
-    --help, -h           Show this message and exit
-    --version            show army version         
-    --file       FILE    file list                 
-    --top-dir    NAME    top directory name (.)    
+    -v                   Activate verbose/debug        
+    -a                   A (default True)              
+    -b                   B (default False)             
+    -c                   C                             
+    --target, -t TEXT    Select target                 
+    --name       TEXT    Show name                     
+    --help, -h           Show this message and exit    
+    --version            show army version             
+    --file       FILE    file list                     
+    --top-dir    NAME    top directory name (default .)
 
 Build Commands:
     clean      clean project            
@@ -127,12 +127,22 @@ Commands:
         self.parser.add_callback(parser_callback)
         assert raised(self.parser.parse, argv)==[ArgparseException, "army: command missing"]
         
+        assert _a is None
+        assert _b is None
+        assert _target is None
+        assert _name is None
+        assert _top_dir=='.'
+
+        argv = ["army", "--target=aaa", "--name=test", "clean"]
+        self.parser.parse(argv)
+
         assert _a==True
         assert _b==False
         assert _target=="aaa"
         assert _name=="test"
         assert _top_dir=="."
-        
+
+
     def test_parse_option_shortcut_unknow(self):
         argv = ["army", "-vu"]
         assert raised(self.parser.parse, argv)==[ArgparseException, "army: invalid option -u"]
@@ -198,6 +208,7 @@ Commands:
         argv = ["army", "--name=test"]
         def name_callback(ctx, value):
             nonlocal name
+            print("----", value)
             name = value
         
         self.name_option.add_callback(name_callback)
@@ -368,22 +379,28 @@ class TestArgparseCommandChain(unittest.TestCase):
         self.chain_group = self.parser.add_group(chain=True)
         
         self.test1_command = self.chain_group.add_command(name="test1", help="test1 command")
+        self.test1_command.add_option(name="v", value="TEXT", help="value")
         self.test1_command.add_option(name="help", shortcut="h", help="Show this message and exit", flag=True)
         
         self.test2_command = self.chain_group.add_command(name="test2", help="test2 command")
+        self.test2_command.add_option(name="v", value="TEXT", help="value")
         self.test2_command.add_option(name="help", shortcut="h", help="Show this message and exit", flag=True)
 
         self.test3_command = self.chain_group.add_command(name="test3", help="test3 command")
+        self.test3_command.add_option(name="v", value="TEXT", help="value")
         self.test3_command.add_option(name="help", shortcut="h", help="Show this message and exit", flag=True)
 
     def test_call_command_chain(self):
-        argv = ["army", "test1", "test2", "test3"]
+        argv = ["army", "test1", "--v", "1", "test2", "--v", "2", "test3", "--v", "3"]
         
         n = 0
-        def test_callback(ctx, *args, **kwargs):
+        l = []
+        def test_callback(ctx, v, *args, **kwargs):
             nonlocal n
+            nonlocal l
             n += 1
-
+            l += v
+        
         self.test1_command.add_callback(test_callback)
         self.test2_command.add_callback(test_callback)
         self.test3_command.add_callback(test_callback)
@@ -391,7 +408,9 @@ class TestArgparseCommandChain(unittest.TestCase):
         self.parser.parse(argv)
         
         assert n==3
-
+        print(l)
+        assert l==['1', '2', '3']
+        
     def test_show_help(self):
         output = io.StringIO()
         with redirect_stderr(output):
@@ -401,7 +420,8 @@ class TestArgparseCommandChain(unittest.TestCase):
         assert output.getvalue()=="""Usage: test1 [OPTIONS] COMMAND [ARGS]
 
 Options:
-    --help, -h    Show this message and exit
+    --v        TEXT    value                     
+    --help, -h         Show this message and exit
 
 Commands:
     test1    test1 command

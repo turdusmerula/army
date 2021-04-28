@@ -34,7 +34,7 @@ from setuptools import setup
 
 setup(
     name='army',
-    version="0.1.2",
+    version="0.1.3",
     description='Arm cross compiling toolset',
     url='https://github.com/turdusmerula/army/',
     author='Sebastien Besombes',
