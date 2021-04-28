@@ -310,23 +310,22 @@ class Parser(object):
             self._recursive_parse(copy.copy(argv), pre_callbacks_to_call, callbacks_to_call)
         except:
             pass
-
+        
         for callback in pre_callbacks_to_call:
             obj, func, ctx, args, kwargs = callback
-#             print("---", obj, func, ctx, args, kwargs)
             func(ctx, *args, **kwargs)
 
         callbacks_to_call = []
         pre_callbacks_to_call = []
-        # second pass check for errors and if ok then apply callcks
+        # second pass check for errors and if ok then apply callbacks
         argv = self._recursive_parse(argv, pre_callbacks_to_call, callbacks_to_call)
         
-#         print("+++")
         for callback in callbacks_to_call:
             obj, func, ctx, args, kwargs = callback
-#             print("---", obj, func, ctx, args, kwargs)
             func(ctx, *args, **kwargs)
     
+        return argv 
+
     def _recursive_parse(self, argv, pre_callbacks_to_call, callbacks_to_call):
         argv.pop(0)
 
@@ -365,7 +364,7 @@ class Parser(object):
                 # callbacks
                 self.context.item = option
 #                 option.call_callbacks(self.context, value)
-                pre_callbacks_to_call.append((option, option.call_callbacks, self.context, [value], {}))
+                pre_callbacks_to_call.append((option, option.call_pre_callbacks, self.context, [value], {}))
                 callbacks_to_call.append((option, option.call_callbacks, self.context, [value], {}))
                 
                 # store value
@@ -387,7 +386,7 @@ class Parser(object):
                 # callbacks
                 self.context.item = option
 #                 option.call_callbacks(self.context, value)
-                pre_callbacks_to_call.append((option, option.call_callbacks, self.context, [value], {}))
+                pre_callbacks_to_call.append((option, option.call_pre_callbacks, self.context, [value], {}))
                 callbacks_to_call.append((option, option.call_callbacks, self.context, [value], {}))
                 
                 # store value
@@ -807,7 +806,7 @@ class Option(object):
         if callback is not None:
             self._callbacks.append(callback)
         if pre_callback is not None:
-            self._callbacks.append(pre_callback)
+            self._pre_callbacks.append(pre_callback)
 
         if shortcut is not None and len(shortcut)!=1:
             raise ArgparseException(f"{shortcut}: shortcut can only be one letter length")

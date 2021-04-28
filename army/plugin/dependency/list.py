@@ -13,7 +13,7 @@ import sys
 @parser
 @group(name="dependency")
 @command(name='list', help='List installed packages')
-@option(name='global', shortcut='g', default=False, help='Install package in user space', flag=True)
+@option(name='global', shortcut='g', default=False, help='List packages in user space', flag=True)
 @option(name='all', shortcut='a', default=False, help='List all installed versions', flag=True)
 def list(ctx, all, **kwargs):
     log.info(f"list")

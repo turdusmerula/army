@@ -12,7 +12,7 @@ def create_parser(*args, **kwargs):
 def get_army_parser():
     global army_parser
     if army_parser is None:
-        army_parser = create_parser(name="army")
+        army_parser = ArmyRootParser(name="army")
     return army_parser
     
     
@@ -24,24 +24,16 @@ class ArmyBaseParser(Parser):
     def __init__(self, *argv, **kwargs):
         super(ArmyBaseParser, self).__init__(*argv, **kwargs)
 
-
-class ArmyParser(ArmyBaseParser):
-    def __init__(self, *argv, **kwargs):
-        super(ArmyParser, self).__init__(*argv, **kwargs, command_parser=create_parser)
-
         self._log_level = 'fatal'
         
         self._dependency_group = self.add_group(name="dependency", help="Dependency Management Commands")
 
-        self.add_verbose_option()
-        self.add_help_option()
+        self._verbose_option = self.add_option(shortcut="v", help="Activate verbose/debug", flag=True, count=4)
+        self._help_option = self.add_option(name="help", shortcut="h", help="Show this message and exit", flag=True, pre_callback=self._help_option_callback)
 
     @property
     def dependency_group(self):
         return self._dependency_group
-
-    def add_verbose_option(self):
-        self._verbose_option = self.add_option(shortcut="v", help="Activate verbose/debug", flag=True, count=4, callback=self._verbose_option_callback)
 
     def _verbose_option_callback(self, ctx, value):
         if value==True:
@@ -57,9 +49,6 @@ class ArmyParser(ArmyBaseParser):
                 self._log_level = "debug"
                 
             set_log_level(self._log_level)
-
-    def add_help_option(self):
-        self._help_option = self.add_option(name="help", shortcut="h", help="Show this message and exit", flag=True, callback=self._help_option_callback)
     
     def _help_option_callback(self, ctx, value):
         self.show_help() 
@@ -73,7 +62,20 @@ class ArmyParser(ArmyBaseParser):
     def log_level(self, value):
         self._log_level = value
         set_log_level(self._log_level)
+
+
+class ArmyRootParser(ArmyBaseParser):
+    def __init__(self, *argv, **kwargs):
+        super(ArmyRootParser, self).__init__(*argv, **kwargs, command_parser=create_parser)
         
+        self._verbose_option.add_pre_callback(self._verbose_option_callback)
+
+class ArmyParser(ArmyBaseParser):
+    def __init__(self, *argv, **kwargs):
+        super(ArmyParser, self).__init__(*argv, **kwargs, command_parser=create_parser)
+
+        self._verbose_option.add_callback(self._verbose_option_callback)
+
 
 ###################################
 ### decorators

@@ -166,9 +166,9 @@ Commands:
             nonlocal c
             c = value
         
-        self.a_option.add_callback(a_callback)
-        self.b_option.add_callback(b_callback)
-        self.c_option.add_callback(c_callback)
+        self.a_option.add_pre_callback(a_callback)
+        self.b_option.add_pre_callback(b_callback)
+        self.c_option.add_pre_callback(c_callback)
         
         assert raised(self.parser.parse, argv)==[ArgparseException, "army: command missing"]
 
@@ -188,7 +188,7 @@ Commands:
             nonlocal t
             t = value
         
-        self.target_option.add_callback(t_callback)
+        self.target_option.add_pre_callback(t_callback)
         
         assert raised(self.parser.parse, argv)==[ArgparseException, "army: command missing"]
 
@@ -206,12 +206,12 @@ Commands:
     def test_parse_option_name_equal_value(self):
         name = None
         argv = ["army", "--name=test"]
+        
         def name_callback(ctx, value):
             nonlocal name
-            print("----", value)
             name = value
         
-        self.name_option.add_callback(name_callback)
+        self.name_option.add_pre_callback(name_callback)
         
         assert raised(self.parser.parse, argv)==[ArgparseException, "army: command missing"]
 
@@ -220,11 +220,12 @@ Commands:
     def test_parse_option_name_value(self):
         name = None
         argv = ["army", "--name", "value"]
+        
         def name_callback(ctx, value):
             nonlocal name
             name = value
         
-        self.name_option.add_callback(name_callback)
+        self.name_option.add_pre_callback(name_callback)
         
         assert raised(self.parser.parse, argv)==[ArgparseException, "army: command missing"]
 

@@ -150,12 +150,12 @@ def load_installed_packages(scope='local', all=False):
         # search package in user space
         path = prefix_path('~/.army/dist')
 
-    if os.path.exists(path)==False:
+    if os.path.exists(os.path.expanduser(path))==False:
         return packages
 
-    for package_name in os.listdir(path):
+    for package_name in os.listdir(os.path.expanduser(path)):
         versions = []
-        for version in os.listdir(os.path.join(path, package_name)):
+        for version in os.listdir(os.path.expanduser(os.path.join(path, package_name))):
             versions.append(version)
         if all==False:
             # only return latest version
