@@ -27,8 +27,8 @@ class GithubRepositoryPackage(IndexedRepositoryPackage):
     def load(self):
         # Download package
         try:
-            uri, org = self.repository._decompose_uri()
-            g = github.Github(self.repository._user, self.repository._password)
+            uri, org, project = self.repository._decompose_uri()
+            g = github.Github(self.repository._token)
         except Exception as e:
             print_stack()
             log.debug(f"{type(e)} {e}")
@@ -121,8 +121,7 @@ class GithubRepository(IndexedRepository):
         super(GithubRepository, self).__init__(name=name, uri=path)
         
         # filled at login
-        self._user = None
-        self._password = None
+        self._token = None
 
 #         if get_log_level()=="debug":
 #             github.enable_console_debug_logging()        
@@ -148,17 +147,15 @@ class GithubRepository(IndexedRepository):
     def load_credentials(self):
         try:
             service_id = f"army.{self.name}"
-            user = keyring.get_password(service_id, 'user')
-            if user is None:
+            token = keyring.get_password(service_id, 'token')
+            if token is None:
                 return False
-            password = keyring.get_password(service_id, user)
         except Exception as e:
             print_stack()
             log.debug(f"{type(e)} {e}")
             return False
         
-        self._user = user
-        self._password = password
+        self._token = token
         return True
 
     def update(self):
@@ -168,7 +165,7 @@ class GithubRepository(IndexedRepository):
         try:
             uri, org, project = self._decompose_uri()
             # no need to login for public repo but needed for private repo
-            g = github.Github(self._user, self._password)
+            g = github.Github(self._token)
         except Exception as e:
             print_stack()
             log.debug(f"{type(e)} {e}")
@@ -229,34 +226,37 @@ class GithubRepository(IndexedRepository):
     
     def publish(self, package, file, overwrite=False):
         try:
-            uri, org = self._decompose_uri()
-            g = github.Github(self._user, self._password)
+            uri, org, project = self._decompose_uri()
+            g = github.Github(self._token)
         except Exception as e:
             print_stack()
             log.debug(f"{type(e)} {e}")
             raise GithubRepositoryException(f"{e}")
 
         try:
-            project = g.get_organization(org).get_repo(f"{package.name}")
+            repo = g.get_repo(f"{org}/{project}")
         except UnknownObjectException as e:
             print_stack()
             log.debug(f"{type(e)} {e}")
-            raise GithubRepositoryException(f"{package.name}: project not found inside repository {self._name}")
+            raise GithubRepositoryException(f"{org}/{project}: repository not found")
         except Exception as e:
             print_stack()
             log.debug(f"{type(e)} {e}")
             raise GithubRepositoryException(f"{e}")
         
+        # download package file
+        # check package match repo
+        
         release = None
         tag = None
         try:
             # check if release already exists
-            for r in project.get_releases():
+            for r in repo.get_releases():
                 if r.tag_name==f"v{package.version}":
                     release = r
             
             # check if tag already exists
-            for t in project.get_tags():
+            for t in repo.get_tags():
                 if t.name==f"v{package.version}":
                     tag = t
         except Exception as e:
@@ -282,7 +282,7 @@ class GithubRepository(IndexedRepository):
             if overwrite==True:
                 log.info(f"remove tag v{package.version}")
                 try:
-                    project.delete_tag(f"v{package.version}")
+                    repo.delete_tag(f"v{package.version}")
                 except Exception as e:
                     print_stack()
                     log.debug(f"{type(e)} {e}")
@@ -292,7 +292,7 @@ class GithubRepository(IndexedRepository):
         
         try:
             # create release
-            release = project.create_git_release(f"v{package.version}", f"{package.name}-{package.version}", message="") #, draft=None, prerelease=None, target_commitish=None)
+            release = repo.create_git_release(f"v{package.version}", f"{package.name}-{package.version}", message="") #, draft=None, prerelease=None, target_commitish=None)
             release.upload_asset(file, f"{package.name}-{package.version}") #, content_type, name)
         except Exception as e:
             print_stack()
