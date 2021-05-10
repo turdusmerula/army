@@ -1,27 +1,29 @@
-from army.api.log import log
+from army.api.command import parser, group, command, option, argument
 from army.api.debugtools import print_stack
+from army.api.dict_file import load_dict_file, save_dict_file
+from army.api.log import log
+from army.api.package import load_installed_package, find_repository_package
+from army.api.path import prefix_path
 from army.api.project import load_project
-from army.api.repository import load_repositories
-from army.api.click import verbose_option 
-from army import cli, packaging
-import click
+from army.api.repository import load_repositories, RepositoryPackage
+from army.api.version import Version, VersionRange
+import getpass
+import keyring
+import keyring.errors
 import os
 import sys
-import keyring.errors
 
-from army import prefix
-
-@packaging.command(name='logout', help='Logout from repository')
-@verbose_option()
-@click.argument('name')
-@click.pass_context
+@parser
+@group(name="package")
+@command(name='logout', help='Logout from repository')
+@argument('name')
 def logout(ctx, name, **kwargs):
     log.info(f"logout {name}")
     
-    config = ctx.parent.config
+    config = ctx.config
         
     # build repositories list
-    repositories = load_repositories(config, prefix)
+    repositories = load_repositories(config)
     
     repo = None
     for repository in repositories:

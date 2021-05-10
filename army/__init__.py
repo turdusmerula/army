@@ -131,10 +131,8 @@ def main():
     # load internal plugins
     import army.plugin.repository
     import army.plugin.dependency
-#     import army.plugin.package
-#     import army.plugin.target
+    import army.plugin.package
     import army.plugin.profile
-# #     import army.plugin.build
 
     # load project
     project = None

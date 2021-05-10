@@ -1,31 +1,28 @@
-from army.api.log import log
+from army.api.command import parser, group, command, option, argument
 from army.api.debugtools import print_stack
+from army.api.dict_file import load_dict_file, save_dict_file
+from army.api.log import log
+from army.api.package import load_installed_package, find_repository_package
+from army.api.path import prefix_path
 from army.api.project import load_project
-from army.api.repository import load_repositories
-from army.api.click import verbose_option 
-from army import cli, packaging
-import click
+from army.api.repository import load_repositories, RepositoryPackage
+from army.api.version import Version, VersionRange
 import os
+import sys
 
-from army import prefix
 
-@packaging.command(name='package', help='Create versioned package')
-@verbose_option()
-@click.pass_context
+@parser
+@group(name="package")
+@command(name='package', help='Create versioned package')
 def package(ctx, **kwargs):
     log.info(f"package")
     
-    config = ctx.parent.config
-    project = None
-    if os.path.exists('army.toml'):
-        try:
-            # load project configuration
-            project = load_project()
-        except Exception as e:
-            print_stack()
-            log.debug(e)
+    config = ctx.config
+
+    # load project
+    project = ctx.project
     if project is None:
-        log.info(f"no project loaded")
+        print(f"no project loaded", file=sys.stderr)
         exit(1)
 
     try:    

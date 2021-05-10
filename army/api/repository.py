@@ -18,9 +18,9 @@ repository_cache = {}
 def register_repository(repository_class):
     global repository_types
     
-    if repository_class.TYPE:
-        repository_types[repository_class.TYPE] = repository_class
-        log.info(f"registered '{repository_class.TYPE}' repository type")
+    if repository_class.Type:
+        repository_types[repository_class.Type] = repository_class
+        log.info(f"registered '{repository_class.Type}' repository type")
 
 
 # build repository list from configuration
@@ -84,8 +84,14 @@ class RepositoryException(Exception):
 
 # TODO: implement source
 class Repository(object):
-    TYPE=None
-    DEV=False
+    Type=None
+    Editable=False
+    
+    # list of login methods available
+    # available:
+    # - token
+    # - user
+    Login=[]
     
     def __init__(self, name, uri):
         self._name = name
@@ -106,7 +112,7 @@ class Repository(object):
     
     @property
     def type(self):
-        return self.TYPE
+        return self.Type
 
     @property
     def editable(self):

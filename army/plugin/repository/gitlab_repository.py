@@ -115,8 +115,9 @@ class GitlabRepositoryPackage(IndexedRepositoryPackage):
         os.remove(tmpf)
 
 class GitlabRepository(IndexedRepository):
-    TYPE="gitlab"
-    DEV=False
+    Type="gitlab"
+    Editable=False
+    Login=[]
     
     def __init__(self, name, path):
         super(GitlabRepository, self).__init__(name=name, uri=path)

@@ -1,24 +1,21 @@
+from army.api.command import parser, group, command, option, argument
 from army.api.log import log
 from army.api.debugtools import print_stack
 from army.api.project import load_project
 from army.api.repository import load_repositories
-from army.api.click import verbose_option 
-from army import cli, dependencies
-import click
 import os
 import sys
-from army import prefix
 
-@dependencies.command(name='update', help='Update repository indexes')
-@verbose_option()
-@click.pass_context
+@parser
+@group(name="dependency")
+@command(name='update', help='Update repository indexes')
 def update(ctx, **kwargs):
     log.info(f"update")
     
-    config = ctx.parent.config
+    config = ctx.config
         
     # build repositories list
-    repositories = load_repositories(config, prefix)
+    repositories = load_repositories(config)
     if len(repositories)==0:
         print("no repository configured")
         return 

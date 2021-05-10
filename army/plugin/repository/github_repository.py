@@ -14,6 +14,7 @@ import io
 import shutil
 import keyring
 import toml
+from urllib.parse import urlparse
 
 class GithubRepositoryException(Exception):
     def __init__(self, message):
@@ -112,8 +113,9 @@ class GithubRepositoryPackage(IndexedRepositoryPackage):
         os.remove(tmpf)
 
 class GithubRepository(IndexedRepository):
-    TYPE="github"
-    DEV=False
+    Type="github"
+    Editable=False
+    Login=['token']
     
     def __init__(self, name, path):
         super(GithubRepository, self).__init__(name=name, uri=path)
@@ -126,7 +128,8 @@ class GithubRepository(IndexedRepository):
 #             github.enable_console_debug_logging()        
 
     def _decompose_uri(self):
-        uri = self._uri
+        o = urlparse(str(self._uri))
+        uri = o.path
         
         chuncks = []
         # decompose uri
@@ -134,14 +137,10 @@ class GithubRepository(IndexedRepository):
             chuncks.append(os.path.basename(uri))
             uri = os.path.dirname(uri)
         
-        if len(chuncks)<2:
+        if len(chuncks)!=2:
             raise GithubRepositoryException(f"{self._uri}: invalid uri")
-        elif len(chuncks)<3:
-            raise GithubRepositoryException(f"{self._uri}: invalid uri, missing organization")
-        elif len(chuncks)>3:
-            raise GithubRepositoryException(f"{self._uri}: invalid uri, using a project as a repository is not supported")
 
-        return (os.path.dirname(self._uri), os.path.basename(self._uri))
+        return (os.path.dirname(self._uri), chuncks[1], chuncks[0])
 
     def _create_package(self, data):
         return GithubRepositoryPackage(data, self)
@@ -164,10 +163,10 @@ class GithubRepository(IndexedRepository):
 
     def update(self):
         if self.load_credentials()==False:
-            print(f"{self.name}: warning: load credentials failed, update may fail due to rate limitation", file=sys.stderr)
+            log.warning(f"{self.name}: load credentials failed, update may fail due to rate limitation", file=sys.stderr)
             
         try:
-            uri, org = self._decompose_uri()
+            uri, org, project = self._decompose_uri()
             # no need to login for public repo but needed for private repo
             g = github.Github(self._user, self._password)
         except Exception as e:
@@ -175,28 +174,26 @@ class GithubRepository(IndexedRepository):
             log.debug(f"{type(e)} {e}")
             raise GithubRepositoryException(f"{e}")
 
-        try:
-            organization = g.get_organization(org)
-        except UnknownObjectException as e:
-            print_stack()
-            log.debug(f"{type(e)} {e}")
-            raise GithubRepositoryException(f"{org}: not found")
-        except Exception as e:
-            print_stack()
-            log.debug(f"{type(e)} {e}")
-            raise GithubRepositoryException(f"{e}")
+#         try:
+#             organization = g.get_organization(org)
+#         except UnknownObjectException as e:
+#             print_stack()
+#             log.debug(f"{type(e)} {e}")
+#             raise GithubRepositoryException(f"{org}: not found")
+#         except Exception as e:
+#             print_stack()
+#             log.debug(f"{type(e)} {e}")
+#             raise GithubRepositoryException(f"{e}")
 
         try:
-            
-            # get versions
-            for repo in organization.get_repos():
-                # remove previous index state
-                self._index_remove_package(repo.name)
+            repo = g.get_repo(f"{org}/{project}")
+            # remove previous index state
+            self._index_remove_package(repo.name)
 
-                log.debug(f"update repo {repo}")
-                for release in repo.get_releases():
-                    if release.tag_name.startswith("v"):
-                        self._index_package(repo.name, release.tag_name[1:], repo.description)
+            log.debug(f"update repo {repo}")
+            for release in repo.get_releases():
+                if release.tag_name.startswith("v"):
+                    self._index_package(repo.name, release.tag_name[1:], repo.description)
         except Exception as e:
             print_stack()
             log.debug(f"{type(e)} {e}")
@@ -204,16 +201,15 @@ class GithubRepository(IndexedRepository):
     
         super(GithubRepository, self).update()
 
-    def login(self, user, password):
+    def login(self, token):
         try:
-            g = github.Github(user, password)
+            g = github.Github(token)
             for repo in g.get_user().get_repos():
                 # if it suceeds one time then it means we are logged ok
                 name = repo.name
                 break
             
-            self._user = user
-            self._password = password
+            self._token = token
         except BadCredentialsException as e:
             print_stack()
             log.debug(e)
@@ -224,18 +220,15 @@ class GithubRepository(IndexedRepository):
             raise GithubRepositoryException("login failed")
         
         service_id = f"army.{self.name}"
-        # store password on keyring
-        keyring.set_password(service_id, user, password)
-        # store user on keyring
-        keyring.set_password(service_id, 'user', user)
+        # store token on keyring
+        keyring.set_password(service_id, 'token', token)
 
     def logout(self):
         service_id = f"army.{self.name}"
         
         try:
-            user = keyring.get_password(service_id, 'user')
-            keyring.delete_password(service_id, 'user')
-            keyring.get_password(service_id, user)
+            keyring.get_password(service_id, 'token')
+            keyring.delete_password(service_id, 'token')
         except keyring.errors.PasswordDeleteError as e:
             print_stack()
             log.debug(e)

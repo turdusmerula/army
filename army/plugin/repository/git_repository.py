@@ -6,8 +6,9 @@ class GitRepositoryException(Exception):
         self.message = message
 
 class GitRepository(Repository):
-    TYPE="git"
-    DEV=False
+    Type="git"
+    Editable=False
+    Login=[]
     
     def __init__(self, name, path):
         super(GitRepository, self).__init__(name=name, uri=path)

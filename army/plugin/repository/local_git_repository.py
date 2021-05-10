@@ -13,8 +13,9 @@ class LocalGitRepositoryException(Exception):
         self.message = message
 
 class LocalGitRepository(Repository):
-    TYPE="git-local"
-    DEV=True
+    Type="git-local"
+    Editable=True
+    Login=[]
     
     def __init__(self, name, path):
         super(LocalGitRepository, self).__init__(name=name, uri=path)

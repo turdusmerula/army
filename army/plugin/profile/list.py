@@ -31,7 +31,7 @@ def profile_list(ctx, all, **kwargs):
     column_path = ['path']
 
     for profile in profiles:
-        profile.load()
+        profile.load(validate=False)
         column_name.append(profile.name)
         if profile.version is None:
             column_version.append("")

@@ -1,5 +1,8 @@
+import army.api.command
+
+package_group = army.api.command.get_army_parser().add_group(name="package", help="Packaging Management Commands")
+
 import army.plugin.package.package
-import army.plugin.package.publish
+# import army.plugin.package.publish
 import army.plugin.package.login
 import army.plugin.package.logout
-from army import cli
