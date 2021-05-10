@@ -39,7 +39,7 @@ class VersionRange(object):
 
     def filter(self, range):
         if range=="latest":
-            return self.max()
+            return [self.max()]
         
         s = semantic_version.SimpleSpec(range)
         versions = []

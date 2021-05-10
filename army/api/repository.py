@@ -462,20 +462,19 @@ class IndexedRepository(Repository):
             if match_name==True:
                 if version is None:
                     # no version specified, give latest by default
-                    version_range = VersionRange('latest', versions=versions)
+                    version_range = 'latest'
                 else:
-                    version_range = VersionRange(version, versions=versions)
+                    version_range = version
                 
-                for version in versions:
-                    if version_range.match(version):
-                        if (package in res and Version(version)>res[package].version) or package not in res:
-                            package_data = {
-                                    'name': package,
-                                    'description': description,
-                                    'version': version
-                                }
-                            pkg = self._create_package(package_data)
-                            res[package] = pkg
+                for version in VersionRange(versions).filter(version_range):
+                    if (package in res and Version(version)>res[package].version) or package not in res:
+                        package_data = {
+                                'name': package,
+                                'description': description,
+                                'version': version
+                            }
+                        pkg = self._create_package(package_data)
+                        res[package] = [pkg]
 
         return res
     

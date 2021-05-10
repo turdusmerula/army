@@ -174,17 +174,6 @@ class GithubRepository(IndexedRepository):
             log.debug(f"{type(e)} {e}")
             raise GithubRepositoryException(f"{e}")
 
-#         try:
-#             organization = g.get_organization(org)
-#         except UnknownObjectException as e:
-#             print_stack()
-#             log.debug(f"{type(e)} {e}")
-#             raise GithubRepositoryException(f"{org}: not found")
-#         except Exception as e:
-#             print_stack()
-#             log.debug(f"{type(e)} {e}")
-#             raise GithubRepositoryException(f"{e}")
-
         try:
             repo = g.get_repo(f"{org}/{project}")
             # remove previous index state
@@ -213,7 +202,7 @@ class GithubRepository(IndexedRepository):
         except BadCredentialsException as e:
             print_stack()
             log.debug(e)
-            raise GithubRepositoryException("invalid username/password")
+            raise GithubRepositoryException("invalid token")
         except Exception as e:
             print_stack()
             log.debug(f"{type(e)} {e}")
