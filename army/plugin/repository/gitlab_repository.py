@@ -9,7 +9,7 @@ import sys
 import tempfile
 import requests
 import zipfile
-import toml
+from urllib.parse import urlparse
 
 class GitlabRepositoryException(Exception):
     def __init__(self, message):
@@ -117,7 +117,7 @@ class GitlabRepositoryPackage(IndexedRepositoryPackage):
 class GitlabRepository(IndexedRepository):
     Type="gitlab"
     Editable=False
-    Login=[]
+    Login=['token']
     
     def __init__(self, name, path):
         super(GitlabRepository, self).__init__(name=name, uri=path)
@@ -125,8 +125,9 @@ class GitlabRepository(IndexedRepository):
         self._token = None
         
     def _decompose_uri(self):
-        uri = self._uri
-        
+        o = urlparse(str(self._uri))
+        uri = o.path
+
         chuncks = []
         # decompose uri
         while os.path.basename(uri)!='':
@@ -135,12 +136,15 @@ class GitlabRepository(IndexedRepository):
         
         if len(chuncks)<2:
             raise GitlabRepositoryException(f"{self._uri}: invalid uri")
-        elif len(chuncks)<3:
-            raise GitlabRepositoryException(f"{self._uri}: invalid uri, missing group")
-        elif len(chuncks)>3:
-            raise GitlabRepositoryException(f"{self._uri}: invalid uri, using a project as a repository is not supported")
 
-        return (os.path.dirname(self._uri), os.path.basename(self._uri))
+        group = ''
+        if len(chuncks)>0:
+            for chunck in chuncks[1:]:
+                if group=="":
+                    group = chunck
+                else:
+                    group = f"{chunck}/{group}"
+        return (f"{o.scheme}://{o.netloc}", group, chuncks[0])
 
     def _create_package(self, data):
         return GitlabRepositoryPackage(data, self)
@@ -164,7 +168,7 @@ class GitlabRepository(IndexedRepository):
         if logged==False:
             print(f"{self.name}: warning: load credentials failed, update may be incomplete when using private repository", file=sys.stderr)
         try:
-            uri, groupuri = self._decompose_uri()
+            uri, group, project = self._decompose_uri()
             if logged:
                 # no need to login for public repo but needed for private repo
                 g = gitlab.Gitlab(uri, private_token=self._token)
@@ -177,41 +181,24 @@ class GitlabRepository(IndexedRepository):
             raise GitlabRepositoryException(f"{e}")
 
         try:
-            group = None
-            for ig in g.groups.list():
-                if ig.name==groupuri:
-                    group = ig
-        except gitlab.exceptions.GitlabGetError as e:
-            print_stack()
-            log.debug(f"{type(e)} {e}")
-            raise GitlabRepositoryException(f"{groupuri}: group not found")
-        except Exception as e:
-            print_stack()
-            log.debug(f"{type(e)} {e}")
-            raise GitlabRepositoryException(f"{e}")
-        if group is None:
-            raise GitlabRepositoryException(f"{groupuri}: group not found")
-
-        try:
-            # get versions
-            projects = {}
-            for p in g.projects.list():
-                projects[p.name] = p
+            # get project
+            gitlab_project = None
+            for p in g.projects.list(all=True):
+                if p.path_with_namespace==f"{group}/{project}":
+                    gitlab_project = p
+                    break
         except Exception as e:
             print_stack()
             log.debug(f"{type(e)} {e}")
             raise GitlabRepositoryException(f"{e}")
         
+        if gitlab_project is None:
+            raise GitlabRepositoryException(f"path not found '{group}/{project}'")
+
         try:
-            for p in group.projects.list(all=True):
-                log.debug(f"update repo {p.name}")
-                if p.name not in projects:
-                    log.error(f"{p.name}: update failed")
-                    continue # TODO raise error?
-                project = projects[p.name]
-                for release in project.releases.list():
-                    if release.tag_name.startswith("v"):
-                        self._index_package(project.name, release.tag_name[1:], project.description)
+            for release in gitlab_project.releases.list():
+                if release.tag_name.startswith("v"):
+                    self._index_package(project.name, release.tag_name[1:], project.description)
         except Exception as e:
             print_stack()
             log.debug(f"{type(e)} {e}")
@@ -219,12 +206,16 @@ class GitlabRepository(IndexedRepository):
     
         super(GitlabRepository, self).update()
 
-    def login(self, token=None, **kwargs):
-        if token is None:
-            raise GitlabRepositoryException("only token auth is supported")
-            
+    def login(self, token):
+        service_id = f"army.{self.name}"
+
         try:
-            uri, org = self._decompose_uri()
+            keyring.delete_password(service_id, 'token')
+        except:
+            pass
+        
+        try:
+            uri, group, project = self._decompose_uri()
             g = gitlab.Gitlab(uri, private_token=token)
 
             g.auth()
@@ -235,7 +226,6 @@ class GitlabRepository(IndexedRepository):
             log.debug(f"{type(e)}: {e}")
             raise GitlabRepositoryException("invalid token")
         
-        service_id = f"army.{self.name}"
         # store token on keyring
         keyring.set_password(service_id, 'token', token)
 

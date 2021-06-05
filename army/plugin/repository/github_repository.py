@@ -13,7 +13,6 @@ import zipfile
 import io
 import shutil
 import keyring
-import toml
 from urllib.parse import urlparse
 
 class GithubRepositoryException(Exception):
@@ -188,6 +187,13 @@ class GithubRepository(IndexedRepository):
         super(GithubRepository, self).update()
 
     def login(self, token):
+        service_id = f"army.{self.name}"
+        try:
+            keyring.get_password(service_id, 'token')
+            keyring.delete_password(service_id, 'token')
+        except:
+            pass
+
         try:
             g = github.Github(token)
             for repo in g.get_user().get_repos():
@@ -205,7 +211,6 @@ class GithubRepository(IndexedRepository):
             log.debug(f"{type(e)} {e}")
             raise GithubRepositoryException("login failed")
         
-        service_id = f"army.{self.name}"
         # store token on keyring
         keyring.set_password(service_id, 'token', token)
 
