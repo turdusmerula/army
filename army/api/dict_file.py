@@ -196,7 +196,7 @@ class DictFile(object):
     def _load_data(self):
         if self._data is None:
             self._data = self.to_dict()
-    
+
     def get(self, path, raw=False, **kwargs):
         self._load_data()
 
@@ -394,6 +394,7 @@ class DictFile(object):
 
         for parent in reversed(parents):
             copy(parent._raw_data, res)
+
         return res
     
     def __repr__(self):

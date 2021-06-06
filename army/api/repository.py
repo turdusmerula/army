@@ -116,7 +116,7 @@ class Repository(object):
 
     @property
     def editable(self):
-        return self.DEV==True
+        return self.Editable==True
     
     def load_credentials(self):
         return True

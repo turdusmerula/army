@@ -36,8 +36,13 @@ def load_global_profile_list():
     dicts = find_dict_files(prefix_path('/etc/army/profile'))
     for name in dicts:
         chunks = parse_profile_name(name)
-        profile = Profile(name=chunks['name'], version=chunks['version'], path=prefix_path('/etc/army/profile'))
-        profiles.append(profile)
+        try:
+            profile = Profile(name=chunks['name'], version=chunks['version'], path=prefix_path('/etc/army/profile'))
+            profiles.append(profile)
+        except Exception as e:
+            print_stack()
+            log.error(f"{e}")
+        
     return profiles
 
 # load profiles from ~/.army/profile
@@ -47,8 +52,13 @@ def load_user_profile_list():
     dicts = find_dict_files(prefix_path('~/.army/profile'))
     for name in dicts:
         chunks = parse_profile_name(name)
-        profile = Profile(name=chunks['name'], version=chunks['version'], path=prefix_path('~/.army/profile'))
-        profiles.append(profile)
+        try:
+            profile = Profile(name=chunks['name'], version=chunks['version'], path=prefix_path('~/.army/profile'))
+            profiles.append(profile)
+        except Exception as e:
+            print_stack()
+            log.error(f"{e}")
+        
     return profiles
 
 # load profiles from current project
@@ -58,8 +68,13 @@ def load_project_profile_list():
     dicts = find_dict_files('profile')
     for name in dicts:
         chunks = parse_profile_name(name)
-        profile = Profile(name=chunks['name'], version=chunks['version'], path='profile')
-        profiles.append(profile)
+        try:
+            profile = Profile(name=chunks['name'], version=chunks['version'], path='profile')
+            profiles.append(profile)
+        except Exception as e:
+            print_stack()
+            log.error(f"{e}")
+            
     return profiles
 
 def load_profile(name, parent=None, validate=True):
@@ -203,6 +218,10 @@ class Profile(object):
     def data(self):
         return self._data
 
+    @property
+    def parent(self):
+        return self._parent
+
     def load(self, validate=True):
         if self._data is not None:
             return
@@ -221,7 +240,7 @@ class Profile(object):
         self._description = self._data.get("/description", raw=True, default="")
         
         # load subprofiles
-        for profile in self.data.get("profiles", default={}):
+        for profile in self.data.get("profiles", raw=True, default={}):
             name = profile.get("name")
             version = profile.get("version")
             profile_data = load_profile(f"{name}@{version}", validate=validate)

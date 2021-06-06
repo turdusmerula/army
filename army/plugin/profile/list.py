@@ -31,15 +31,19 @@ def profile_list(ctx, all, **kwargs):
     column_path = ['path']
 
     for profile in profiles:
-        profile.load(validate=False)
-        column_name.append(profile.name)
-        if profile.version is None:
-            column_version.append("")
-        else:
-            column_version.append(profile.version)
-        column_path.append(path(profile.path))
-        column_description.append(profile.description)
-  
+        try:
+            profile.load(validate=False)
+            column_name.append(profile.name)
+            if profile.version is None:
+                column_version.append("")
+            else:
+                column_version.append(profile.version)
+            column_path.append(path(profile.path))
+            column_description.append(profile.description)
+        except Exception as e:
+            print_stack()
+            log.error(f"{e}")
+
     max_name = len(max(column_name, key=len))
     max_version = len(max(column_version, key=len))
     max_path = len(max(column_path, key=len))

@@ -190,59 +190,6 @@ def main():
         log.error(f"{e}")
         print(f"Error loading profile", file=sys.stderr)
 
-#     except Exception as e:
-#         print_stack()
-#         log.error(f"{e}")
-    
-#     # load default target if exists
-#     if project is not None:
-#         # get target config
-#         default_target = None
-#         if target_name is None and project.default_target:
-#             target_name = project.default_target
-#             
-#         if target_name is not None:
-#             if target_name in project.target:
-#                 default_target = project.target[target_name]
-#             else:
-#                 print(f"{target_name}: target not defined in project", file=sys.stderr)
-#                 exit(1)
-#             log.info(f"current target: {target_name}")
-#     
-#     if project is not None:
-#         # load plugins at project level
-#         for plugin in project.plugins:
-#             plugin_config = None
-#             
-#             # search for plugin configuration in project
-#             if plugin in project.plugin:
-#                 plugin_config = project.plugin[plugin]
-#             
-#             # search plugin configuration in target
-#             if plugin in default_target.plugin:
-#                 plugin_config = default_target.plugin[plugin]
-#             
-#             try:
-#                 load_plugin(plugin, config, plugin_config)
-#             except Exception as e:
-#                 print_stack()
-#                 print(f"{e}")
-# 
-#     if default_target is not None:
-#         # load plugins at target level
-#         for plugin in default_target.plugins:
-#             plugin_config = None
-#             
-#             # search plugin configuration in target
-#             if plugin in default_target.plugin:
-#                 plugin_config = default_target.plugin[plugin]
-#             
-#             try:
-#                 load_plugin(plugin, config, plugin_config)
-#             except Exception as e:
-#                 print_stack()
-#                 print(f"{e}")
-# 
     # parse command line
     try:
         army_parser.log_level = "fatal"

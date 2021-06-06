@@ -8,6 +8,6 @@ from army.plugin.repository.gitlab_repository import GitlabRepository
 # 
 # register repository types
 register_repository(LocalGitRepository)
-register_repository(GitRepository)
+# register_repository(GitRepository)
 register_repository(GithubRepository)
 register_repository(GitlabRepository)

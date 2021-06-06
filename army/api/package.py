@@ -56,7 +56,9 @@ def find_installed_package(name, version_range="latest", scope=None, exist_ok=Fa
     if package_local is None:
         package = package_user
     if package_user is not None and package_local is not None:
-        if package_user.version>package_local.version:
+        version_user = Version(os.path.basename(package_user))
+        version_local = Version(os.path.basename(package_local))
+        if version_user>version_local:
             package = package_user
         else:
             package = package_local
