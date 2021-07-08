@@ -9,4 +9,6 @@ import army.plugin.profile.inspect
 import army.plugin.profile.list
 # TODO
 # import army.plugin.profile.search
+import army.plugin.profile.pop
+import army.plugin.profile.push
 import army.plugin.profile.set

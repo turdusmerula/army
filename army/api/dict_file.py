@@ -54,12 +54,13 @@ def load_dict_file(path, name, exist_ok=False):
             raise DictFileException(f"{path}: path not found")
     
     file = os.path.join(str(path), f"{name}.yaml")
-    if os.path.exists(file)==False:
+    if os.path.exists(file)==False and exist_ok==False:
         raise DictFileException(f"{path}: {name}.yaml not found")
 
-    res = _load_yaml_dict_file(file)
-    if res is None and exist_ok==False:
-        raise DictFileException(f"{path}: {name}.yaml not found")
+    if os.path.exists(file)==True:
+        res = _load_yaml_dict_file(file)
+        if res is None and exist_ok==False:
+            raise DictFileException(f"{path}: {name}.yaml not found")
     
 #         # check if file matches one of known extensions
 #         for ext, loader in dict_file_extensions().items():
