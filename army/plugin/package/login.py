@@ -37,7 +37,7 @@ def login(ctx, name, token, user, password, **kwargs):
         exit(1)
     
     if token is not None and user is not None:
-        print("Can not combie user and token login", file=sys.stderr)
+        print("Can not combine user and token login", file=sys.stderr)
         exit(1)
     
     logged = False

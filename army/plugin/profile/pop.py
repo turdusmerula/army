@@ -13,6 +13,8 @@ def profile_pop(ctx, **kwargs):
 
     profile = None
     profiles = load_current_profile_cache()
-    profiles.pop()
+    name = profiles.pop()
+    
+    print(f"removed: {name}")
     
     save_current_profile_cache(profiles)
