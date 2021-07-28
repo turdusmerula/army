@@ -3,6 +3,7 @@ from army.api.debugtools import print_stack
 from army.api.log import log
 from army.api.path import path
 from army.api.profile import load_profile_list, load_profile
+from army.api.version import Version
 import sys
 
 # TODO: implement profile description
@@ -57,4 +58,9 @@ def profile_list(ctx, all, **kwargs):
         print()
 
 def _compare_name_version(profile):
-    return ( profile.name, profile.version )
+    try:
+        return ( profile.name, Version(profile.version) )
+    except:
+        return ( profile.name, Version("0.0.0") )
+        
+#     print("---", profile, profile.name, profile.version, type(profile.version))

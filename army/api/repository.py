@@ -251,12 +251,15 @@ class RepositoryPackage(Package):
         for profile in self.profiles:
             profile_name = f"{profile}@{self.version}"
             dest_path = os.path.join(profile_path, f"{profile_name}.yaml")
-            if os.path.exists(dest_path):
+            if os.path.exists(dest_path) or os.path.islink(dest_path):
                 if force==True:
                     self._rm(dest_path)
                 else:
                     raise RepositoryException(f"{dest_path}: profile already installed")
-            self._link_file(os.path.join(self._source_path, 'profile', f"{profile}.yaml"), dest_path)
+            source_path = os.path.join(self._source_path, 'profile', f"{profile}.yaml")
+            if os.path.exists(os.path.expanduser(source_path))==False:
+                raise RepositoryException(f"{source_path}: profile not found")
+            self._link_file(source_path, dest_path)
             
     
     def _install(self, path, force, edit):

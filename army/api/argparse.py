@@ -731,6 +731,20 @@ class Command(object):
             return None
         return recursive_find_command(self, name)
 
+    def _recursive_find_group(self, parent, name):
+        for child in parent.childs:
+            if isinstance(child, Group) and child.name is not None and child.name==name:
+                return child
+            elif isinstance(child, Group):
+                found = self._recursive_find_group(child, name)
+                if found is not None:
+                    return found
+        return None
+    
+    # find a non anonymous group inside parser
+    def find_group(self, name):
+        return self._recursive_find_group(self, name)
+
     def add_group(self, *args, **kwargs):
         group = Group(parent=self, *args, **kwargs)
         self.childs.append(group)
