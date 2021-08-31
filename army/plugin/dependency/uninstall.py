@@ -12,7 +12,7 @@ loaded_packages = {}
 
 class UninstalledPackage(InstalledPackage):
     def __init__(self, package):
-        super(UninstalledPackage, self).__init__(data=package._data, path=package.path)
+        super(UninstalledPackage, self).__init__(data=package._data, path=package.path, profile=None)
         self._direct_uninstall = False
         self._uninstall = False
         
