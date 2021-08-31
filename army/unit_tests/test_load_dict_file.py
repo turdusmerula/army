@@ -1,4 +1,4 @@
-from army.api.dict_file import load_dict_file, DictFileException, DictFile
+from army.api.dict_file import load_dict_file, DictException, Dict
 from army.api.log import log
 import unittest
 from helper import raised, run
@@ -10,12 +10,12 @@ log.setLevel('DEBUG')
 
 def TestDict():
     test_suite = unittest.TestSuite()
-    test_suite.addTest(unittest.makeSuite(TestLoadDictFile))
+    test_suite.addTest(unittest.makeSuite(TestLoadDict))
     test_suite.addTest(unittest.makeSuite(TestDictObject))
     return test_suite
 
 
-class TestLoadDictFile(unittest.TestCase):
+class TestLoadDict(unittest.TestCase):
     
     def setUp(self):
         pass
@@ -38,12 +38,12 @@ class TestLoadDictFile(unittest.TestCase):
 #         assert res['item']=="value"
 # 
 #     def test_load_json_error(self):
-#         assert raised(load_dict_file, os.path.join(self.path, "json_error"), "config")==DictFileException
+#         assert raised(load_dict_file, os.path.join(self.path, "json_error"), "config")==DictException
 # 
 #     def test_load_json_not_found(self):
 #         res = load_dict_file(os.path.join(self.path, "json"), "none", exist_ok=True)
 #         assert res is None
-#         assert raised(load_dict_file, os.path.join(self.path, "json_error"), "none", exist_ok=False)==DictFileException
+#         assert raised(load_dict_file, os.path.join(self.path, "json_error"), "none", exist_ok=False)==DictException
         
 
     def test_load_yaml(self):
@@ -51,12 +51,12 @@ class TestLoadDictFile(unittest.TestCase):
         assert res['item']=="value"
 
     def test_load_yaml_error(self):
-        assert raised(load_dict_file, os.path.join(self.path, "yaml_error"), "config")[0]==DictFileException
+        assert raised(load_dict_file, os.path.join(self.path, "yaml_error"), "config")[0]==DictException
 
     def test_load_yaml_not_found(self):
         res = load_dict_file(os.path.join(self.path, "yaml"), "none", exist_ok=True)
         assert res is None
-        assert raised(load_dict_file, os.path.join(self.path, "yaml_error"), "none", exist_ok=False)[0]==DictFileException
+        assert raised(load_dict_file, os.path.join(self.path, "yaml_error"), "none", exist_ok=False)[0]==DictException
 
 
 #     def test_load_toml(self):
@@ -64,12 +64,12 @@ class TestLoadDictFile(unittest.TestCase):
 #         assert res['item']=="value"
 # 
 #     def test_load_toml_error(self):
-#         assert raised(load_dict_file, os.path.join(self.path, "toml_error"), "config")==DictFileException
+#         assert raised(load_dict_file, os.path.join(self.path, "toml_error"), "config")==DictException
 # 
 #     def test_load_toml_not_found(self):
 #         res = load_dict_file(os.path.join(self.path, "toml"), "none", exist_ok=True)
 #         assert res is None
-#         assert raised(load_dict_file, os.path.join(self.path, "toml_error"), "none", exist_ok=False)==DictFileException
+#         assert raised(load_dict_file, os.path.join(self.path, "toml_error"), "none", exist_ok=False)==DictException
 
 
 #     def test_load_python(self):
@@ -77,18 +77,18 @@ class TestLoadDictFile(unittest.TestCase):
 #         assert res['item']=="value"
 # 
 #     def test_load_python_error(self):
-#         assert raised(load_dict_file, os.path.join(self.path, "python_error"), "config")[0]==DictFileException
+#         assert raised(load_dict_file, os.path.join(self.path, "python_error"), "config")[0]==DictException
 # 
 #     def test_load_python_not_found(self):
 #         res = load_dict_file(os.path.join(self.path, "python"), "none", exist_ok=True)
 #         assert res is None
-#         assert raised(load_dict_file, os.path.join(self.path, "python_error"), "none", exist_ok=False)[0]==DictFileException
+#         assert raised(load_dict_file, os.path.join(self.path, "python_error"), "none", exist_ok=False)[0]==DictException
 
 
 class TestDictObject(unittest.TestCase):
     
     def setUp(self):
-        self.dict1 = DictFile(data={
+        self.dict1 = Dict(data={
             "a": "1",
             "e": "0",
             "f": "0",
@@ -96,7 +96,7 @@ class TestDictObject(unittest.TestCase):
             "array": [1, 2, 3, 4]
         })
         
-        self.dict2 = DictFile(data={
+        self.dict2 = Dict(data={
             "b": "{{a}}",
             "c": "{{b}}",
             "d": "{{nonexists}}",
@@ -120,7 +120,7 @@ class TestDictObject(unittest.TestCase):
             
         }, parent=self.dict1)
 
-        self.dict3 = DictFile(data={
+        self.dict3 = Dict(data={
 
         }, parent=self.dict2)
         

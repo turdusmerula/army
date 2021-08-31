@@ -2,7 +2,7 @@ from army.api.command import parser, group, command, option, argument
 from army.api.debugtools import print_stack
 from army.api.dict_file import load_dict_file, save_dict_file
 from army.api.log import log
-from army.api.package import load_installed_package, find_repository_package
+from army.api.package import find_repository_package
 from army.api.path import prefix_path
 from army.api.project import load_project
 from army.api.repository import load_repositories, RepositoryPackage

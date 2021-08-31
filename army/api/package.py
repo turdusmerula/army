@@ -3,7 +3,7 @@ from army.api.debugtools import print_stack
 from army.api.dict_file import load_dict_file
 from army.api.log import log
 from army.api.path import prefix_path
-from army.api.schema import Schema, String, VersionString, Optional, PackageString, Array, Dict, VariableDict, Variant, VersionRangeString, Boolean
+from army.api.schema import validate, Optional, Use, Or, SchemaError, Const
 from army.api.version import Version, VersionRange
 import os
 import shutil
@@ -71,7 +71,7 @@ def find_installed_package(name, version_range="latest", scope=None, exist_ok=Fa
 
     return package
 
-def load_installed_package(name, version_range="latest", scope=None, exist_ok=False):
+def load_installed_package(name, version_range="latest", scope=None, profile=None, exist_ok=False):
     """ search for an installed package
     search is done inside project first and then in user space
     
@@ -95,7 +95,7 @@ def load_installed_package(name, version_range="latest", scope=None, exist_ok=Fa
             return None
     
         try:
-            package = _load_installed_package(os.path.join(str(package_path), str(version)))
+            package = _load_installed_package(os.path.join(str(package_path), str(version)), profile=profile)
         except Exception as e:
             print_stack()
             log.error(e)
@@ -142,7 +142,7 @@ def load_installed_package(name, version_range="latest", scope=None, exist_ok=Fa
 
     return package
 
-def load_installed_packages(scope='local', all=False):
+def load_installed_packages(scope='local', all=False, profile=None):
     packages = []
 
     if scope=='local':
@@ -164,7 +164,7 @@ def load_installed_packages(scope='local', all=False):
             versions = [VersionRange(versions).max()]
         for version in versions:
             try:
-                package = _load_installed_package(os.path.join(str(path), package_name, str(version)))
+                package = _load_installed_package(os.path.join(str(path), package_name, str(version)), profile=profile)
                 packages.append(package)
             except Exception as e:
                 print_stack()
@@ -174,7 +174,7 @@ def load_installed_packages(scope='local', all=False):
     return packages
 
 # TODO check version when loading package and in case of package installed both global and local use the best fit
-def load_project_packages(project):
+def load_project_packages(project, profile=None):
     loaded = []
     to_load = []
     for dependency in project.dependencies:
@@ -184,7 +184,7 @@ def load_project_packages(project):
     while len(to_load)>0:
         dependency, version_range = to_load.pop(0)
         if dependency not in loaded:
-            installed = load_installed_package(dependency, version_range=version_range)
+            installed = load_installed_package(dependency, version_range=version_range, profile=profile)
             if installed is None:
                 raise PackageException(f"{dependency}: package not installed")
             dependencies.append(installed)
@@ -198,11 +198,11 @@ def load_project_packages(project):
     dependencies.reverse()
     return dependencies
 
-def _load_installed_package(path, exist_ok=False):
+def _load_installed_package(path, profile, exist_ok=False):
     content = load_dict_file(path, "army", exist_ok=exist_ok)
     
-    project = InstalledPackage(data=content, path=path)
-    project.check()
+    project = InstalledPackage(data=content, path=path, profile=profile)
+    project.validate()
 
     return project
 
@@ -281,34 +281,53 @@ class PackageException(Exception):
     def __init__(self, message):
         self.message = message
 
-class Package(Schema):
-    def __init__(self, data, schema):
-        super(Package, self).__init__(data, schema={
-                **schema,
-                'name': String(),
-                'description': String(),
-                'version': VersionString(),
-                'dependencies': Optional(VariableDict(PackageString(), VersionRangeString())),
-                'plugins': Optional(Array(String())),
-#                 'plugin': Optional(VariableDict(PackageString(), Variant())),
-                'packaging': Optional(Dict({
-                    'include': Optional(Array(String())),
-                    'exclude': Optional(Array(String()))
-                    })),
-                
-                'profiles': Optional(Array(String())),
-                
-                'definition': Optional(VariableDict(String(), String())),
-
-                'archs': Optional(Array(Dict({
-                    'name': String(),
-                    'cpu': String(),
-                    'cpu_definition': Optional(String()),
-                    'mpu': Optional(String()),
-                    'mpu_definition': Optional(String()),
-                    }))),
-           })
+class PackageReference():
+    def __init__(self, reference):
+        self._reference = reference
+        self.validate(reference)
+        
+    @staticmethod
+    def validate(value):
+        if not isinstance(value, str):
+            raise SchemaError(f"{value}: invalid package name")
+        try:
+            parse_package_name(value)
+        except Exception as e:
+            raise SchemaError(f"{e}")
     
+class Package(object):
+    _schema = {
+        'name': str,
+        'description': str,
+        'version': Use(Version),
+        Optional('dependencies'): {
+            str: Use(VersionRange),
+        },
+        Optional('plugins'): [str], # TODO improve validation
+        Optional('packaging'): {
+            Optional('include'): [str],
+            Optional('exclude'): [str]
+        },
+        Optional('profiles'): [str],
+#         
+        Optional('definition'): {
+            str: Or([object], object)
+        },
+
+        Optional('archs'): [{
+            'name': str,
+            'cpu': str,
+            Optional('cpu_definition'): str,
+            Optional('mpu'): str,
+            Optional('mpu_definition'): str,
+        }],
+    }
+            
+    def __init__(self, data, profile):
+        self._data = data
+        self._profile = profile
+        self._schema = Package._schema
+
     @property
     def name(self):
         return self._data['name']
@@ -363,9 +382,13 @@ class Package(Schema):
     
     @property
     def definition(self):
+        data = {}
         if 'definition' in self._data:
-            return self._data['definition']
-        return {}
+            data = self._data['definition']
+        for item, value in data.items():
+            if not isinstance(value, list):
+                data[item] = [value]
+        return data
         
     @property
     def archs(self):
@@ -421,112 +444,31 @@ class Package(Schema):
             return ArchDict(self._data['archs'])
         return ArchDict({})
 
-#     @property
-#     def plugins(self):
-#         if 'plugins' in self._data:
-#             return self._data['plugins']
-#         return []
-#     
-#     @property
-#     def plugin(self):
-#         if 'plugin' in self._data:
-#             return self._data['plugin']
-#         return []
-
-#     @property
-#     def default_target(self):
-#         if 'default-target' in self._data:
-#             return self._data['default-target']
-#         return None
-#         
-#     @property
-#     def target(self):
-#         class TargetDictIterator(object):
-#             def __init__(self, values):
-#                 self._list = values
-#                 self._iter = iter(self._list)
-#              
-#             def __next__(self):
-#                 return next(self._iter)
-# 
-#         class TargetDict(object):
-#             def __init__(self, data):
-#                 self._data = data
-#                 
-#             def __iter__(self):
-#                 return TargetDictIterator(self._data)
-#             
-#             def __getitem__(self, item):
-#                 return Target(self._data[item])
-#             
-#         class Target(object):
-#             def __init__(self, data):
-#                 self._data = data
-#             
-#             @property
-#             def arch(self):
-#                 return self._data['arch']
-#             
-#             @property
-#             def definition(self):
-#                 if 'definition' in self._data:
-#                     return self._data['definition']
-#                 return None
-# 
-#             @property
-#             def dependencies(self):
-#                 if 'dependencies' in self._data:
-#                     return self._data['dependencies']
-#                 return []
-#         
-#             @property
-#             def plugins(self):
-#                 if 'plugins' in self._data:
-#                     return self._data['plugins']
-#                 return []
-#             
-#             @property
-#             def plugin(self):
-#                 if 'plugin' in self._data:
-#                     return self._data['plugin']
-#                 return []
-# 
-#         if 'target' in self._data:
-#             return TargetDict(self._data['target'])
-#         return TargetDict({})
-# 
-#     @property
-#     def cmake(self):
-#         class CMake(object):
-#             def __init__(self, data):
-#                 self._data = data
-#             
-#             @property
-#             def include(self):
-#                 if 'include' in self._data:
-#                     return self._data['include']
-#                 return None
-#         if 'cmake' in self._data:
-#             return CMake(self._data['cmake'])
-#         return CMake({})
     
     def package(self, output_path):
         """ Packaging command, to be overloaded by package behavior
         """
         pass
-    
+
+    def validate(self):
+        validate(self._data.to_dict(), self._schema)
+
     def __repr__(self):
         return f"{self.name}@{self.version}"
 
 class InstalledPackage(Package):
-    def __init__(self, data, path):
-        super(InstalledPackage, self).__init__(data, schema={
-                'repository': Variant(),
-                'installed_user': Optional(Boolean()),
-                'installed_by': Optional(Array(PackageString())),
-            })
+    _schema = {
+        **Package._schema,
+        'repository': object,   # TODO
+        Optional('installed_user'): bool,
+        Optional('installed_by'): [Use(PackageReference)],
+    }
+    
+    def __init__(self, data, path, profile):
+        super(InstalledPackage, self).__init__(data, profile)
 
         self._path = path
+        self._schema = InstalledPackage._schema
         
     @property
     def path(self):

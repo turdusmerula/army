@@ -14,11 +14,11 @@ class PluginException(Exception):
         self.message = message
 
     
-def load_plugin(name, version_range, config):
+def load_plugin(name, version_range, config, profile):
     global plugins
     log.info(f"load plugin '{name}@{version_range}'")
 #         
-    package = load_installed_package(name, version_range=version_range, exist_ok=True)
+    package = load_installed_package(name, version_range=version_range, exist_ok=True, profile=profile)
     
     if name in plugins:
         if plugins[name].version==package.version:

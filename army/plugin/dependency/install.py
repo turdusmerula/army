@@ -12,7 +12,7 @@ import sys
 
 class PackageDependency(RepositoryPackage):
     def __init__(self, package, installed_by=None, installed_user=False):
-        super(PackageDependency, self).__init__(data=package._data, repository=package.repository)
+        super(PackageDependency, self).__init__(data=package._data, repository=package.repository, profile=None)
         self._installed_by = installed_by
         self._installed_user = installed_user
         
@@ -51,6 +51,9 @@ def install(ctx, name, edit, reinstall, **kwargs):
     if project is None:
         log.info(f"no project loaded")
 
+    # load profile
+    profile = ctx.profile
+    
     if len(name)==0 and project is None:
         print("nothing to install", file=sys.stderr)
         exit(1)
@@ -118,7 +121,7 @@ def install(ctx, name, edit, reinstall, **kwargs):
         print("install failed", file=sys.stderr)
         exit(1)
     
-    _install_packages(repositories, dependency_tree, edit=edit, scope=scope, reinstall=reinstall)
+    _install_packages(repositories, dependency_tree, edit=edit, scope=scope, reinstall=reinstall, profile=profile)
     
     print("install finished ok")
     
@@ -200,10 +203,10 @@ def _recursive_check_dependency_version_conflict(dependency_tree, packages):
     
     return result
 
-def _install_packages(repositories, dependency_tree, edit=False, scope='local', reinstall=False):
-    _resursive_install_packages(repositories, dependency_tree, level=0, edit=edit, scope=scope, reinstall=reinstall)
+def _install_packages(repositories, dependency_tree, edit=False, scope='local', reinstall=False, profile=None):
+    _resursive_install_packages(repositories, dependency_tree, level=0, edit=edit, scope=scope, reinstall=reinstall, profile=profile)
 
-def _resursive_install_packages(repositories, dependency_tree, level, edit, scope, reinstall):
+def _resursive_install_packages(repositories, dependency_tree, level, edit, scope, reinstall, profile):
     tab = ""
     for l in range(0, level):
         tab += "  "
@@ -215,11 +218,11 @@ def _resursive_install_packages(repositories, dependency_tree, level, edit, scop
         if len(dependencies)>0:
             print(f'{tab}{package}')
             
-        _resursive_install_packages(repositories, dependencies, level=level+1, edit=edit, scope=scope, reinstall=reinstall)
+        _resursive_install_packages(repositories, dependencies, level=level+1, edit=edit, scope=scope, reinstall=reinstall, profile=profile)
 
-        _install_package(package, level=level, edit=edit, scope=scope, reinstall=reinstall)
+        _install_package(package, level=level, edit=edit, scope=scope, reinstall=reinstall, profile=profile)
 
-def _install_package(package, level, edit, scope, reinstall):
+def _install_package(package, level, edit, scope, reinstall, profile):
     tab = ""
     for l in range(0, level):
         tab += "  "
@@ -232,7 +235,7 @@ def _install_package(package, level, edit, scope, reinstall):
 
     try:
         # search package in installed packages
-        installed_package = load_installed_package(package.name, version_range=package.version, scope=scope, exist_ok=True)
+        installed_package = load_installed_package(package.name, version_range=package.version, scope=scope, exist_ok=True, profile=profile)
     except Exception as e:
         print(f"Error loading package {package}", file=sys.stderr)
         print("install failed", file=sys.stderr)

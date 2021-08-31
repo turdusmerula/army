@@ -20,8 +20,8 @@ class GithubRepositoryException(Exception):
         self.message = message
 
 class GithubRepositoryPackage(IndexedRepositoryPackage):
-    def __init__(self, data, repository):
-        super(GithubRepositoryPackage, self).__init__(data=data, repository=repository)
+    def __init__(self, data, repository, profile):
+        super(GithubRepositoryPackage, self).__init__(data=data, repository=repository, profile=profile)
 
     def load(self):
         # Download package
@@ -141,7 +141,7 @@ class GithubRepository(IndexedRepository):
         return (os.path.dirname(self._uri), chuncks[1], chuncks[0])
 
     def _create_package(self, data):
-        return GithubRepositoryPackage(data, self)
+        return GithubRepositoryPackage(data, self, profile={})
 
     def load_credentials(self):
         try:

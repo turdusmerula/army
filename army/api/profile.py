@@ -1,8 +1,8 @@
 from army.api.log import log
 from army.api.debugtools import print_stack
-from army.api.dict_file import load_dict_file, find_dict_files, DictFile
+from army.api.dict_file import load_dict_file, find_dict_files
 from army.api.path import prefix_path
-from army.api.schema import Schema, String, VersionString, Optional, PackageString, Array, Dict, VariableDict, Variant, VersionRangeString, Boolean
+from army.api.schema import validate, Optional, Use
 from army.api.version import Version, VersionRange
 import copy
 import json
@@ -112,8 +112,6 @@ def load_profile(name, parent=None, validate=True):
     res = copy.copy(found)
     res._parent = parent
     res.load(validate=validate)
-    if validate:
-        res.check()
     return res
     
 
@@ -147,9 +145,6 @@ def save_current_profile_cache(profiles):
     with open(path, "w") as f:
         json.dump(profiles, f)
 
-def get_current_profile_plugins():
-    pass
-
 
 def parse_profile_name(profile_name):
     res = {
@@ -171,20 +166,23 @@ def parse_profile_name(profile_name):
 
 class Profile(object):
     _schema = {
-        'profiles': Optional(Array(
-            Dict({
-                'name': String(),
-                'version': VersionRangeString(),
-                })
-            )),
-        'plugins': Optional(Array(
-            Dict({
-                'name': String(),
-                'version': VersionRangeString(),
-                'config': VariableDict(String(), Variant())
-                })
-            )),
-        'tools': Optional(VariableDict(String(), Variant()))
+        Optional('profiles'): [{
+            'name': str,
+            'version': str 
+        }],
+        Optional('plugins'): [{
+            'name': str,
+            'version': Use(VersionRange),
+            'config': {
+                str: object
+            },
+        }],
+        Optional('tools'): {
+            str: object
+        },
+        Optional('env'): {
+            str: str
+        }
     }
     
     def __init__(self, name=None, version=None, path=None, parent=None):
@@ -196,7 +194,7 @@ class Profile(object):
         self._description = None
         self._data = None
         
-        self._schema = Schema(self._data, Profile._schema)
+        self._schema = Profile._schema
         
     @property
     def name(self):
@@ -235,7 +233,9 @@ class Profile(object):
         else:
             name = f"{self.name}@{self.version}"
             
-        self._data = DictFile(data=load_dict_file(self.path, name), parent=parent)
+        self._data = load_dict_file(self.path, name, parent=parent)
+        if validate:
+            self.validate()
         
         self._description = self._data.get("/description", raw=True, default="")
         
@@ -251,7 +251,5 @@ class Profile(object):
             self._data._reload_data()
         self._data.delete("profiles")
         
-    def check(self):
-        self._schema._data = self._data 
-        self._schema.check()
-        
+    def validate(self):
+        validate(self._data, self._schema)

@@ -1,5 +1,6 @@
 from army.api.debugtools import print_stack
 from army.api.log import log, get_log_level
+from army.api.schema import validate
 import copy
 import dpath.util
 import importlib.util
@@ -8,7 +9,7 @@ import sys
 #import oyaml as yaml
 import yaml
 
-class DictFileException(Exception):
+class DictException(Exception):
     def __init__(self, message):
         self.message = message
 
@@ -35,7 +36,7 @@ def find_dict_files(path):
     return files
 
 # load a configuration file containing a dict
-def load_dict_file(path, name, exist_ok=False):
+def load_dict_file(path, name=None, exist_ok=False, parent=None):
     res = None
     
     if path is None:
@@ -49,62 +50,31 @@ def load_dict_file(path, name, exist_ok=False):
     path = os.path.expanduser(path)
     if os.path.exists(path)==False:
         if exist_ok==True:
-            return {}
+            return Dict(data={}, parent=parent)
         else:
-            raise DictFileException(f"{path}: path not found")
+            raise DictException(f"{path}: path not found")
     
-    file = os.path.join(str(path), f"{name}.yaml")
+    if name is not None:
+        file = os.path.join(str(path), f"{name}.yaml")
+    else:
+        file = path
+        name = os.path.basename(path).replace(".yaml", "")
+        path = os.path.dirname(path)
+
     if os.path.exists(file)==False and exist_ok==False:
-        raise DictFileException(f"{path}: {name}.yaml not found")
+        raise DictException(f"{path}: {name}.yaml not found")
 
     if os.path.exists(file)==True:
-        res = _load_yaml_dict_file(file)
-        if res is None and exist_ok==False:
-            raise DictFileException(f"{path}: {name}.yaml not found")
-    
-#         # check if file matches one of known extensions
-#         for ext, loader in dict_file_extensions().items():
-#             if name.endswith(f".{ext}"):
-#                 res = loader(file)
-#                 log.debug(f"content: {res}")
-#                 return res
-#         
-#         raise DictFileException(f"{file}: unkwnown file type")
-#         
-#     # search for a file 
-#     res = None
-#     for ext, loader in dict_file_extensions().items():
-#         file = os.path.join(path, f"{name}.{ext}")
-#         if os.path.exists(file):
-#             if res is None:
-#                 res = loader(file)
-#             else:
-#                 log.warning(f"{file}: {name} already loaded, skipped")
-#             
-#     if res is None and exist_ok==False:
-#         raise DictFileException(f"{path}: {name}.yaml not found")
-    
+        data = _load_yaml_dict_file(file)
+        if data is None and exist_ok==False:
+            raise DictException(f"{path}: {name}.yaml not found")
+        res = Dict(data=data, parent=parent)
+#         res = Dict(data=data)
+        
     if res is not None:
         log.debug(f"content: {res}")
     
     return res
-
-# def _load_python_dict_file(file):
-#     res = None
-#     # try to load python file
-#     with open(file) as f:
-#         try:
-#             log.info(f"load file '{file}'")
-#             pkg = os.path.basename(os.path.dirname(file))
-#             spec = importlib.util.spec_from_file_location(pkg, file)
-#             config = importlib.util.module_from_spec(spec)
-#             spec.loader.exec_module(config)
-#             res = config.content
-#         except Exception as e:
-#             print_stack()
-#             log.debug(f"{e}")
-#             raise DictFileException(f"{file}: {e}")
-#     return res
 
 def _load_yaml_dict_file(file):
     res = None
@@ -118,33 +88,8 @@ def _load_yaml_dict_file(file):
         except Exception as e:
             print_stack()
             log.debug(f"{e}")
-            raise DictFileException(f"{file}: {e}")
+            raise DictException(f"{file}: {e}")
     return res
-
-# def _load_toml_dict_file(file):
-#     res = None
-#     # try to load toml file
-#     try:
-#         log.info(f"load file '{file}'")
-#         res = toml.load(file)
-#     except Exception as e:
-#         print_stack()
-#         log.debug(f"{e}")
-#         raise DictFileException(f"{file}: {e}")
-#     return res
-# 
-# def _load_json_dict_file(file):
-#     res = None
-#     # try to load json file
-#     with open(file) as f:
-#         try:
-#             log.info(f"load file '{file}'")    
-#             res = json.load(f)
-#         except Exception as e:
-#             print_stack()
-#             log.debug(f"{e}")
-#             raise DictFileException(f"{file}: {e}")
-#     return res
 
 def save_dict_file(path, name, content):
     res = None
@@ -153,11 +98,11 @@ def save_dict_file(path, name, content):
     with open(file, "w") as f:
         try:
             log.info(f"save file '{file}'")
-            res = yaml.dump(content, f)
+            res = content.dump(f)
         except Exception as e:
             print_stack()
             log.debug(f"{e}")
-            raise DictFileException(f"{file}: {e}")
+            raise DictException(f"{file}: {e}")
     return res
 
 # TODO https://stackoverflow.com/questions/528281/how-can-i-include-a-yaml-file-inside-another
@@ -175,10 +120,10 @@ class Loader(yaml.FullLoader):
 #     
 # Loader.add_constructor('!profile', Loader.profile)
 
-class DictFile(object):
+class Dict(object):
     def __init__(self, data=None, parent=None):
-        if parent is not None and isinstance(parent, DictFile)==False:
-            raise DictFileException(f"{type(parent)}: parent type mismatch")
+        if parent is not None and isinstance(parent, Dict)==False:
+            raise DictException(f"{type(parent)}: parent type mismatch")
         
         self._raw_data = data
         self._parent = parent
@@ -186,18 +131,26 @@ class DictFile(object):
         self._data = None
         
     def __iter__(self):
+        if self._data is None:
+            return iter({})
         return iter(self._data)
 
     def __getitem__(self, item):
         return self.get(item)
 
+    def __setitem__(self, key, value):
+        self._raw_data[key] = value
+
+    def __len__(self):
+        return len(self.to_dict())
+    
     def _reload_data(self):
         self._data = self.to_dict()
 
     def _load_data(self):
         if self._data is None:
             self._data = self.to_dict()
-
+    
     def get(self, path, raw=False, **kwargs):
         self._load_data()
 
@@ -214,7 +167,8 @@ class DictFile(object):
                 raise e
             elif self._parent is not None:
                 value = self._parent.get(path=path, raw=raw, **kwargs)
- 
+        except Exception as e:
+            print(f"{e}")
         return value
  
     def _cut_subst(self, value):
@@ -238,56 +192,6 @@ class DictFile(object):
     def delete(self, item):
         if item in self._raw_data:
             del self._raw_data[item]
-
-#     def _resolve_substs(self, path, stack):
-# #         value = dpath.util.get(self._data, path)
-#         if path.startswith('/')==False:
-#             path = f"/{path}"
-#         
-#         value = self.get(path, raw=True, default="")
-# #         print(f"{'  '*len(stack)}**", path, value)
-# 
-#         # put path in stack to detect variable recursion
-#         # when a recursion is found then we look for the path in parent dict
-#         stack.append(path)
-#             
-#         chuncks = self._cut_subst(value)
-#         res = ""
-#         for t, v in chuncks:
-#             if t==0:
-#                 res += v
-#             else:
-#                 if v.startswith('/')==False:
-#                     v = f"/{v}"
-# 
-#                 if v in stack and self._parent is not None:
-# #                     content = self._parent.get(v, raw=True, default="")
-# #                     print(f"{'  '*len(stack)}==", f"{content}--{v}--{stack}")
-#                     res += self._parent._resolve_substs(v, stack=[])
-#                 else:
-# #                     content = self.get(v, raw=True, default="")
-# #                     print(f"{'  '*len(stack)}++", f"{content}--{v}--{stack}")
-#                     res += self._resolve_substs(v, stack=stack)
-# #         print(f"{'  '*len(stack)}**", f"{res}")
-#         return res
-# 
-#     def get(self, path, raw=False, **kwargs):
-#         value = None
-#         try:
-#             if raw==True:
-#                 value = dpath.util.get(self._data, path)
-#             else:
-#                 dpath.util.get(self._data, path)    # here only to check that path exists
-#                 value = self._resolve_substs(path, stack=[])
-#         except KeyError as e:
-#             if self._parent is None:
-#                 if 'default' in kwargs:
-#                     return kwargs['default']
-#                 raise e
-#             elif self._parent is not None:
-#                 value = self._parent.get(path=path, raw=raw, **kwargs)
-# 
-#         return value
 
     def to_dict(self):
         res = {}
@@ -345,8 +249,12 @@ class DictFile(object):
                             chunks = parse_package_name(content)
                             path = find_installed_package(name=chunks['name'], version_range=chunks['version'], exist_ok=False)
                             res = path
+                        elif kind=='env':
+                            res = os.getenv(content)
+                        elif kind=='py':
+                            res = exec(content)
                         else:
-                            raise DictFileException(f"unknown substitution kind '{kind}'")
+                            raise DictException(f"unknown substitution kind '{kind}'")
                     else:
                         value = get_value(din, v)
                         res += expand_value(din, value)
@@ -398,5 +306,8 @@ class DictFile(object):
 
         return res
     
+    def dump(self, file):
+        return yaml.dump(self._raw_data, file)
+
     def __repr__(self):
         return str(self.to_dict())

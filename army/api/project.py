@@ -1,5 +1,5 @@
 from army.api.debugtools import print_stack
-from army.api.dict_file import load_dict_file, find_dict_files, dict_file_extensions
+from army.api.dict_file import load_dict_file
 from army.api.log import log
 from army.api.package import Package
 import os
@@ -10,15 +10,14 @@ import zipfile
 
 # load project army file 
 # @return the loaded project configuration or None if project was not loaded
-def load_project(path='army', exist_ok=False):
-    
+def load_project(path='army', exist_ok=False, profile=None):
     
     content = load_dict_file(path=None, name=path, exist_ok=exist_ok)
     if content is None:
         return None
         
-    project = Project(data=content)
-    project.check()
+    project = Project(data=content, profile=profile)
+    project.validate()
 
     return project
 
@@ -28,8 +27,8 @@ class ProjectException(Exception):
 
 
 class Project(Package):
-    def __init__(self, data):
-        super(Project, self).__init__(data, schema={})
+    def __init__(self, data, profile):
+        super(Project, self).__init__(data, profile)
 
     def package(self, path, output_path):
 
@@ -46,9 +45,8 @@ class Project(Package):
             files.append(include)
         
         # add project file
-        for ext in dict_file_extensions():
-            if os.path.exists(os.path.join(path, f"army.{ext}")):
-                files.append(f"army.{ext}")
+        if os.path.exists(os.path.join(path, f"army.yaml")):
+            files.append(f"army.yaml")
         
         # copy files
         for include in files:

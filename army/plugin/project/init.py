@@ -3,10 +3,8 @@ from army.api.debugtools import print_stack
 from army.api.project import load_project
 from army.army import prefix
 from army.api.click import verbose_option 
-from army.api.package import load_installed_packages
 from army.army import cli
 import click
-import sys
 
 
 @cli.command(name='init', help='Create a new project')

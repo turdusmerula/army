@@ -1,6 +1,6 @@
 from army.api.command import parser, group, command, option, argument
 from army.api.debugtools import print_stack
-from army.api.dict_file import DictFile
+from army.api.dict_file import Dict
 from army.api.log import log
 from army.api.plugin import load_plugin
 from army.api.profile import load_profile, save_current_profile_cache
@@ -30,7 +30,7 @@ def profile_set(ctx, profiles, **kwargs):
         # TODO improve error handling
         for plugin in plugins:
             try:
-                data = DictFile(plugin)
+                data = Dict(plugin)
                 name = data.get(f"name")
                 version = data.get(f"version", default="latest")
                 config = data.get(f"config", default={})

@@ -24,7 +24,7 @@ def register_repository(repository_class):
 
 
 # build repository list from configuration
-def load_repositories(config):
+def load_repositories(config, profile=None):
     global repository_types
     global repository_cache
     
@@ -65,18 +65,6 @@ def load_repositories(config):
                 log.error(f"{repo_name}: load repository failed")
     return repositories
 
-def load_repository_file(path, parent=None):
-    content = load_dict_file(path=path, name="army")
-    
-    try:
-        res = ArmyConfigRepository(value=content, parent=parent)
-        res.check()
-    except Exception as e:
-        print_stack()
-        log.debug(e)
-        raise ConfigException(f"{format(e)}")
-        
-    return res
 
 class RepositoryException(Exception):
     def __init__(self, message):
@@ -179,8 +167,8 @@ class Repository(object):
         pass
 
 class RepositoryPackage(Package):
-    def __init__(self, data, repository):
-        super(RepositoryPackage, self).__init__(data=data, schema={})
+    def __init__(self, data, repository, profile):
+        super(RepositoryPackage, self).__init__(data=data, profile=profile)
         self._repository = repository
         self._source_path = repository._uri
         
@@ -354,8 +342,8 @@ class RepositoryPackage(Package):
             shutil.rmtree(path, onerror=self._rmtree_error)
             
 class IndexedRepositoryPackage(RepositoryPackage):
-    def __init__(self, data, repository):
-        super(IndexedRepositoryPackage, self).__init__(data, repository)
+    def __init__(self, data, repository, profile):
+        super(IndexedRepositoryPackage, self).__init__(data, repository, profile=profile)
         self._loaded = False
 
     def load(self):

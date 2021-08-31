@@ -7,9 +7,9 @@ from itertools import chain
 sys.path.append(os.path.dirname(pkg_resources.resource_filename(__name__, "__main__.py")))
 
 from army.api.command import get_army_parser, create_parser, ArmyBaseParser
-from army.api.config import ArmyConfig, load_global_configuration, load_global_configuration_repositories, load_user_configuration, load_user_configuration_repositories
+from army.api.config import Config, load_global_configuration, load_global_configuration_repositories, load_user_configuration, load_user_configuration_repositories
 from army.api.debugtools import print_stack
-from army.api.dict_file import DictFile
+from army.api.dict_file import Dict
 from army.api.log import log, get_log_level
 from army.api.path import set_prefix_path
 from army.api.plugin import load_plugin
@@ -63,7 +63,6 @@ version = "0.1.2"
 # project.toml # project description and global dependencies
 
 # default configuration
-root_config = ArmyConfig()
 config = None
 project_file = None
 default_target = None
@@ -116,7 +115,7 @@ def main():
     # load army configuration files
     try:
         log.debug("load configuration")
-        config = load_global_configuration(parent=root_config)
+        config = load_global_configuration()
         config = load_global_configuration_repositories(parent=config)
         config = load_user_configuration(parent=config)
         config = load_user_configuration_repositories(parent=config)
@@ -133,20 +132,7 @@ def main():
     import army.plugin.dependency
     import army.plugin.package
     import army.plugin.profile
-
-    # load project
-    project = None
-    try:
-        if project_file is not None:
-            project = load_project(path=project_file, exist_ok=False)
-        else:
-            project = load_project(exist_ok=True)                
-    except Exception as e:
-        print_stack()
-        log.fatal(f"{e}")        
-        print(f"Error loading project", file=sys.stderr)
-        exit(1)
-    army_parser.context.project = project
+    import army.plugin.project
 
     # load profile
     profile = None
@@ -168,15 +154,29 @@ def main():
         # TODO improve error handling
         for plugin in plugins:
             try:
-                data = DictFile(plugin)
+                data = Dict(plugin)
                 name = data.get(f"name")
                 version = data.get(f"version", default="latest")
                 config = data.get(f"config", default={})
-                load_plugin(name, version, config)
+                load_plugin(name, version, config, profile)
             except Exception as e:
                 print_stack()
                 log.error(f"{e}")
                 print(f"Error loading plugin {plugin['name']}@{plugin['version']}", file=sys.stderr)
+
+    # load project
+    project = None
+    try:
+        if project_file is not None:
+            project = load_project(path=project_file, exist_ok=False, profile=profile)
+        else:
+            project = load_project(exist_ok=True, profile=profile)                
+    except Exception as e:
+        print_stack()
+        log.fatal(f"{e}")        
+        print(f"Error loading project", file=sys.stderr)
+        exit(1)
+    army_parser.context.project = project
 
     # load profile
     profile = None

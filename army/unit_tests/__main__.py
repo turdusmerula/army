@@ -13,6 +13,7 @@ from test_command import *
 from test_version import *
 from test_version_range import *
 from test_project import *
+from test_schema import *
 
 from test_dependency_repos import *
 from test_dependency_search import *

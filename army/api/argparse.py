@@ -275,14 +275,14 @@ class Parser(object):
     
     def _check_arguments(self, arguments):
         for child in self.childs:
-            if isinstance(child, Argument) and child not in arguments:
+            if isinstance(child, Argument) and child.count!='?' and child not in arguments:
                 if child.help is not None:
                     raise ArgparseException(f"{self.command}: argument '{child.help}' missing")
                 else:
                     raise ArgparseException(f"{self.command}: argument '{child.name}' missing")
                     
         for argument in arguments:
-            if argument.count is not None and argument.count!='*' and len(arguments[argument])<argument.count:
+            if argument.count is not None and argument.count!='*' and argument.count!='?' and len(arguments[argument])<argument.count:
                 if child.help is not None:
                     raise ArgparseException(f"{self.command}: not enough values for argument '{child.help}'")
                 else:
@@ -297,7 +297,7 @@ class Parser(object):
 
     def _set_arguments_defaults(self, arguments):
         for child in self.childs:
-            if isinstance(child, Argument) and child.count is not None and child.count=='*':
+            if isinstance(child, Argument) and child.count is not None and ( child.count=='*' or child.count=='?' ):
                 if child not in arguments:
                     arguments[child] = []
     
@@ -415,23 +415,27 @@ class Parser(object):
                         if current_arg.count is None:
                             # argument is not an array, go to next
                             current_arg = None
-                        elif current_arg.count!='*':
+                        elif isinstance(current_arg.count, int):
                             # argument is a fixed size array
                             if len(arguments[current_arg])>=current_arg.count:
                                 current_arg = None
-
+                        elif current_arg.count=='?':
+                            # argument is optional
+                            current_arg = None
                     else:
                         # check if we should go to next argument
                         if current_arg.count is None:
                             current_arg = None
                         elif current_arg.count=='*':
                             arguments[current_arg].append(arg)
-                        else:
+                        elif isinstance(current_arg.count, int):
                             arguments[current_arg].append(arg)
                             # we are in an array
                             if len(arguments[current_arg])>=current_arg.count:
                                 current_arg = None
-                
+                        else:
+                            raise ArgparseException(f"${current_arg.count}: incorrect argument count value")
+
         self._set_arguments_defaults(arguments)
         self._check_arguments(arguments)
         self._set_options_defaults(options)

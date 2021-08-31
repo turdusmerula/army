@@ -14,6 +14,8 @@ def TestArgparse():
     test_suite.addTest(unittest.makeSuite(TestArgparseOption))
     test_suite.addTest(unittest.makeSuite(TestArgparseArgument))
     test_suite.addTest(unittest.makeSuite(TestArgparseArgumentFixedArray))
+    test_suite.addTest(unittest.makeSuite(TestArgparseArgumentVariableArray))
+    test_suite.addTest(unittest.makeSuite(TestArgparseArgumentOptionalArray))
     test_suite.addTest(unittest.makeSuite(TestArgparseCommand))
     test_suite.addTest(unittest.makeSuite(TestArgparseCommandChain))
     test_suite.addTest(unittest.makeSuite(TestArgparseCheckErrors))
@@ -338,6 +340,78 @@ class TestArgparseArgumentFixedArray(unittest.TestCase):
         assert v1=="1"
         assert v2==["2", "3", "4"]
 
+class TestArgparseArgumentVariableArray(unittest.TestCase):
+    
+    def setUp(self):
+        self.parser = create_parser(command="army")
+
+        # add arguments
+        self.parser.add_argument(name="value1")
+        self.parser.add_argument(name="value2", count='*')
+        
+    def test_parse_argument(self):
+        argv = ["army", "1", "2", "3", "4"]
+        
+        v1 = None
+        v2 = None
+        def parser_callback(ctx, value1, value2, *args, **kwargs):
+            nonlocal v1, v2
+            v1 = value1
+            v2 = value2
+        
+        self.parser.add_callback(parser_callback)
+        
+        self.parser.parse(argv)
+
+        assert v1=="1"
+        assert v2==["2", "3", "4"]
+
+class TestArgparseArgumentOptionalArray(unittest.TestCase):
+    
+    def setUp(self):
+        self.parser = create_parser(command="army")
+
+        # add arguments
+        self.parser.add_argument(name="value1")
+        self.parser.add_argument(name="value2", count='?')
+        
+    def test_parse_argument_unknown(self):
+        argv = ["army", "1", "2", "3"]
+        assert raised(self.parser.parse, argv)==[ArgparseException, "army: unknown parameter '3'"]
+    
+    def test_parse_1_argument(self):
+        argv = ["army", "1"]
+        
+        v1 = None
+        v2 = None
+        def parser_callback(ctx, value1, value2, *args, **kwargs):
+            nonlocal v1, v2
+            v1 = value1
+            v2 = value2
+        
+        self.parser.add_callback(parser_callback)
+        
+        self.parser.parse(argv)
+
+        assert v1=="1"
+        assert v2==[]
+
+    def test_parse_2_argument(self):
+        argv = ["army", "1", "2"]
+        
+        v1 = None
+        v2 = None
+        def parser_callback(ctx, value1, value2, *args, **kwargs):
+            nonlocal v1, v2
+            v1 = value1
+            v2 = value2
+        
+        self.parser.add_callback(parser_callback)
+        
+        self.parser.parse(argv)
+        
+        assert v1=="1"
+        assert v2==["2"]
 
 class TestArgparseCommand(unittest.TestCase):
     

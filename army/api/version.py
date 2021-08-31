@@ -19,6 +19,13 @@ class Version(semantic_version.Version):
         else:
             raise VersionException(f"Invalid version {value}")
 
+    @staticmethod
+    def validate(value):
+        from army.api.schema import SchemaError
+        try:
+            Version(value)
+        except Exception as e:
+            raise SchemaError(f"{e}")
 
 class VersionRange(object):
     def __init__(self, versions=[]):
@@ -68,3 +75,11 @@ class VersionRange(object):
 
     def __str__(self):
         return str(self)
+
+    @staticmethod
+    def validate(value):
+        from army.api.schema import SchemaError
+        try:
+            VersionRange(versions=['0.0.0']).filter(value)
+        except Exception as e:
+            raise SchemaError(f"{e}")

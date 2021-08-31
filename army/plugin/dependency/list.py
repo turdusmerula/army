@@ -26,7 +26,10 @@ def list(ctx, all, **kwargs):
     # load configuration
     config = ctx.config
 
-    packages = load_installed_packages(scope=scope, all=all)
+    # load profile
+    profile = ctx.profile
+    
+    packages = load_installed_packages(scope=scope, all=all, profile=profile)
     packages = sorted(packages, key=_compare_name_version)
     
     if len(packages)==0:

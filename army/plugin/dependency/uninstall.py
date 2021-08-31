@@ -45,13 +45,16 @@ def uninstall(ctx, name, yes, **kwargs):
         print("nothing to uninstall", file=sys.stderr)
         exit(1)
 
+    # load profile
+    profile = ctx.profile
+
     tree = {}
     
     packages = []
     
     if len(name)==0:
         for package, version in project.dependencies.items():
-            packages.append(_find_installed_package(package, version=version, scope=scope))
+            packages.append(_find_installed_package(package, version=version, scope=scope, profile=profile))
 
     else:
         for package in name:
@@ -72,7 +75,7 @@ def uninstall(ctx, name, yes, **kwargs):
                 print(f"{package}: naming error", file=sys.stderr)
                 exit(1)
             
-            packages.append(_find_installed_package(s_name, version=s_version, scope=scope))
+            packages.append(_find_installed_package(s_name, version=s_version, scope=scope, profile=profile))
     
     for pkg in packages:
         pkg['package']._direct_uninstall = True
@@ -145,12 +148,12 @@ def _recursive_get_top_level_parents(package, scope, parents):
             parents[parent_id] = _find_installed_package(parent_name, parent_version, scope)
             _recursive_get_top_level_parents(parents[parent_id]['package'], scope, parents)
 
-def _find_installed_package(name, version, scope='user', from_package=None):
+def _find_installed_package(name, version, scope='user', from_package=None, profile=None):
     global loaded_packages
     
     package = load_installed_package(name, version, scope)
     if package is None:
-        package = load_installed_package(name, version_range=None, scope=scope)
+        package = load_installed_package(name, version_range=None, scope=scope, profile=profile)
         if from_package is None:
             if package is None or version is None:
                 print(f"{name}: package not installed", file=sys.stderr)
