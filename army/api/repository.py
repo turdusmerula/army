@@ -260,14 +260,22 @@ class RepositoryPackage(Package):
             error = e
         
         package_path = os.path.join(path, 'dist', self.name, str(self.version))
+
+        # load source defintion
+        content = load_dict_file(self._source_path, "army")
+        
         try:
             # try to load installed package definition
             # if package is already installed then it will be modified
-            content = load_dict_file(package_path, "army")
+            installed_content = load_dict_file(package_path, "army")
+            content['repository'] = installed_content['repository']
+            if 'installed_user' in installed_content:
+                content['installed_user'] = installed_content['installed_user']
+            if 'installed_by' in installed_content:
+                content['installed_by'] = installed_content['installed_by']
         except Exception as e:
-            # load source defintion
-            content = load_dict_file(self._source_path, "army")
-
+            pass
+    
         # add package install source
         content['repository'] = {
             'uri': str(self._repository._uri),

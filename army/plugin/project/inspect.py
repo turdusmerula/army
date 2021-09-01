@@ -1,6 +1,7 @@
 from army.api.command import parser, group, command, option, argument
 from army.api.debugtools import print_stack
 from army.api.log import log
+from army.api.package import load_project_packages, load_installed_package
 from army.api.profile import load_profile_list, load_profile, load_current_profile_cache
 from army.api.project import load_project
 import sys
@@ -28,6 +29,24 @@ def project_inspect(ctx, project, **kwargs):
             log.fatal(f"{e}")        
             print(f"Error loading project", file=sys.stderr)
             exit(1)
+            
+    # load profile
+    profile = ctx.profile
+
+    dependencies = load_project_packages(project, profile=profile)
+
+    d = project.to_dict()
+    d['dependencies'] = {}
     
-    print(yaml.dump(project._data))
+    # expand dependencies
+    for dependency in dependencies:
+        d['dependencies'][dependency.name] = dependency.to_dict()
+        
+#     expand_dependencies(d['dependencies'])
     
+    print(yaml.dump(d))
+    
+
+def expand_dependencies(dependencies):
+    for dependency in dependencies:
+        dependencies[dependency] = {}

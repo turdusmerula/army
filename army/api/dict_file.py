@@ -8,6 +8,7 @@ import os
 import sys
 #import oyaml as yaml
 import yaml
+from pickle import FALSE
 
 class DictException(Exception):
     def __init__(self, message):
@@ -128,12 +129,9 @@ class Dict(object):
         self._raw_data = data
         self._parent = parent
         
-        self._data = None
-        
     def __iter__(self):
-        if self._data is None:
-            return iter({})
-        return iter(self._data)
+        data = self.to_dict()
+        return iter(data)
 
     def __getitem__(self, item):
         return self.get(item)
@@ -143,23 +141,15 @@ class Dict(object):
 
     def __len__(self):
         return len(self.to_dict())
-    
-    def _reload_data(self):
-        self._data = self.to_dict()
-
-    def _load_data(self):
-        if self._data is None:
-            self._data = self.to_dict()
-    
+        
     def get(self, path, raw=False, **kwargs):
-        self._load_data()
-
         value = None
         try:
             if raw==True:
                 value = dpath.util.get(self._raw_data, path)
             else:
-                value = dpath.util.get(self._data, path)
+                data = self.to_dict()
+                value = dpath.util.get(data, path)
         except KeyError as e:
             if self._parent is None:
                 if 'default' in kwargs:
@@ -193,7 +183,7 @@ class Dict(object):
         if item in self._raw_data:
             del self._raw_data[item]
 
-    def to_dict(self):
+    def to_dict(self, env={}):
         res = {}
         
         def get_value(din, path):
@@ -226,11 +216,25 @@ class Dict(object):
                             res += f" {value}"
                 return res
             
+            has_value = False
             try:
-                return to_value(dpath.util.get(din, path))
+                return to_value(dpath.util.get(env, path))
+                has_value = True
             except KeyError as e:
-                return ""
+                pass
             
+            if has_value==False:
+                try:
+                    print("###", path)
+                    return to_value(dpath.util.get(din, path))
+                    has_value = True
+                except KeyError as e:
+                    pass
+            
+            if has_value==False:
+                log.warn(f"{path}: substitution not found")
+                return ""
+
         def expand_value(din, value):
             chuncks = self._cut_subst(value)
             res = ""
@@ -240,21 +244,24 @@ class Dict(object):
                     res += v
                 else:
                     # chunk type is a substitution
-                    if ':' in v:
+                    content = v.strip()
+                    if content.startswith("package:"):
+                        content = content.replace("package:", "").strip()
+                        from army.api.package import find_installed_package, parse_package_name
+                        chunks = parse_package_name(content)
+                        path = find_installed_package(name=chunks['name'], version_range=chunks['version'], exist_ok=False)
+                        res += path
+                    elif content.startswith("env:"):
+                        content = content.replace("env:", "")
+                        res += os.getenv(content)
+                    elif content.startswith("py:"):
+                        content = content.replace("py:", "")
+                        res += exec(content)
+                        # TODO: get stdout 
+                    elif ':' in content:
                         kind, content = v.split(':')
                         kind = kind.strip()
-                        content = content.strip()
-                        if kind=='package':
-                            from army.api.package import find_installed_package, parse_package_name
-                            chunks = parse_package_name(content)
-                            path = find_installed_package(name=chunks['name'], version_range=chunks['version'], exist_ok=False)
-                            res = path
-                        elif kind=='env':
-                            res = os.getenv(content)
-                        elif kind=='py':
-                            res = exec(content)
-                        else:
-                            raise DictException(f"unknown substitution kind '{kind}'")
+                        raise DictException(f"unknown substitution kind '{kind}'")
                     else:
                         value = get_value(din, v)
                         res += expand_value(din, value)
@@ -309,5 +316,16 @@ class Dict(object):
     def dump(self, file):
         return yaml.dump(self._raw_data, file)
 
+    @property
+    def raw_data(self):
+        return self._raw_data
+    
+    @property
+    def parent(self):
+        return self._parent
+    @parent.setter
+    def parent(self, value):
+        self._parent = value
+        
     def __repr__(self):
         return str(self.to_dict())

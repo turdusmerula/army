@@ -245,11 +245,12 @@ class Profile(object):
             version = profile.get("version")
             profile_data = load_profile(f"{name}@{version}", validate=validate)
             if self._data._parent is not None:
-                profile_data._data._parent = self._data._parent
-                profile_data._data._reload_data()
-            self._data._parent = profile_data._data
-            self._data._reload_data()
+                profile_data._data.parent = self._data.parent
+            self._data.parent = profile_data._data
         self._data.delete("profiles")
         
     def validate(self):
         validate(self._data, self._schema)
+
+    def to_dict(self):
+        return self._data.to_dict()

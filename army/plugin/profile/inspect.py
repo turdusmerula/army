@@ -26,7 +26,7 @@ def profile_inspect(ctx, profiles, **kwargs):
     
     values = {}
     if profile is not None:
-        values = profile.data.to_dict()
+        values = profile.to_dict()
     
     print(yaml.dump(values))
     

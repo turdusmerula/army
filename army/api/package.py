@@ -1,6 +1,6 @@
 import army.api
 from army.api.debugtools import print_stack
-from army.api.dict_file import load_dict_file
+from army.api.dict_file import load_dict_file, Dict
 from army.api.log import log
 from army.api.path import prefix_path
 from army.api.schema import validate, Optional, Use, Or, SchemaError, Const
@@ -453,6 +453,13 @@ class Package(object):
     def validate(self):
         validate(self._data.to_dict(), self._schema)
 
+    @property
+    def data(self):
+        return self._data
+    
+    def to_dict(self):
+        return self._data.to_dict(env=self._profile.to_dict())
+    
     def __repr__(self):
         return f"{self.name}@{self.version}"
 
