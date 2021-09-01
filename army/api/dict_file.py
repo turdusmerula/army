@@ -37,7 +37,7 @@ def find_dict_files(path):
     return files
 
 # load a configuration file containing a dict
-def load_dict_file(path, name=None, exist_ok=False, parent=None):
+def load_dict_file(path, name=None, exist_ok=False, parent=None, env=None):
     res = None
     
     if path is None:
@@ -51,7 +51,7 @@ def load_dict_file(path, name=None, exist_ok=False, parent=None):
     path = os.path.expanduser(path)
     if os.path.exists(path)==False:
         if exist_ok==True:
-            return Dict(data={}, parent=parent)
+            return Dict(data={}, parent=parent, env=env)
         else:
             raise DictException(f"{path}: path not found")
     
@@ -69,7 +69,7 @@ def load_dict_file(path, name=None, exist_ok=False, parent=None):
         data = _load_yaml_dict_file(file)
         if data is None and exist_ok==False:
             raise DictException(f"{path}: {name}.yaml not found")
-        res = Dict(data=data, parent=parent)
+        res = Dict(data=data, parent=parent, env=env)
 #         res = Dict(data=data)
         
     if res is not None:
@@ -122,12 +122,13 @@ class Loader(yaml.FullLoader):
 # Loader.add_constructor('!profile', Loader.profile)
 
 class Dict(object):
-    def __init__(self, data=None, parent=None):
+    def __init__(self, data=None, parent=None, env=None):
         if parent is not None and isinstance(parent, Dict)==False:
             raise DictException(f"{type(parent)}: parent type mismatch")
         
         self._raw_data = data
         self._parent = parent
+        self._env = env
         
     def __iter__(self):
         data = self.to_dict()
@@ -183,7 +184,7 @@ class Dict(object):
         if item in self._raw_data:
             del self._raw_data[item]
 
-    def to_dict(self, env={}):
+    def to_dict(self):
         res = {}
         
         def get_value(din, path):
@@ -218,7 +219,7 @@ class Dict(object):
             
             has_value = False
             try:
-                return to_value(dpath.util.get(env, path))
+                return to_value(dpath.util.get(self._env, path))
                 has_value = True
             except KeyError as e:
                 pass

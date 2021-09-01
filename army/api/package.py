@@ -199,9 +199,9 @@ def load_project_packages(project, profile=None):
     return dependencies
 
 def _load_installed_package(path, profile, exist_ok=False):
-    content = load_dict_file(path, "army", exist_ok=exist_ok)
+    content = load_dict_file(path, "army", exist_ok=exist_ok, env=profile.to_dict())
     
-    project = InstalledPackage(data=content, path=path, profile=profile)
+    project = InstalledPackage(data=content, path=path)
     project.validate()
 
     return project
@@ -323,9 +323,8 @@ class Package(object):
         }],
     }
             
-    def __init__(self, data, profile):
+    def __init__(self, data):
         self._data = data
-        self._profile = profile
         self._schema = Package._schema
 
     @property
@@ -458,7 +457,7 @@ class Package(object):
         return self._data
     
     def to_dict(self):
-        return self._data.to_dict(env=self._profile.to_dict())
+        return self._data.to_dict()
     
     def __repr__(self):
         return f"{self.name}@{self.version}"
@@ -471,8 +470,8 @@ class InstalledPackage(Package):
         Optional('installed_by'): [Use(PackageReference)],
     }
     
-    def __init__(self, data, path, profile):
-        super(InstalledPackage, self).__init__(data, profile)
+    def __init__(self, data, path):
+        super(InstalledPackage, self).__init__(data)
 
         self._path = path
         self._schema = InstalledPackage._schema

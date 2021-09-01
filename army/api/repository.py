@@ -167,8 +167,8 @@ class Repository(object):
         pass
 
 class RepositoryPackage(Package):
-    def __init__(self, data, repository, profile):
-        super(RepositoryPackage, self).__init__(data=data, profile=profile)
+    def __init__(self, data, repository):
+        super(RepositoryPackage, self).__init__(data=data)
         self._repository = repository
         self._source_path = repository._uri
         
@@ -350,8 +350,8 @@ class RepositoryPackage(Package):
             shutil.rmtree(path, onerror=self._rmtree_error)
             
 class IndexedRepositoryPackage(RepositoryPackage):
-    def __init__(self, data, repository, profile):
-        super(IndexedRepositoryPackage, self).__init__(data, repository, profile=profile)
+    def __init__(self, data, repository):
+        super(IndexedRepositoryPackage, self).__init__(data, repository)
         self._loaded = False
 
     def load(self):

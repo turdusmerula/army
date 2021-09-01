@@ -29,7 +29,7 @@ class LocalGitRepository(Repository):
 
         content = load_dict_file(path=self.uri, name="army")
 
-        self._project = RepositoryPackage(data=content, repository=self, profile=None)
+        self._project = RepositoryPackage(data=content, repository=self)
         self._project.validate()
         
     @property

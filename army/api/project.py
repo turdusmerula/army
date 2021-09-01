@@ -12,11 +12,11 @@ import zipfile
 # @return the loaded project configuration or None if project was not loaded
 def load_project(path='army', exist_ok=False, profile=None):
     
-    content = load_dict_file(path=None, name=path, exist_ok=exist_ok)
+    content = load_dict_file(path=None, name=path, exist_ok=exist_ok, env=profile.to_dict())
     if content is None:
         return None
         
-    project = Project(data=content, profile=profile)
+    project = Project(data=content)
     project.validate()
 
     return project
@@ -27,8 +27,8 @@ class ProjectException(Exception):
 
 
 class Project(Package):
-    def __init__(self, data, profile):
-        super(Project, self).__init__(data, profile)
+    def __init__(self, data):
+        super(Project, self).__init__(data)
 
     def package(self, path, output_path):
 
