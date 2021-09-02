@@ -12,7 +12,7 @@ import sys
 
 class PackageDependency(RepositoryPackage):
     def __init__(self, package, installed_by=None, installed_user=False):
-        super(PackageDependency, self).__init__(data=package._data, repository=package.repository, profile=None)
+        super(PackageDependency, self).__init__(data=package._data, repository=package.repository)
         self._installed_by = installed_by
         self._installed_user = installed_user
         

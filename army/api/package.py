@@ -199,7 +199,11 @@ def load_project_packages(project, profile=None):
     return dependencies
 
 def _load_installed_package(path, profile, exist_ok=False):
-    content = load_dict_file(path, "army", exist_ok=exist_ok, env=profile.to_dict())
+    if profile is None:
+        env = None
+    else:
+        env = profile.to_dict()
+    content = load_dict_file(path, "army", exist_ok=exist_ok, env=env)
     
     project = InstalledPackage(data=content, path=path)
     project.validate()

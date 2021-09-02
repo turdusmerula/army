@@ -226,7 +226,6 @@ class Dict(object):
             
             if has_value==False:
                 try:
-                    print("###", path)
                     return to_value(dpath.util.get(din, path))
                     has_value = True
                 except KeyError as e:
