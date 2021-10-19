@@ -36,7 +36,7 @@ def profile_push(ctx, new, **kwargs):
                 name = data.get(f"name")
                 version = data.get(f"version", default="latest")
                 config = data.get(f"config", default={})
-                load_plugin(name, version, config)
+                load_plugin(name, version, config, profile=profile)
             except Exception as e:
                 print_stack()
                 log.error(f"{e}")

@@ -33,9 +33,9 @@ def load_plugin(name, version_range, config, profile):
 
     plugins[name] = package
 
-    try:
-        for plugin in package.plugins:
-            location = os.path.join(package.path, plugin, '__init__.py')
+    for plugin in package.plugins:
+        try:
+            location = os.path.realpath(os.path.join(package.path, plugin, '__init__.py'))
             sys.path.insert(0, os.path.dirname(location))
 
             spec = importlib.util.spec_from_file_location(name=plugin, location=location)
@@ -44,10 +44,10 @@ def load_plugin(name, version_range, config, profile):
             spec.loader.exec_module(module)
             
             sys.path.pop(0)
-    except Exception as e:
-        print_stack()
-        log.error(f"loading plugin '{name}' failed: {e}")
-        sys.path.pop(0)
+        except Exception as e:
+            print_stack()
+            log.error(f"loading plugin '{plugin}' from '{name}' failed: {e}")
+            sys.path.pop(0)
 
     
 class Plugin(object):
