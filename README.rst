@@ -39,4 +39,7 @@ Links
 TODO
 ----
 
--   add dependency item to profile
+- template version -> for application and documentation
+- write proper unit tests
+- improve argparse annotations for better error handling
+- improve substitution not found warning on dict_file

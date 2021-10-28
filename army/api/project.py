@@ -12,7 +12,11 @@ import zipfile
 # @return the loaded project configuration or None if project was not loaded
 def load_project(path='army', exist_ok=False, profile=None):
     
-    content = load_dict_file(path=None, name=path, exist_ok=exist_ok, env=profile.to_dict())
+    if profile is None:
+        env = {}
+    else:
+        env = profile.to_dict()
+    content = load_dict_file(path=None, name=path, exist_ok=exist_ok, env=env)
     if content is None:
         return None
         

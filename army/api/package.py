@@ -24,7 +24,7 @@ def find_installed_package(name, version_range="latest", scope=None, exist_ok=Fa
         if os.path.exists(package_path)==False:
             return None
         
-        versions = os.listdir(package_path)
+        versions = _list_dir(package_path)
         if len(versions)==0:
             return None
                 
@@ -86,7 +86,7 @@ def load_installed_package(name, version_range="latest", scope=None, profile=Non
         if os.path.exists(package_path)==False:
             return None
         
-        versions = os.listdir(package_path)
+        versions = _list_dir(package_path)
         if len(versions)==0:
             return None
         version = VersionRange(versions)[str(version_range)]
@@ -155,21 +155,22 @@ def load_installed_packages(scope='local', all=False, profile=None):
     if os.path.exists(os.path.expanduser(path))==False:
         return packages
 
-    for package_name in os.listdir(os.path.expanduser(path)):
+    for package_name in _list_dir(path):
         versions = []
-        for version in os.listdir(os.path.expanduser(os.path.join(path, package_name))):
+        for version in _list_dir(os.path.join(path, package_name)):
             versions.append(version)
-        if all==False:
-            # only return latest version
-            versions = [VersionRange(versions).max()]
-        for version in versions:
-            try:
-                package = _load_installed_package(os.path.join(str(path), package_name, str(version)), profile=profile)
-                packages.append(package)
-            except Exception as e:
-                print_stack()
-                log.error(e)
-                raise PackageException(e)
+        if len(versions)>0:
+            if all==False:
+                # only return latest version
+                versions = [VersionRange(versions).max()]
+            for version in versions:
+                try:
+                    package = _load_installed_package(os.path.join(str(path), package_name, str(version)), profile=profile)
+                    packages.append(package)
+                except Exception as e:
+                    print_stack()
+                    log.error(e)
+                    raise PackageException(e)
             
     return packages
 
@@ -210,6 +211,15 @@ def _load_installed_package(path, profile, exist_ok=False):
 
     return project
 
+def _list_dir(path):
+    try:
+        dirs = os.listdir(os.path.expanduser(path))
+        return dirs
+    except Exception as e:
+        print_stack()
+        log.error(e)
+    return []
+    
 def find_repository_package(repositories, name, version_range="latest", repository=None, editable=None):
     """ search for a package in repositories
     package with the greatest version in version_range is returned

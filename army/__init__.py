@@ -16,7 +16,6 @@ from army.api.plugin import load_plugin
 from army.api.profile import load_current_profile, profiles
 from army.api.project import load_project
 
-version = "0.1.2"
 # TODO add autocomplete https://kislyuk.github.io/argcomplete/
 
 # Git coupling
@@ -68,15 +67,6 @@ project_file = None
 default_target = None
 target_name = None
 
-def option_show_version(ctx, value):
-    print(f"army, version {version}")
-    print("Copyright (C) 2016 Free Software Foundation, Inc.")
-    print("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>")
-    print("")
-    print("This is free software; you are free to change and redistribute it.")
-    print("There is NO WARRANTY, to the extent permitted by law.")
-    exit(0)
-
 def option_project_file(ctx, value):
     global project_file
     project_file = value
@@ -91,7 +81,6 @@ def main():
     army_parser = get_army_parser()
     army_parser.context.config = config
     army_parser.add_option(name="file", shortcut="f", help="Project file to use", value="FILE", default=None, callback=option_project_file)
-    army_parser.add_option(name="version", help="Show version", flag=True, callback=option_show_version)
 
     sys.stdout = None
     sys.stderr = None
@@ -133,6 +122,7 @@ def main():
     import army.plugin.package
     import army.plugin.profile
     import army.plugin.project
+    import army.plugin.version
 
     # load profile
     profile = None

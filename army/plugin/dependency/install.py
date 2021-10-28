@@ -34,7 +34,7 @@ class PackageDependency(RepositoryPackage):
 @option(name='global', shortcut='g', default=False, help='Install package in user space', flag=True)
 @option(name='reinstall', shortcut='r', default=False, help='Force reinstall module if already exists', flag=True)
 #@option(name='save', help='Update project package list', flag=True)    # TODO
-@argument(name='name', count='*')
+@argument(name='name', help='PACKAGE ...', count='*')
 def install(ctx, name, edit, reinstall, **kwargs):
     log.info(f"install {name} {name} {edit} {reinstall} {kwargs}")
     

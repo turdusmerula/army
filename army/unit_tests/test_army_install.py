@@ -13,7 +13,7 @@ prefix = 'test_local_repository'
 log.setLevel('CRITICAL')
 
 
-class TestDependencyInstall(unittest.TestCase):
+class TestArmyInstall(unittest.TestCase):
     
     def setUp(self):
         "Hook method for setting up the test fixture before exercising it."
