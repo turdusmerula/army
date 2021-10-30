@@ -143,22 +143,28 @@ def load_installed_package(name, version_range="latest", scope=None, profile=Non
     return package
 
 def load_installed_packages(scope='local', all=False, profile=None):
-    packages = []
 
     if scope=='local':
         # search package in local project
-        path = 'dist'
-    else:
+        paths = ['dist']
+    elif scope=='global':
         # search package in user space
-        path = prefix_path('~/.army/dist')
+        paths = [prefix_path('~/.army/dist')]
+    elif scope=='all':
+        paths = ['dist', prefix_path('~/.army/dist')]
 
-    if os.path.exists(os.path.expanduser(path))==False:
-        return packages
+    packages = []
+    found_packages = {} # key is package name
+    for path in paths:
+        if os.path.exists(os.path.expanduser(path)):
+            for package_name in _list_dir(path):
+                if package_name not in found_packages:
+                    found_packages[package_name] = []
 
-    for package_name in _list_dir(path):
-        versions = []
-        for version in _list_dir(os.path.join(path, package_name)):
-            versions.append(version)
+                for version in _list_dir(os.path.join(path, package_name)):
+                    found_packages[package_name].append(version)
+            
+    for package_name, versions in found_packages.items():
         if len(versions)>0:
             if all==False:
                 # only return latest version
@@ -171,7 +177,7 @@ def load_installed_packages(scope='local', all=False, profile=None):
                     print_stack()
                     log.error(e)
                     raise PackageException(e)
-            
+
     return packages
 
 # TODO check version when loading package and in case of package installed both global and local use the best fit
@@ -493,6 +499,13 @@ class InstalledPackage(Package):
     @property
     def path(self):
         return self._path
+
+    @property
+    def scope(self):
+        if self.path.startswith("~/.army"):
+            return 'global'
+        else:
+            return 'local'
 
     @property
     def repository(self):

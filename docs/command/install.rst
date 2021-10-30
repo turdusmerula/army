@@ -49,7 +49,7 @@ Options
 
 	`-g` or `--global`
 		| By default packages are installed in the current path inside the `dist` folder.
-		| Whis this option you can make packages available for every project for the user by installing it user wide inside the `~/.army/dist` folder.
+		| Whis this option you can make packages available user wide by installing it inside the `~/.army/dist` folder.
 
 	`-r` or `--reinstall`
 		Force package to be reinstalled.

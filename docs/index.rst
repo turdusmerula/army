@@ -52,6 +52,7 @@ Commands
 
    command/army
    command/install
+   command/list
    command/version
 
 API Reference
