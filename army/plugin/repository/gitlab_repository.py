@@ -1,4 +1,4 @@
-from army.api.repository import IndexedRepository, IndexedRepositoryPackage
+from army.api.repository import IndexedRepository, IndexedRepositoryPackage, AuthToken
 from army.api.log import log
 from army.api.debugtools import print_stack
 import army.api.gitlab
@@ -117,12 +117,10 @@ class GitlabRepositoryPackage(IndexedRepositoryPackage):
 class GitlabRepository(IndexedRepository):
     Type="gitlab"
     Editable=False
-    Login=['token']
+    Login=[AuthToken]
     
     def __init__(self, name, path):
         super(GitlabRepository, self).__init__(name=name, uri=path)
-
-        self._token = None
         
     def _decompose_uri(self):
         o = urlparse(str(self._uri))
@@ -148,20 +146,6 @@ class GitlabRepository(IndexedRepository):
 
     def _create_package(self, data):
         return GitlabRepositoryPackage(data, self)
-
-    def load_credentials(self):
-        try:
-            service_id = f"army.{self.name}"
-            token = keyring.get_password(service_id, 'token')
-            if token is None:
-                return False
-        except Exception as e:
-            print_stack()
-            log.debug(f"{type(e)} {e}")
-            return False
-        
-        self._token = token
-        return True
 
     def update(self):
         logged = self.load_credentials()
@@ -207,27 +191,17 @@ class GitlabRepository(IndexedRepository):
         super(GitlabRepository, self).update()
 
     def login(self, token):
-        service_id = f"army.{self.name}"
-
-        try:
-            keyring.delete_password(service_id, 'token')
-        except:
-            pass
-        
         try:
             uri, group, project = self._decompose_uri()
             g = gitlab.Gitlab(uri, private_token=token)
 
             g.auth()
-
-            self._token = token
         except Exception as e:
             print_stack()
             log.debug(f"{type(e)}: {e}")
             raise GitlabRepositoryException("invalid token")
-        
-        # store token on keyring
-        keyring.set_password(service_id, 'token', token)
+
+        self.save_credentials(AuthToken, token=token)
 
     def logout(self):
         service_id = f"army.{self.name}"
@@ -237,7 +211,7 @@ class GitlabRepository(IndexedRepository):
         except keyring.errors.PasswordDeleteError as e:
             print_stack()
             log.debug(f"{type(e)}: {e}")
-            raise GitlabRepositoryException("not logged to repository")
+            raise GitlabRepositoryException(f"no credential found")
         except Exception as e:
             print_stack()
             log.debug(type(e), e)

@@ -36,7 +36,8 @@ class PackageDependency(RepositoryPackage):
 #@option(name='save', help='Update project package list', flag=True)    # TODO
 @argument(name='name', help='PACKAGE ...', count='*')
 def install(ctx, name, edit, reinstall, **kwargs):
-    log.info(f"install {name} {name} {edit} {reinstall} {kwargs}")
+    log.info(f"army install")
+    # log.info(f"army install {name} --edit={edit} --reinstall={reinstall} --global={kwargs['global']}")
     
     if 'global' in kwargs and kwargs['global']==True:  # not in parameters due to conflict with global keyword
         scope = 'user'

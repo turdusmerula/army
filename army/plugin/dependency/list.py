@@ -18,7 +18,7 @@ import sys
 @option(name='global', shortcut='g', default=False, help='List packages in user space', flag=True)
 @option(name='local', shortcut='l', default=False, help='List packages inside project', flag=True)
 def list(ctx, all, **kwargs):
-    log.info(f"list")
+    log.info(f"army list")
     
     scope = 'all'
 

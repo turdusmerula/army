@@ -14,7 +14,7 @@ import sys
 @option(name="all", shortcut="a", flag=True, default=False, help="Show all matches")
 @argument(name='name')
 def search(ctx, name, all, **kwargs):
-    log.info(f"dependency search {name}")
+    log.info(f"army search")
         
     # load configuration
     config = ctx.config

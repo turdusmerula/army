@@ -53,6 +53,7 @@ Commands
    command/army
    command/install
    command/list
+   command/repos
    command/version
 
 API Reference

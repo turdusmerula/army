@@ -122,6 +122,7 @@ def main():
     import army.plugin.package
     import army.plugin.profile
     import army.plugin.project
+    import army.plugin.repo
     import army.plugin.version
 
     # load profile

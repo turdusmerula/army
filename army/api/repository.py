@@ -4,11 +4,13 @@ from army.api.log import log
 from army.api.package import Package, PackageException
 from army.api.path import prefix_path
 from army.api.version import Version, VersionRange
-import os
-import subprocess
-import shutil
-import toml
 import datetime
+import getpass
+import keyring
+import os
+import shutil
+import subprocess
+import toml
 
 repository_types = {}
 
@@ -81,10 +83,21 @@ class Repository(object):
     # - user
     Login=[]
     
+
+    # Attributes = {
+    #     'editable': False,
+    #     'auth': None,   # array of auth methods
+    #     'publish': False,
+    #     'unpublish': False,
+    #     'indexed': False,
+    # }
+
+    
     def __init__(self, name, uri):
         self._name = name
         self._uri = uri
-    
+        self._credentials = None
+        
     @property
     def uri(self):
         return self._uri
@@ -104,11 +117,40 @@ class Repository(object):
 
     @property
     def editable(self):
-        return self.Editable==True
+        return self.Editable
     
     def load_credentials(self):
-        return True
-    
+        credentials = None
+        for method in self.Login:
+            try:
+                auth = method(id=self._name)
+                auth.load()
+                credentials = auth
+            except Exception as e:
+                pass
+
+        if credentials is None:
+            raise RepositoryException("no credentials found")
+        self._credentials = credentials
+
+    def save_credentials(self, method, *args, **kwargs):
+        # remove any saved credential
+        for method in self.Login:
+            try:
+                auth = method(id=self._name)
+                auth.delete()
+            except Exception as e:
+                pass
+
+        try:
+            auth = method(id=self._name, *args, **kwargs)
+            auth.save()
+            self._credentials = auth
+        except Exception as e:
+            print_stack()
+            log.debug(f"{type(e)} {e}")
+            raise RepositoryException("invalid credentials")
+
     # load package list from repository
     def load(self):
         pass
@@ -160,7 +202,7 @@ class Repository(object):
     def publish(self, package, overwrite=False):
         pass
     
-    def login(self, user=None, password=None, token=None):
+    def login(self):
         pass
 
     def logout(self):
@@ -476,4 +518,162 @@ class IndexedRepository(Repository):
                         res[package] = [pkg]
 
         return res
+
+
+class AuthException(Exception):
+    def __init__(self, message):
+        self.message = message
+
+class Auth(object):
+    def __init__(self, id):
+        self._id = id
+
+    @property
+    def id(self):
+        return self._id
     
+    def load(self):
+        pass
+    
+    def save(self):
+        pass
+    
+    def delete(self):
+        pass
+    
+class AuthToken(Auth):
+    Method = 'token'
+    
+    def __init__(self, id, token=None):
+        super(AuthToken, self).__init__(id)
+        self._token = token
+
+    @property
+    def token(self):
+        return self._token
+
+    def load(self):
+        service_id = f"army.repo.{self._id}"
+        
+        method = None
+        try:
+            method = keyring.get_password(service_id, 'method')
+        except Exception as e:
+            print_stack()
+            log.debug(f"{type(e)} {e}")
+            return False
+        
+        if method is None:
+            raise AuthException(f"no credential found")
+
+        if method!='token':
+            raise AuthException(f"incompatible credential method found")
+        
+        token = None
+        try:
+            token = keyring.get_password(service_id, 'token')
+        except Exception as e:
+            print_stack()
+            log.debug(f"{type(e)} {e}")
+
+        if token is None:
+            raise AuthException(f"no credential found")
+    
+        self._token = token
+
+    def save(self):
+        service_id = f"army.repo.{self._id}"
+        
+        if self._token is None:
+            raise AuthException(f"token not found")
+        
+        self.delete()
+        
+        keyring.set_password(service_id, 'method', 'token')
+        keyring.set_password(service_id, 'token', self._token)
+
+    def delete(self):
+        service_id = f"army.repo.{self._id}"
+        try:
+            keyring.delete_password(service_id, 'method')
+        except:
+            pass
+
+        try:
+            keyring.delete_password(service_id, 'token')
+        except:
+            pass
+        
+class UserPasswordToken(Auth):
+    Method = 'user-password'
+
+    def __init__(self, key, user=None, password=None):
+        super(UserPasswordToken, self).__init__(key)
+        self._user = user
+        self._password = password
+        
+    def load(self):
+        service_id = f"army.repo.{self._id}"
+        
+        method = None
+        try:
+            method = keyring.get_password(service_id, 'method')
+        except Exception as e:
+            print_stack()
+            log.debug(f"{type(e)} {e}")
+            return False
+        
+        if method is None:
+            raise AuthException(f"no credential found")
+
+        if method!='user-password':
+            raise AuthException(f"incompatible credential method found")
+        
+        user = None
+        password = None
+        try:
+            user = keyring.get_password(service_id, 'user')
+        except Exception as e:
+            print_stack()
+            log.debug(f"{type(e)} {e}")
+            
+        try:
+            password = keyring.get_password(service_id, 'password')
+        except Exception as e:
+            print_stack()
+            log.debug(f"{type(e)} {e}")
+
+        if user is None or password is None:
+            raise AuthException(f"no credential found")
+    
+        self._user = user
+        self._password = password
+    
+    def save(self):
+        service_id = f"army.repo.{self._id}"
+        
+        if self._user is None or self._password is None:
+            raise AuthException(f"user/password not found")
+        
+        self.delete()
+        
+        keyring.set_password(service_id, 'method', 'user-password')
+        keyring.set_password(service_id, 'user', self._user)
+        keyring.set_password(service_id, 'password', self._password)
+
+    def delete(self):
+        service_id = f"army.repo.{self._id}"
+        try:
+            keyring.delete_password(service_id, 'method')
+        except:
+            pass
+
+        try:
+            keyring.delete_password(service_id, 'user')
+        except:
+            pass
+        
+        try:
+            keyring.delete_password(service_id, 'password')
+        except:
+            pass

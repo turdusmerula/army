@@ -14,7 +14,8 @@ import os
 import sys
 
 @parser
-@group(name="package")
+@group(name="repo")
+@command(name="repo")
 @command(name='logout', help='Logout from repository')
 @argument('name')
 def logout(ctx, name, **kwargs):
@@ -24,7 +25,7 @@ def logout(ctx, name, **kwargs):
         
     # build repositories list
     repositories = load_repositories(config)
-    
+
     repo = None
     for repository in repositories:
         if repository.name==name:

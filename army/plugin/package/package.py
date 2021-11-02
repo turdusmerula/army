@@ -15,7 +15,7 @@ import sys
 @group(name="package")
 @command(name='package', help='Create versioned package')
 def package(ctx, **kwargs):
-    log.info(f"package")
+    log.info(f"army package")
     
     config = ctx.config
 

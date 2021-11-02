@@ -7,10 +7,11 @@ import os
 import sys
 
 @parser
-@group(name="dependency")
+@group("repo")
+@command("repo")
 @command(name='update', help='Update repository indexes')
 def update(ctx, **kwargs):
-    log.info(f"update")
+    log.info(f"army repo update")
     
     config = ctx.config
         

@@ -26,7 +26,7 @@ class UninstalledPackage(InstalledPackage):
 @option(name='yes', shortcut='y', default=False, help="don't ask for confirmation", flag=True)
 @argument(name='name', count='*')
 def uninstall(ctx, name, yes, **kwargs):
-    log.info(f"uninstall {name} {kwargs}")
+    log.info(f"army uninstall")
 
     if 'global' in kwargs and kwargs['global']==True:  # not in parameters due to conflict with global keyword
         scope = 'user'

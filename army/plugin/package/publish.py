@@ -14,7 +14,7 @@ import sys
 @option(shortcut='f', name='force', help='Force create release if already exists', flag=True, default=False)
 @argument('name')
 def publish(ctx, name, force, **kwargs):
-    log.info(f"publish")
+    log.info(f"army publish")
     
     config = ctx.config
 
