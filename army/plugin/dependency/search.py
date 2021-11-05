@@ -15,7 +15,7 @@ import sys
 @argument(name='name')
 def search(ctx, name, all, **kwargs):
     log.info(f"army search")
-        
+
     # load configuration
     config = ctx.config
     

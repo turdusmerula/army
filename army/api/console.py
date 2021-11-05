@@ -4,12 +4,12 @@ class ConsoleException(Exception):
     def __init__(self, message):
         self.message = message
 
-class ItemList():
+class ItemList(object):
     def __init__(self, columns=[]):
         self._columns = columns
         self._lines = []
         self._current = None
-        
+
     def add_line(self, values={}):
         self._lines.append({})
         self._current = self._lines[-1]
@@ -32,7 +32,7 @@ class ItemList():
         
         res = sorted(self._lines, key=sort_key )
         self._lines = res
-        
+
     def render(self, file=sys.stdout):
         sizes = {}
         for column in self._columns:
@@ -49,3 +49,46 @@ class ItemList():
             for column in self._columns:
                 print(f"{str(line[column]).ljust(sizes[column])} | ", end='', file=file)
             print("", file=file)
+
+class ProgressBar(object):
+    def __init__(self, value=0, min=0, max=100):
+        self._value = value
+        self._min = min
+        self._max = max
+    
+    @property
+    def value(self):
+        return self._value
+    
+    @value.setter
+    def value(self, value):
+        self._value = value
+
+    @property
+    def min(self):
+        return self._min
+
+    @property
+    def max(self):
+        return self._max
+    
+    def render(self, file=sys.stdout):
+        pass
+
+class Console(object):
+    def __init__(self):
+        self._lines = []
+        self._labels = {}
+    
+    def add_line(self, content, label=None, pos=None):
+        pass
+    
+    def render_line(self, content, label=None, pos=None, file=sys.stdout):
+        self.add_line(content, label=label, pos=pos)
+        self.render(file)
+    
+    def get_line(self, label):
+        pass
+    
+    def render(self, file=sys.stdout):
+        pass

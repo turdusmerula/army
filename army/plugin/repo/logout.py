@@ -34,10 +34,9 @@ def logout(ctx, name, **kwargs):
     if repo is None:
         print(f"{name}: repository not found", file=sys.stderr)
         exit(1)
-        
-    service_id = f"army.{name}"
-    
+
     try:
+        repo.load_credentials()
         repo.logout()
     except Exception as e:
         print_stack()

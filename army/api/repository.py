@@ -10,7 +10,8 @@ import keyring
 import os
 import shutil
 import subprocess
-import toml
+import tempfile
+import yaml
 
 repository_types = {}
 
@@ -67,12 +68,14 @@ def load_repositories(config, profile=None):
                 log.error(f"{repo_name}: load repository failed")
     return repositories
 
+def load_repository_package():
+    pass
+
 
 class RepositoryException(Exception):
     def __init__(self, message):
         self.message = message
 
-# TODO: implement source
 class Repository(object):
     Type=None
     Editable=False
@@ -82,29 +85,24 @@ class Repository(object):
     # - token
     # - user
     Login=[]
-    
 
-    # Attributes = {
-    #     'editable': False,
-    #     'auth': None,   # array of auth methods
-    #     'publish': False,
-    #     'unpublish': False,
-    #     'indexed': False,
-    # }
 
-    
     def __init__(self, name, uri):
         self._name = name
         self._uri = uri
         self._credentials = None
         
     @property
+    def name(self):
+        return self._name
+    
+    @property
     def uri(self):
         return self._uri
     
     @property
-    def name(self):
-        return self._name
+    def credentials(self):
+        return self._credentials
     
     # override to return package list
     @property
@@ -129,8 +127,8 @@ class Repository(object):
             except Exception as e:
                 pass
 
-        if credentials is None:
-            raise RepositoryException("no credentials found")
+        # if credentials is None and len(self.Login)>0:
+        #     raise RepositoryException(f"{self.name}: no credentials found")
         self._credentials = credentials
 
     def save_credentials(self, method, *args, **kwargs):
@@ -202,6 +200,9 @@ class Repository(object):
     def publish(self, package, overwrite=False):
         pass
     
+    def unpublish(self, package, force=False):
+        pass
+    
     def login(self):
         pass
 
@@ -212,13 +213,17 @@ class RepositoryPackage(Package):
     def __init__(self, data, repository):
         super(RepositoryPackage, self).__init__(data=data)
         self._repository = repository
+        
         self._source_path = repository._uri
         
     @property
     def repository(self):
         return self._repository
     
-    
+    @property
+    def source_path(self):
+        return self._source_path
+
     def _rmtree_error(self, func, path, exc_info):
         raise RepositoryException(exc_info)
 
@@ -390,27 +395,13 @@ class RepositoryPackage(Package):
             os.remove(path)
         else:
             shutil.rmtree(path, onerror=self._rmtree_error)
-            
-class IndexedRepositoryPackage(RepositoryPackage):
-    def __init__(self, data, repository):
-        super(IndexedRepositoryPackage, self).__init__(data, repository)
-        self._loaded = False
 
-    def load(self):
-        pass
 
-    def install(self, path, link):
-        if self._loaded==False:
-            self.load()
-        
-        super(IndexedRepositoryPackage, self).install(path, link)
 
 class IndexedRepository(Repository):
     def __init__(self, name, uri):
         super(IndexedRepository, self).__init__(name, uri)
         self._loaded = False
-        self._index = {}
-        
         self._index = {
                 'updated': None,
                 'packages': {}
@@ -419,12 +410,13 @@ class IndexedRepository(Repository):
     def load(self):
         # load repository index from cache
         try:
-            file = os.path.join("~/.army/.cache", f"{self.name}.toml")
+            file = os.path.join("~/.army/.cache", f"{self.name}.yaml")
             if os.path.exists(os.path.expanduser(file))==False:
                 log.error(f"{self.name}: index not built")
             else:
                 log.info(f"load index file {file}")
-                self._index = toml.load(os.path.expanduser(file))
+                with open(os.path.expanduser(file), "r") as f:
+                    self._index = yaml.load(f, Loader=yaml.Loader)
         except Exception as e:
             print_stack()
             log.debug(f"{e}")
@@ -435,22 +427,29 @@ class IndexedRepository(Repository):
     def save(self):
         pass
 
-    # if repository has an internal cache this is where it should be reconstructed
     def update(self):
         self._index['updated'] = datetime.datetime.now()
+        
+        self._index_clear_packages()
+        
+        self.update_index()
         
         try:
             os.makedirs(os.path.expanduser(os.path.join("~/.army/.cache")), exist_ok=True)
             
-            file = os.path.join("~/.army/.cache", f"{self.name}.toml")
+            file = os.path.join("~/.army/.cache", f"{self.name}.yaml")
             log.info(f"write index file {file}")
             with open(os.path.expanduser(file), "w") as f:
-                toml.dump(self._index, f)
+                yaml.dump(self._index, f)
         except Exception as e:
             print_stack()
             log.debug(f"{e}")
-            raise RepositoryException(f"{self.name}: load repository index failed")
+            raise RepositoryException(f"{self.name}: update repository index failed")
 
+    # if repository has an internal cache this is where it should be reconstructed
+    def update_index(self):
+        pass
+    
     @property
     def packages(self):
         raise "not yet implemented"
@@ -458,23 +457,18 @@ class IndexedRepository(Repository):
     def _create_package(self, data):
         return IndexedRepositoryPackage(data, self)
     
+    def _index_clear_packages(self):
+        self._index['packages'] = {}
+
     def _index_remove_package(self, name):
         if name in self._index['packages']:
             del self._index['packages'][name]
             
-    def _index_package(self, name, version, description):
+    def _index_package(self, name, version, data):
         # add package to index
         if name not in self._index['packages']:
-            self._index['packages'][name] = {
-                    'description': description,
-                    'versions': []
-                }
-        if version not in self._index['packages'][name]['versions']:
-            self._index['packages'][name]['versions'].append(version)
-        
-        # update common fields in case version is the latest
-        if Version(version)>=Version(max(self._index['packages'][name]['versions'], key=lambda x: Version(x))):
-            self._index['packages'][name]['description'] = description
+            self._index['packages'][name] = {}
+        self._index['packages'][name][version] = data
             
     def search(self, name, version=None, fullname=False):
         # check if index is loaded
@@ -488,36 +482,50 @@ class IndexedRepository(Repository):
         name = name.lower()
         # select packages matching name criteria in package list
         for package in self._index['packages']:
-            description = self._index['packages'][package]['description']
-            versions = self._index['packages'][package]['versions']
-            match_name = False
-            
-            if fullname==False and name in description.lower():
-                match_name = True
+
+            versions = []
+            for v in self._index['packages'][package]:
+                versions.append(v)
+
+            if version is None:
+                # no version specified, give latest by default
+                version_range = 'latest'
+            else:
+                version_range = version
+
+            for v in VersionRange(versions).filter(version_range):
+                data = self._index['packages'][package][str(v)]
                 
-            if fullname==True and name==package:
-                match_name = True
-            elif fullname==False and name in package:
-                match_name = True
+                description = data['description']
+                match_name = False
             
-            if match_name==True:
-                if version is None:
-                    # no version specified, give latest by default
-                    version_range = 'latest'
-                else:
-                    version_range = version
+                if fullname==False and name in description.lower():
+                    match_name = True
                 
-                for version in VersionRange(versions).filter(version_range):
-                    if (package in res and Version(version)>res[package].version) or package not in res:
-                        package_data = {
-                                'name': package,
-                                'description': description,
-                                'version': version
-                            }
-                        pkg = self._create_package(package_data)
-                        res[package] = [pkg]
+                if fullname==True and name==package:
+                    match_name = True
+                elif fullname==False and name in package:
+                    match_name = True
+            
+                if match_name==True:
+                    pkg = self._create_package(data)
+                    res[package] = [pkg]
 
         return res
+
+class IndexedRepositoryPackage(RepositoryPackage):
+    def __init__(self, data, repository):
+        super(IndexedRepositoryPackage, self).__init__(data, repository)
+        self._source_path = None
+
+    # override this function to load full package content
+    def load(self):
+        pass
+
+    def install(self, path, link):
+        self.load()
+        super(IndexedRepositoryPackage, self).install(path, link)
+
 
 
 class AuthException(Exception):

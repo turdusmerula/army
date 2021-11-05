@@ -4,3 +4,4 @@ package_group = army.api.command.get_army_parser().add_group(name="package", hel
 
 import army.plugin.package.package
 import army.plugin.package.publish
+import army.plugin.package.unpublish

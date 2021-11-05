@@ -233,7 +233,7 @@ def find_repository_package(repositories, name, version_range="latest", reposito
     :param repositories: list of repository to search in
     :param name: name of the package to find
     :param version_range: version range to match, if None then match 'latest'
-    :param repository: if not None the limit search to this repository
+    :param repository: if not None then limit search to this repository
     :param editable: if True try to find a suitable version with a local dev repository
     """
     

@@ -77,6 +77,20 @@ def load_dict_file(path, name=None, exist_ok=False, parent=None, env=None):
     
     return res
 
+def load_dict(data, parent=None, env=None):
+    res = None
+    # try to load yaml file
+    try:
+        content = yaml.safe_load(data)
+        if content is None:
+            content = {}
+        res = Dict(data=content, parent=parent, env=env)
+    except Exception as e:
+        print_stack()
+        log.debug(f"{e}")
+        raise DictException(f"{e}")
+    return res
+
 def _load_yaml_dict_file(file):
     res = None
     # try to load yaml file

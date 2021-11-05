@@ -12,8 +12,8 @@ import sys
 @group(name="package")
 @command(name='publish', help='Publish versioned package')
 @option(shortcut='f', name='force', help='Force create release if already exists', flag=True, default=False)
-@argument('name')
-def publish(ctx, name, force, **kwargs):
+@argument('repo_name', help='REPOSITORY')
+def publish(ctx, repo_name, force, **kwargs):
     log.info(f"army publish")
     
     config = ctx.config
@@ -29,16 +29,16 @@ def publish(ctx, name, force, **kwargs):
 
     repo = None
     for repository in repositories:
-        if repository.name==name:
+        if repository.name==repo_name:
             repo = repository
     
     if repo is None:
-        print(f"{name}: repository not found", file=sys.stderr)
+        print(f"{repo_name}: repository not found", file=sys.stderr)
         exit(1)
 
-    if repo.load_credentials()==False:
-        print(f"{name}: no credentials found", file=sys.stderr)
-        exit(1)
+    # if repo.load_credentials()==False:
+    #     print(f"{repo_name}: no credentials found", file=sys.stderr)
+    #     exit(1)
 
     
     # package
