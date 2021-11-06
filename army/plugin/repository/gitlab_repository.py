@@ -24,60 +24,50 @@ class GitlabRepositoryPackage(IndexedRepositoryPackage):
         if self.source_path is not None:
             return
 
-        print("###", self)
-        exit(1)
-        # # Download package
-        # try:
-        #     uri, groups, _ = self.repository._decompose_uri()
-        #     g = self.repository._get_gitlab(uri)
-        # except Exception as e:
-        #     print_stack()
-        #     log.debug(f"{type(e)} {e}")
-        #     raise GitlabRepositoryException(f"{e}")
-        #
-        # group, project = self.repository._get_gitlab_project(g, '/'.join(groups), self.name)
-        #
-        # release, tag = self._get_gitlab_release(self, project)
-        #
-        # if release is None:
-        #     raise GitlabRepositoryException(f"{self.name}-{self.version}: no release found from github repository")
-        #
-        # try:
-        #     # search zip file
-        #     asset = None
-        #     for link in release.assets['links']:
-        #         if link['name']==f"{self.name}-{self.version}.zip":
-        #             asset = link
-        # except Exception as e:
-        #     print_stack()
-        #     log.debug(f"{type(e)} {e}")
-        #     raise GitlabRepositoryException(f"{e}")
-        #
-        # if asset is None:
-        #     raise GitlabRepositoryException(f"{self.name}-{self.version}.zip: not found from github repository")
-        #
-        # try:
-        #     # download unzip package
-        #     tmpd = tempfile.mkdtemp()
-        #     tmpf = tempfile.mktemp()
-        #
-        #     # TODO: need this bug to be corrected to make this working
-        #     # https://gitlab.com/gitlab-org/gitlab/-/issues/28978
-        #     headers = {'Private-Token': self.repository._token}
-        #     r = requests.get(asset['url'], headers=headers, allow_redirects=True)
-        #     with open(tmpf, mode="wb") as f:
-        #         f.write(r.content)
-        #
-        #     file = zipfile.ZipFile(tmpf)
-        #     file.extractall(path=tmpd, members=file.namelist())
-        #
-        #     self._source_path = tmpd
-        # except Exception as e:
-        #     os.remove(tmpf)
-        #     print_stack()
-        #     log.debug(f"{type(e)} {e}")
-        #     raise GitlabRepositoryException(f"{e}")
-        #
+        try:
+            uri, groups, project = self.repository._decompose_uri()
+            g = self.repository._get_gitlab(uri)
+        except Exception as e:
+            print_stack()
+            log.debug(f"{type(e)} {e}")
+            raise GitlabRepositoryException(f"{e}")
+        
+        _, gitlab_project = self.repository._get_gitlab_project(g, '/'.join(groups), self.name)
+
+        gitlab_release, gitlab_tag = self.repository._get_gitlab_release(self, gitlab_project)
+        
+        if gitlab_release is None:
+            raise GitlabRepositoryException(f"{self.name}-{self.version}: release not found in repository")
+
+        # download package
+        data = gitlab_project.generic_packages.download(
+            package_name=self.name,
+            package_version=self.version,
+            file_name=f"{self.name}-{self.version}.zip",
+        )
+        
+        if data is None:
+            raise GitlabRepositoryException(f"{self.name}-{self.version}: package found found in repository")
+            
+        try:
+            # download unzip package
+            tmpd = tempfile.mkdtemp()
+            tmpf = tempfile.mktemp()
+        
+            with open(tmpf, mode="wb") as f:
+                f.write(data)
+        
+            file = zipfile.ZipFile(tmpf)
+            file.extractall(path=tmpd, members=file.namelist())
+        
+            self._source_path = tmpd
+            print("####", self._source_path)
+        except Exception as e:
+            os.remove(tmpf)
+            print_stack()
+            log.debug(f"{type(e)} {e}")
+            raise GitlabRepositoryException(f"{e}")
+
         # # load army.toml
         # try:
         #     file = os.path.join(tmpd, "army.toml")

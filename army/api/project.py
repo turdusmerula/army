@@ -52,6 +52,14 @@ class Project(Package):
         if os.path.exists(os.path.join(path, f"army.yaml")):
             files.append(f"army.yaml")
         
+        # add profiles
+        if os.path.exists(os.path.join(path, "profile")):
+            files.append(f"profile")
+ 
+        # add plugins
+        for plugin in self.plugins:
+            files.append(plugin)
+
         # copy files
         for include in files:
             source = os.path.join(os.path.expanduser(path), include)

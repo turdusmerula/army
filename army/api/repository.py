@@ -522,9 +522,9 @@ class IndexedRepositoryPackage(RepositoryPackage):
     def load(self):
         pass
 
-    def install(self, path, link):
+    def install(self, path, force=False, edit=False):
         self.load()
-        super(IndexedRepositoryPackage, self).install(path, link)
+        super(IndexedRepositoryPackage, self).install(path, force, edit)
 
 
 

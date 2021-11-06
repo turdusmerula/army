@@ -10,22 +10,29 @@ from army.api.version import Version, VersionRange
 import os
 import sys
 
-class PackageDependency(RepositoryPackage):
-    def __init__(self, package, installed_by=None, installed_user=False):
-        super(PackageDependency, self).__init__(data=package._data, repository=package.repository)
-        self._installed_by = installed_by
-        self._installed_user = installed_user
-        
-    @property
-    def installed_by(self):
-        return self._installed_by
+def _create_package_dependecy(package, installed_by=None, installed_user=False):
 
-    @property
-    def installed_user(self):
-        return self._installed_user
+    class PackageDependency(package.__class__):
+        # Inherited = type(package)
+        def __init__(self, package, installed_by=None, installed_user=False):
+            super(PackageDependency, self).__init__(data=package._data, repository=package.repository)
+            #PackageDependency.Inherited.__init__(self, data=package._data, repository=package.repository)
+            
+            self._installed_by = installed_by
+            self._installed_user = installed_user
+            
+        @property
+        def installed_by(self):
+            return self._installed_by
+    
+        @property
+        def installed_user(self):
+            return self._installed_user
+    
+        def __repr__(self):
+            return f"{self.repository.name}@{self.name}@{self.version}"
 
-    def __repr__(self):
-        return f"{self.repository.name}@{self.name}@{self.version}"
+    return PackageDependency(package, installed_by, installed_user)
 
 @parser
 @group(name="dependency")
@@ -80,7 +87,7 @@ def install(ctx, name, edit, reinstall, **kwargs):
 
         for package, version in project.dependencies.items():
             pkg, repo = _find_repository_package(repositories, package, version_range=version, editable=edit)
-            packages.append(PackageDependency(package=pkg, installed_user=True))
+            packages.append(_create_package_dependecy(package=pkg, installed_user=True))
     else:
         for package in name:
             s_name = package
@@ -106,7 +113,7 @@ def install(ctx, name, edit, reinstall, **kwargs):
                 exit(1)
 
             pkg, repo = _find_repository_package(repositories, s_name, version_range=s_version, repository=s_repository, editable=edit)
-            packages.append(PackageDependency(package=pkg, installed_user=True))
+            packages.append(_create_package_dependecy(package=pkg, installed_user=True))
      
     # build dependencies tree
     dependency_tree = _build_dependency_tree(repositories, packages, editable=edit)
@@ -146,7 +153,7 @@ def _find_dependencies(repositories, package, editable=False):
             print(f"{name}: dependency from {package} not found", file=sys.stderr)
             exit(1)
         
-        dependencies.append(PackageDependency(package=pkg, installed_by=package))
+        dependencies.append(_create_package_dependecy(package=pkg, installed_by=package))
     return dependencies
 
 def _find_repository_package(repositories, name, version_range="latest", repository=None, editable=None):
@@ -261,7 +268,7 @@ def _install_package(package, level, edit, scope, reinstall, profile):
                 # edit mode is only possible with editable repository
                 print(f"{package}: repository is not editable", file=sys.stderr)
                 edit = False
-                
+            
             package.install(path=path, force=reinstall, edit=edit)
 
         content = load_dict_file(install_path, "army")
