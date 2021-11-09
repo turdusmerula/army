@@ -1,12 +1,9 @@
 from army.api.debugtools import print_stack
 from army.api.dict_file import load_dict
-import army.api.gitlab
 from army.api.log import log, get_log_level
 from army.api.repository import IndexedRepository, IndexedRepositoryPackage, AuthToken
 import gitlab
-import keyring
 import os
-import requests
 import sys
 import tempfile
 from urllib.parse import urlparse
@@ -61,7 +58,6 @@ class GitlabRepositoryPackage(IndexedRepositoryPackage):
             file.extractall(path=tmpd, members=file.namelist())
         
             self._source_path = tmpd
-            print("####", self._source_path)
         except Exception as e:
             os.remove(tmpf)
             print_stack()
@@ -199,7 +195,7 @@ class GitlabRepository(IndexedRepository):
         )
 
         if data is None:
-            raise GitlabRepositoryException(f"army.yaml missing for release {gitlab_release.name}-{gitlab_release.version}")
+            raise GitlabRepositoryException(f"army.yaml missing for release {package}-{version}")
     
         return load_dict(data.decode('utf-8'))
     
@@ -328,6 +324,9 @@ class GitlabRepository(IndexedRepository):
             print_stack()
             log.debug(f"{type(e)} {e}")
             raise GitlabRepositoryException(f"{e}")
+
+        if self.credentials is None and len(self.Login)>0:
+            log.warning(f"{self.name}: no credentials found")
 
         _, gitlab_project = self._get_gitlab_project(g, '/'.join(groups), self.name)
 

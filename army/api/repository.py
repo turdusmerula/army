@@ -495,7 +495,7 @@ class IndexedRepository(Repository):
 
             for v in VersionRange(versions).filter(version_range):
                 data = self._index['packages'][package][str(v)]
-                
+
                 description = data['description']
                 match_name = False
             

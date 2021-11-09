@@ -20,3 +20,4 @@ def delete_tag(self, name):
     :rtype: None
     """
     headers, data = self._requester.requestJsonAndCheck("DELETE", f"{self.url}/git/refs/tags/{name}")
+
